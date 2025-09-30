@@ -1,10 +1,10 @@
-package com.backend_gestion_balta;
+package com.marroquineriabalta;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class GestionBaltaApplicationTests {
+class MarroquineriaApplicationTests {
 
 	@Test
 	void contextLoads() {
