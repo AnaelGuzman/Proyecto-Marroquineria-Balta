@@ -1,5 +1,6 @@
 package com.marroquineriabalta.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -38,5 +39,6 @@ public class Venta {
     private String observaciones;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private List<DetalleVenta> detalles = new ArrayList<>();
 }
