@@ -50,6 +50,14 @@ public class InventarioService {
     }
 
     @Transactional
+    public void eliminarInventario(Long id) {
+        if (!inventarioRepository.existsById(id)) {
+            throw new RuntimeException("Inventario no encontrado");
+        }
+        inventarioRepository.deleteById(id);
+    }
+
+    @Transactional
     public Inventario ajustarCantidad(Long idProducto, Integer cantidad) {
         Inventario inventario = inventarioRepository.findByProductoIdProducto(idProducto)
                 .orElseThrow(() -> new RuntimeException("Inventario no encontrado para el producto"));

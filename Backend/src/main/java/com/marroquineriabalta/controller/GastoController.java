@@ -41,11 +41,23 @@ public class GastoController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarGasto(@PathVariable Long id, @RequestBody Gasto gasto) {
+        try {
+            Gasto existente = gastoService.obtenerGastoPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Gasto no encontrado"));
+            // Implementar lógica de actualización
+            return ResponseEntity.ok("Actualización no implementada");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarGasto(@PathVariable Long id) {
         try {
             gastoService.eliminarGasto(id);
-            return ResponseEntity.ok("Gasto eliminado");
+            return ResponseEntity.ok("Gasto eliminado exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

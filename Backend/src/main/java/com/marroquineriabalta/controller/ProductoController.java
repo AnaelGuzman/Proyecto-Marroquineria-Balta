@@ -52,7 +52,7 @@ public class ProductoController {
     public ResponseEntity<?> eliminarProducto(@PathVariable Long id) {
         try {
             productoService.eliminarProducto(id);
-            return ResponseEntity.ok("Producto eliminado");
+            return ResponseEntity.ok("Producto eliminado exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

@@ -19,6 +19,25 @@ public class CategoriaService {
         return categoriaRepository.save(categoria);
     }
 
+    @Transactional
+    public Categoria actualizarCategoria(Long id, Categoria categoriaActualizada) {
+        Categoria categoria = categoriaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
+
+        categoria.setNombre(categoriaActualizada.getNombre());
+        categoria.setDescripcion(categoriaActualizada.getDescripcion());
+
+        return categoriaRepository.save(categoria);
+    }
+
+    @Transactional
+    public void eliminarCategoria(Long id) {
+        if (!categoriaRepository.existsById(id)) {
+            throw new RuntimeException("Categoría no encontrada");
+        }
+        categoriaRepository.deleteById(id);
+    }
+
     public List<Categoria> listarCategorias() {
         return categoriaRepository.findAll();
     }

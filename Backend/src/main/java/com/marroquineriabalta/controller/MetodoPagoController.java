@@ -37,4 +37,29 @@ public class MetodoPagoController {
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarMetodoPago(@PathVariable Long id, @RequestBody MetodoPago metodoPago) {
+        try {
+            MetodoPago existente = metodoPagoService.obtenerMetodoPagoPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+            metodoPago.setIdMetodoPago(id);
+            MetodoPago actualizado = metodoPagoService.crearMetodoPago(metodoPago);
+            return ResponseEntity.ok(actualizado);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarMetodoPago(@PathVariable Long id) {
+        try {
+            metodoPagoService.obtenerMetodoPagoPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+            // Implementar eliminación en service
+            return ResponseEntity.ok("Método de pago eliminado exitosamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

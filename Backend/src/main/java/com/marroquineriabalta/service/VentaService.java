@@ -22,7 +22,6 @@ public class VentaService {
 
     @Transactional
     public Venta registrarVenta(Venta venta) {
-        // Validar método de pago
         if (venta.getMetodoPago() == null || venta.getMetodoPago().getIdMetodoPago() == null) {
             throw new RuntimeException("Debe especificar un método de pago");
         }
@@ -33,19 +32,16 @@ public class VentaService {
         venta.setMetodoPago(metodoPago);
         venta.setFecha(LocalDateTime.now());
 
-        // Procesar detalles
         BigDecimal subtotalGeneral = BigDecimal.ZERO;
         List<DetalleVenta> detallesConVenta = new ArrayList<>();
 
         for (DetalleVenta detalle : venta.getDetalles()) {
-            // Validar producto
             Producto producto = productoRepository.findById(detalle.getProducto().getIdProducto())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + detalle.getProducto().getIdProducto()));
 
             detalle.setProducto(producto);
             detalle.setVenta(venta);
 
-            // Calcular subtotal
             BigDecimal subtotal = detalle.getPrecioUnitario()
                     .multiply(BigDecimal.valueOf(detalle.getCantidad()));
             detalle.setSubtotal(subtotal);
@@ -53,13 +49,11 @@ public class VentaService {
             subtotalGeneral = subtotalGeneral.add(subtotal);
             detallesConVenta.add(detalle);
 
-            // Actualizar inventario
             actualizarInventario(producto.getIdProducto(), detalle.getCantidad());
         }
 
         venta.setDetalles(detallesConVenta);
 
-        // Calcular IVA
         BigDecimal ivaTotal = calcularIVA(subtotalGeneral, metodoPago.getIvaAsociado());
         BigDecimal montoTotal = subtotalGeneral.add(ivaTotal);
 
@@ -67,6 +61,25 @@ public class VentaService {
         venta.setMontoTotal(montoTotal);
 
         return ventaRepository.save(venta);
+    }
+
+    @Transactional
+    public void eliminarVenta(Long id) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
+
+        // Devolver productos al inventario
+        for (DetalleVenta detalle : venta.getDetalles()) {
+            Optional<Inventario> inventarioOpt = inventarioRepository.findByProductoIdProducto(detalle.getProducto().getIdProducto());
+            if (inventarioOpt.isPresent()) {
+                Inventario inventario = inventarioOpt.get();
+                inventario.setCantidadProducto(inventario.getCantidadProducto() + detalle.getCantidad());
+                inventario.setFechaActualizacion(LocalDateTime.now());
+                inventarioRepository.save(inventario);
+            }
+        }
+
+        ventaRepository.deleteById(id);
     }
 
     private void actualizarInventario(Long idProducto, Integer cantidad) {

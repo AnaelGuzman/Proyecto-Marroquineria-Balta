@@ -19,6 +19,25 @@ public class MetodoPagoService {
         return metodoPagoRepository.save(metodoPago);
     }
 
+    @Transactional
+    public MetodoPago actualizarMetodoPago(Long id, MetodoPago metodoPagoActualizado) {
+        MetodoPago metodoPago = metodoPagoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+
+        metodoPago.setNombre(metodoPagoActualizado.getNombre());
+        metodoPago.setIvaAsociado(metodoPagoActualizado.getIvaAsociado());
+
+        return metodoPagoRepository.save(metodoPago);
+    }
+
+    @Transactional
+    public void eliminarMetodoPago(Long id) {
+        if (!metodoPagoRepository.existsById(id)) {
+            throw new RuntimeException("Método de pago no encontrado");
+        }
+        metodoPagoRepository.deleteById(id);
+    }
+
     public List<MetodoPago> listarMetodosPago() {
         return metodoPagoRepository.findAll();
     }

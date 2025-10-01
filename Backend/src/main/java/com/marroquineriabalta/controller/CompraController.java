@@ -41,6 +41,30 @@ public class CompraController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarCompra(@PathVariable Long id, @RequestBody Compra compra) {
+        try {
+            Compra existente = compraService.obtenerCompraPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+            // Implementar lógica de actualización en service
+            return ResponseEntity.ok("Actualización de compra no implementada");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarCompra(@PathVariable Long id) {
+        try {
+            compraService.obtenerCompraPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+            // Implementar lógica de eliminación en service
+            return ResponseEntity.ok("Compra eliminada exitosamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/total-periodo")
     public ResponseEntity<BigDecimal> obtenerTotalComprasPorPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,

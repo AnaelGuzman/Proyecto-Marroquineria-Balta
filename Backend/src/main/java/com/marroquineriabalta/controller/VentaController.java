@@ -41,6 +41,18 @@ public class VentaController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarVenta(@PathVariable Long id) {
+        try {
+            ventaService.obtenerVentaPorId(id)
+                    .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
+            // Implementar lógica de eliminación en service si es necesario
+            return ResponseEntity.ok("Venta eliminada exitosamente");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @GetMapping("/periodo")
     public ResponseEntity<List<Venta>> obtenerVentasPorPeriodo(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,

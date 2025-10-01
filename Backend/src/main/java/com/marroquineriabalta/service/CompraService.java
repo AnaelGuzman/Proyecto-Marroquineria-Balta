@@ -57,6 +57,30 @@ public class CompraService {
         return compraRepository.save(compra);
     }
 
+    @Transactional
+    public Compra actualizarCompra(Long id, Compra compraActualizada) {
+        Compra compra = compraRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
+
+        if (compraActualizada.getMetodoPago() != null && compraActualizada.getMetodoPago().getIdMetodoPago() != null) {
+            MetodoPago metodoPago = metodoPagoRepository.findById(compraActualizada.getMetodoPago().getIdMetodoPago())
+                    .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+            compra.setMetodoPago(metodoPago);
+        }
+
+        compra.setObservaciones(compraActualizada.getObservaciones());
+
+        return compraRepository.save(compra);
+    }
+
+    @Transactional
+    public void eliminarCompra(Long id) {
+        if (!compraRepository.existsById(id)) {
+            throw new RuntimeException("Compra no encontrada");
+        }
+        compraRepository.deleteById(id);
+    }
+
     private BigDecimal calcularIVA(BigDecimal monto, Integer porcentajeIva) {
         if (porcentajeIva == null || porcentajeIva == 0) {
             return BigDecimal.ZERO;

@@ -31,6 +31,31 @@ public class GastoService {
         return gastoRepository.save(gasto);
     }
 
+    @Transactional
+    public Gasto actualizarGasto(Long id, Gasto gastoActualizado) {
+        Gasto gasto = gastoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Gasto no encontrado"));
+
+        gasto.setMonto(gastoActualizado.getMonto());
+        gasto.setDescripcion(gastoActualizado.getDescripcion());
+
+        if (gastoActualizado.getMetodoPago() != null && gastoActualizado.getMetodoPago().getIdMetodoPago() != null) {
+            MetodoPago metodoPago = metodoPagoRepository.findById(gastoActualizado.getMetodoPago().getIdMetodoPago())
+                    .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+            gasto.setMetodoPago(metodoPago);
+        }
+
+        return gastoRepository.save(gasto);
+    }
+
+    @Transactional
+    public void eliminarGasto(Long id) {
+        if (!gastoRepository.existsById(id)) {
+            throw new RuntimeException("Gasto no encontrado");
+        }
+        gastoRepository.deleteById(id);
+    }
+
     public List<Gasto> listarGastos() {
         return gastoRepository.findAll();
     }
@@ -42,13 +67,5 @@ public class GastoService {
     public BigDecimal obtenerTotalGastosPorPeriodo(LocalDateTime inicio, LocalDateTime fin) {
         BigDecimal total = gastoRepository.sumMontoByFechaBetween(inicio, fin);
         return total != null ? total : BigDecimal.ZERO;
-    }
-
-    @Transactional
-    public void eliminarGasto(Long id) {
-        if (!gastoRepository.existsById(id)) {
-            throw new RuntimeException("Gasto no encontrado");
-        }
-        gastoRepository.deleteById(id);
     }
 }
