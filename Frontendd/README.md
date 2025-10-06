@@ -1,6 +1,6 @@
-# Cuero Artesanal | Admin (Maqueta)
+# Cuero Artesanal | Admin 
 
-Maqueta visual (sin backend ni lógica) para el control simple de ingresos, egresos y reportes de una microempresa de artículos de cuero hechos a mano.
+Frontend para el control simple de ingresos, egresos y reportes de una microempresa de artículos de cuero hechos a mano.
 
 ## Qué incluye
 - Navegación lateral: Inicio, Ingresos, Egresos, Reportes.
@@ -28,4 +28,12 @@ npm run build
 npm run preview
 ```
 
-> Nota: Es solo una maqueta visual. Los formularios y botones están deshabilitados a propósito.
+## Configuración del backend (CUANDO ESTE EL BACKEND EN LA NUBE)
+
+Definir la URL del backend con un archivo `.env` en la raíz del proyecto:
+
+```env
+VITE_API_BASE_URL=https://backend-url.com/api
+```
+
+Si no se define la variable, la aplicación usará `http://localhost:8080/api` como valor por defecto para entornos locales.
