@@ -41,10 +41,7 @@ public class CategoriaController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarCategoria(@PathVariable Long id, @RequestBody Categoria categoria) {
         try {
-            Categoria existente = categoriaService.obtenerCategoriaPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-            categoria.setIdCategoria(id);
-            Categoria actualizada = categoriaService.crearCategoria(categoria);
+            Categoria actualizada = categoriaService.actualizarCategoria(id, categoria);
             return ResponseEntity.ok(actualizada);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
@@ -54,9 +51,7 @@ public class CategoriaController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCategoria(@PathVariable Long id) {
         try {
-            categoriaService.obtenerCategoriaPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Categoría no encontrada"));
-            // Implementar eliminación en service
+            categoriaService.eliminarCategoria(id);
             return ResponseEntity.ok("Categoría eliminada exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

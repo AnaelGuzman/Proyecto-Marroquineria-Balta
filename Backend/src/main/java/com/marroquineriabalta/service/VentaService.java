@@ -30,7 +30,10 @@ public class VentaService {
                 .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
 
         venta.setMetodoPago(metodoPago);
-        venta.setFecha(LocalDateTime.now());
+
+        if (venta.getFecha() == null) {
+            venta.setFecha(LocalDateTime.now());
+        }
 
         BigDecimal subtotalGeneral = BigDecimal.ZERO;
         List<DetalleVenta> detallesConVenta = new ArrayList<>();
@@ -54,8 +57,84 @@ public class VentaService {
 
         venta.setDetalles(detallesConVenta);
 
-        BigDecimal ivaTotal = calcularIVA(subtotalGeneral, metodoPago.getIvaAsociado());
-        BigDecimal montoTotal = subtotalGeneral.add(ivaTotal);
+        // El precio ya incluye IVA, extraemos el IVA del total
+        BigDecimal montoTotal = subtotalGeneral;
+        BigDecimal ivaTotal;
+
+        if (metodoPago.getIvaAsociado() != null && metodoPago.getIvaAsociado() > 0) {
+            BigDecimal factorIva = BigDecimal.ONE.add(
+                    BigDecimal.valueOf(metodoPago.getIvaAsociado()).divide(BigDecimal.valueOf(100))
+            );
+            ivaTotal = montoTotal.subtract(montoTotal.divide(factorIva, 2, java.math.RoundingMode.HALF_UP));
+        } else {
+            ivaTotal = BigDecimal.ZERO;
+        }
+
+        venta.setIvaTotal(ivaTotal);
+        venta.setMontoTotal(montoTotal);
+
+        return ventaRepository.save(venta);
+    }
+
+    @Transactional
+    public Venta actualizarVenta(Long id, Venta ventaActualizada) {
+        Venta venta = ventaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
+
+        // Devolver productos al inventario antes de actualizar
+        for (DetalleVenta detalle : venta.getDetalles()) {
+            Optional<Inventario> inventarioOpt = inventarioRepository.findByProductoIdProducto(detalle.getProducto().getIdProducto());
+            if (inventarioOpt.isPresent()) {
+                Inventario inventario = inventarioOpt.get();
+                inventario.setCantidadProducto(inventario.getCantidadProducto() + detalle.getCantidad());
+                inventario.setFechaActualizacion(LocalDateTime.now());
+                inventarioRepository.save(inventario);
+            }
+        }
+
+        // Actualizar método de pago si se proporciona
+        if (ventaActualizada.getMetodoPago() != null && ventaActualizada.getMetodoPago().getIdMetodoPago() != null) {
+            MetodoPago metodoPago = metodoPagoRepository.findById(ventaActualizada.getMetodoPago().getIdMetodoPago())
+                    .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+            venta.setMetodoPago(metodoPago);
+        }
+
+        venta.setObservaciones(ventaActualizada.getObservaciones());
+
+        // Limpiar detalles antiguos
+        venta.getDetalles().clear();
+
+        // Agregar nuevos detalles
+        BigDecimal subtotalGeneral = BigDecimal.ZERO;
+        for (DetalleVenta detalle : ventaActualizada.getDetalles()) {
+            Producto producto = productoRepository.findById(detalle.getProducto().getIdProducto())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado: " + detalle.getProducto().getIdProducto()));
+
+            detalle.setProducto(producto);
+            detalle.setVenta(venta);
+
+            BigDecimal subtotal = detalle.getPrecioUnitario()
+                    .multiply(BigDecimal.valueOf(detalle.getCantidad()));
+            detalle.setSubtotal(subtotal);
+
+            subtotalGeneral = subtotalGeneral.add(subtotal);
+            venta.getDetalles().add(detalle);
+
+            actualizarInventario(producto.getIdProducto(), detalle.getCantidad());
+        }
+
+        // Recalcular totales
+        BigDecimal montoTotal = subtotalGeneral;
+        BigDecimal ivaTotal;
+
+        if (venta.getMetodoPago().getIvaAsociado() != null && venta.getMetodoPago().getIvaAsociado() > 0) {
+            BigDecimal factorIva = BigDecimal.ONE.add(
+                    BigDecimal.valueOf(venta.getMetodoPago().getIvaAsociado()).divide(BigDecimal.valueOf(100))
+            );
+            ivaTotal = montoTotal.subtract(montoTotal.divide(factorIva, 2, java.math.RoundingMode.HALF_UP));
+        } else {
+            ivaTotal = BigDecimal.ZERO;
+        }
 
         venta.setIvaTotal(ivaTotal);
         venta.setMontoTotal(montoTotal);
@@ -91,14 +170,6 @@ public class VentaService {
             inventario.setFechaActualizacion(LocalDateTime.now());
             inventarioRepository.save(inventario);
         }
-    }
-
-    private BigDecimal calcularIVA(BigDecimal monto, Integer porcentajeIva) {
-        if (porcentajeIva == null || porcentajeIva == 0) {
-            return BigDecimal.ZERO;
-        }
-        return monto.multiply(BigDecimal.valueOf(porcentajeIva))
-                .divide(BigDecimal.valueOf(100));
     }
 
     public List<Venta> listarVentas() {

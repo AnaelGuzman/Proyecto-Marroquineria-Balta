@@ -58,9 +58,7 @@ public class InventarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarInventario(@PathVariable Long id) {
         try {
-            inventarioService.obtenerInventarioPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Inventario no encontrado"));
-            // Implementar en service si es necesario
+            inventarioService.eliminarInventario(id);
             return ResponseEntity.ok("Inventario eliminado exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

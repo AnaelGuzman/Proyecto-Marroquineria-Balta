@@ -41,12 +41,20 @@ public class VentaController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarVenta(@PathVariable Long id, @RequestBody Venta venta) {
+        try {
+            Venta actualizada = ventaService.actualizarVenta(id, venta);
+            return ResponseEntity.ok(actualizada);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarVenta(@PathVariable Long id) {
         try {
-            ventaService.obtenerVentaPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Venta no encontrada"));
-            // Implementar lógica de eliminación en service si es necesario
+            ventaService.eliminarVenta(id);
             return ResponseEntity.ok("Venta eliminada exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

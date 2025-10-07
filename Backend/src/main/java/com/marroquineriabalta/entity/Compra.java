@@ -39,6 +39,6 @@ public class Compra {
     private String observaciones;
 
     @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonManagedReference(value = "compra-detalles")
     private List<DetalleCompra> detalles = new ArrayList<>();
 }

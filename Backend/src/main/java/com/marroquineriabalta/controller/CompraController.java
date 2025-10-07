@@ -44,10 +44,8 @@ public class CompraController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarCompra(@PathVariable Long id, @RequestBody Compra compra) {
         try {
-            Compra existente = compraService.obtenerCompraPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
-            // Implementar lógica de actualización en service
-            return ResponseEntity.ok("Actualización de compra no implementada");
+            Compra actualizada = compraService.actualizarCompra(id, compra);
+            return ResponseEntity.ok(actualizada);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -56,9 +54,7 @@ public class CompraController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarCompra(@PathVariable Long id) {
         try {
-            compraService.obtenerCompraPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Compra no encontrada"));
-            // Implementar lógica de eliminación en service
+            compraService.eliminarCompra(id);
             return ResponseEntity.ok("Compra eliminada exitosamente");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

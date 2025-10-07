@@ -39,6 +39,6 @@ public class Venta {
     private String observaciones;
 
     @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
+    @JsonManagedReference(value = "venta-detalles")
     private List<DetalleVenta> detalles = new ArrayList<>();
 }

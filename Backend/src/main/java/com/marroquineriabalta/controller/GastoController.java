@@ -44,10 +44,8 @@ public class GastoController {
     @PutMapping("/{id}")
     public ResponseEntity<?> actualizarGasto(@PathVariable Long id, @RequestBody Gasto gasto) {
         try {
-            Gasto existente = gastoService.obtenerGastoPorId(id)
-                    .orElseThrow(() -> new RuntimeException("Gasto no encontrado"));
-            // Implementar lógica de actualización
-            return ResponseEntity.ok("Actualización no implementada");
+            Gasto actualizado = gastoService.actualizarGasto(id, gasto);
+            return ResponseEntity.ok(actualizado);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
