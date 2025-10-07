@@ -17,8 +17,12 @@ const routes = [
 
 export default function App() {
   const [hash, setHash] = useState(window.location.hash || '#/')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   React.useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash || '#/')
+    const onHashChange = () => {
+      setHash(window.location.hash || '#/')
+      setSidebarOpen(false)
+    }
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
@@ -29,8 +33,8 @@ export default function App() {
   }, [hash])
 
   return (
-    <div className="shell">
-      <aside className="sidebar">
+    <div className={`shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
+      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="brand">
           <Logo />
           <div className="brand-text">
@@ -49,8 +53,11 @@ export default function App() {
           <small>Maqueta visual • Sin backend</small>
         </div>
       </aside>
+      {sidebarOpen && (
+        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+      )}
       <main className="content">
-        <Header hash={hash} />
+        <Header hash={hash} onToggleSidebar={() => setSidebarOpen(s => !s)} />
         <div className="page">
           <Active />
         </div>
@@ -59,7 +66,7 @@ export default function App() {
   )
 }
 
-function Header({ hash }) {
+function Header({ hash, onToggleSidebar }) {
   const title = useMemo(() => {
     const route = routes.find(r => hash === r.path)
     return route?.label ?? 'Inicio'
@@ -74,6 +81,13 @@ function Header({ hash }) {
   return (
     <>
       <header className="topbar">
+        <button
+          type="button"
+          className="hamburger-btn"
+          onClick={onToggleSidebar}
+        >
+          ☰
+        </button>
         <h1>{title}</h1>
         <div className="spacer" />
 

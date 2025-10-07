@@ -20,16 +20,18 @@ body{
   background:var(--bg);
   color:var(--text);
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  overflow-x:hidden;
 }
-.muted{color:var(--muted)}
-.small{font-size:.95rem}
-.center{text-align:center}
-.large-text { font-size: 1.2rem; }
-.shell{display:grid;grid-template-columns:320px 1fr;min-height:100%} /* sidebar más ancho */
+.shell{
+  display:grid;
+  grid-template-columns:320px 1fr;
+  min-height:100%;
+}
 .sidebar{
   background:linear-gradient(180deg, var(--panel), var(--panel-2));
   border-right:1px solid var(--border);
   display:flex;flex-direction:column;
+  transition:transform .3s ease;
 }
 .brand{display:flex;gap:1rem;align-items:center;padding:1.1rem 1.5rem;border-bottom:1px solid var(--border)}
 .brand-text strong{display:block;letter-spacing:.3px;font-size:1.15rem;color:var(--text)}
@@ -70,6 +72,17 @@ body{
   padding:.45rem .7rem;border-radius:999px;font-size:1.05rem;color:var(--text)
 }
 .user-chip .avatar{filter:saturate(.8)}
+
+/* Añade esta regla aquí, antes de cualquier media query */
+.hamburger-btn{
+  display:none; /* Oculto por defecto en todos los dispositivos */
+  background:none;
+  border:none;
+  font-size:1.6rem;
+  cursor:pointer;
+  color:var(--text);
+  padding:0.25rem 0.5rem;
+}
 
 .content{min-height:100%;}
 .page{padding:1.5rem;}
@@ -206,9 +219,39 @@ input[type="number"]{ -moz-appearance: textfield; }
 
 /* Responsivo: en móviles apilan automáticamente */
 @media(max-width:899px){
-  .shell{grid-template-columns:1fr}
-  .sidebar{order:2}
-  .topbar{position:relative}
+  .shell{
+    grid-template-columns:1fr;
+    position:relative;
+    overflow-x:hidden;
+  }
+  .sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    width:280px;
+    transform:translateX(-100%);
+    z-index:1000;
+  }
+  .sidebar.open{
+    transform:translateX(0);
+  }
+  .sidebar-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:block;
+    z-index:900;
+  }
+  .hamburger-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+  }
+}
+
+@media(min-width:900px){
+  .sidebar-overlay{display:none !important;}
 }
 
 /* Tablas y listas */
@@ -239,4 +282,48 @@ table.table tbody tr:nth-child(even){background:hsl(0, 0%, 96%)}
 .topbar .btn.ghost,
 .topbar .user-chip {
   cursor: pointer;
+}
+
+@media(max-width:599px){
+  html{font-size:12px;}
+  .form-grid{grid-template-columns:1fr;gap:0.6rem;}
+  .field{grid-column:1 / -1;gap:0.3rem;}
+  .field-label{font-size:0.8rem;}
+  .field select,
+  .field input,
+  .field textarea{
+    height:auto;
+    min-height:2.4rem;
+    padding:0.35rem 0.55rem;
+    font-size:0.85rem;
+  }
+  .field > div{gap:0.25rem;}
+  .field > div .btn,
+  .toolbar .btn{
+    min-height:2.2rem;
+    padding:0.4rem 0.75rem;
+    font-size:0.85rem;
+  }
+  .btn,
+  .btn.ghost{
+    min-height:2.4rem;
+    padding:0.45rem 0.5rem;
+    font-size:0.88rem;
+  }
+  textarea{
+    min-height:4.5rem;
+  }
+  .card-header{
+    padding:0.55rem 0.75rem;
+  }
+  .card-header h3{
+    font-size:1.5rem;
+    margin:0.05rem 0;
+  }
+  .muted,
+  .muted.small,
+  .brand-text .muted{
+    font-size:0.72rem;
+    line-height:1.25;
+  }
 }
