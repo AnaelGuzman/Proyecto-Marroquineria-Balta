@@ -32,9 +32,6 @@ public class Compra {
     @JoinColumn(name = "id_metodo_pago")
     private MetodoPago metodoPago;
 
-    @Column(name = "iva_total", precision = 10, scale = 2)
-    private BigDecimal ivaTotal;
-
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 

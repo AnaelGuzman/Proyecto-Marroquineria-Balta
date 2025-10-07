@@ -90,19 +90,6 @@ export default function Ingresos() {
         return r
       })
       
-      const nuevaVenta = {
-        fecha: new Date(formData.fecha).toISOString(),
-        montoTotal: producto.precio * formData.cantidad,
-        metodoPago: metodoPago,
-        detalles: [{
-          producto: producto,
-          cantidad: formData.cantidad,
-          precioUnitario: producto.precio
-        }]
-      }
-      
-      setVentas([...ventas, nuevaVenta])
-      
       alert('Venta registrada exitosamente')
       
       setFormData({
@@ -113,6 +100,9 @@ export default function Ingresos() {
         observaciones: '',
         categoriaId: ''
       })
+      
+      // Recargar ventas
+      cargarDatos()
     } catch (error) {
       console.error('Error completo:', error)
       alert('Error al registrar la venta: ' + error.message)
@@ -169,17 +159,19 @@ export default function Ingresos() {
       }
     }
 
-    // Calcular neto, IVA y bruto
-    const montoBruto = v.montoTotal || 0
-    const ivaTotal = v.ivaTotal || 0
-    const montoNeto = Math.round(montoBruto - ivaTotal)
+    // Usar los valores calculados por el backend si existen, sino calcular
+    const montoNeto = v.montoNeto ? Math.round(v.montoNeto) : Math.round((v.montoTotal || 0) - (v.ivaTotal || 0))
+    const ivaTotal = v.ivaTotal ? Math.round(v.ivaTotal) : 0
+    const comision = v.comision ? Math.round(v.comision) : 0
+    const montoBruto = v.montoBruto ? Math.round(v.montoBruto) : Math.round(v.montoTotal || 0)
     
     return [
       fechaFormateada,
       primerProducto,
       `$ ${montoNeto.toLocaleString('es-CL')}`,
-      `$ ${Math.round(ivaTotal).toLocaleString('es-CL')}`,
-      `$ ${Math.round(montoBruto).toLocaleString('es-CL')}`,
+      `$ ${ivaTotal.toLocaleString('es-CL')}`,
+      `$ ${comision.toLocaleString('es-CL')}`,
+      `$ ${montoBruto.toLocaleString('es-CL')}`,
       v.metodoPago?.nombre || 'Efectivo'
     ]
   })
@@ -293,7 +285,7 @@ export default function Ingresos() {
       </Card>
 
       <Card title="Ingresos del mes" subtitle="Últimas ventas registradas">
-        <Table columns={['Fecha', 'Detalle', 'Monto Neto', 'IVA', 'Monto Bruto', 'Medio']} rows={rows} />
+        <Table columns={['Fecha', 'Detalle', 'Neto', 'IVA', 'Comisión', 'Bruto', 'Medio']} rows={rows} />
       </Card>
     </div>
   )

@@ -34,7 +34,7 @@ public class CompraService {
         compra.setFecha(LocalDateTime.now());
 
         List<DetalleCompra> detallesConCompra = new ArrayList<>();
-        BigDecimal subtotalGeneral = BigDecimal.ZERO;
+        BigDecimal montoTotal = BigDecimal.ZERO;
 
         for (DetalleCompra detalle : compra.getDetalles()) {
             detalle.setCompra(compra);
@@ -42,16 +42,11 @@ public class CompraService {
                     .multiply(BigDecimal.valueOf(detalle.getCantidad()));
             detalle.setSubtotal(subtotal);
 
-            subtotalGeneral = subtotalGeneral.add(subtotal);
+            montoTotal = montoTotal.add(subtotal);
             detallesConCompra.add(detalle);
         }
 
         compra.setDetalles(detallesConCompra);
-
-        BigDecimal ivaTotal = calcularIVA(subtotalGeneral, metodoPago.getIvaAsociado());
-        BigDecimal montoTotal = subtotalGeneral.add(ivaTotal);
-
-        compra.setIvaTotal(ivaTotal);
         compra.setMontoTotal(montoTotal);
 
         return compraRepository.save(compra);
@@ -79,14 +74,6 @@ public class CompraService {
             throw new RuntimeException("Compra no encontrada");
         }
         compraRepository.deleteById(id);
-    }
-
-    private BigDecimal calcularIVA(BigDecimal monto, Integer porcentajeIva) {
-        if (porcentajeIva == null || porcentajeIva == 0) {
-            return BigDecimal.ZERO;
-        }
-        return monto.multiply(BigDecimal.valueOf(porcentajeIva))
-                .divide(BigDecimal.valueOf(100));
     }
 
     public List<Compra> listarCompras() {

@@ -25,15 +25,25 @@ public class Venta {
     @Column(nullable = false)
     private LocalDateTime fecha = LocalDateTime.now();
 
+    @Column(name = "monto_neto", precision = 10, scale = 2)
+    private BigDecimal montoNeto;
+
+    @Column(name = "iva_total", precision = 10, scale = 2)
+    private BigDecimal ivaTotal;
+
+    @Column(name = "comision", precision = 10, scale = 2)
+    private BigDecimal comision;
+
+    @Column(name = "monto_bruto", nullable = false, precision = 10, scale = 2)
+    private BigDecimal montoBruto;
+
+    // Este campo lo mantenemos por compatibilidad, pero ahora usamos montoBruto
     @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
     private BigDecimal montoTotal;
 
     @ManyToOne
     @JoinColumn(name = "id_metodo_pago")
     private MetodoPago metodoPago;
-
-    @Column(name = "iva_total", precision = 10, scale = 2)
-    private BigDecimal ivaTotal;
 
     @Column(columnDefinition = "TEXT")
     private String observaciones;

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +20,9 @@ public class VentaService {
     private final MetodoPagoRepository metodoPagoRepository;
     private final ProductoRepository productoRepository;
     private final InventarioRepository inventarioRepository;
+
+    // Constante para la comisión: 2.30%
+    private static final BigDecimal PORCENTAJE_COMISION = new BigDecimal("2.30");
 
     @Transactional
     public Venta registrarVenta(Venta venta) {
@@ -35,6 +39,7 @@ public class VentaService {
             venta.setFecha(LocalDateTime.now());
         }
 
+        // Calcular subtotal general (suma de todos los detalles)
         BigDecimal subtotalGeneral = BigDecimal.ZERO;
         List<DetalleVenta> detallesConVenta = new ArrayList<>();
 
@@ -57,21 +62,60 @@ public class VentaService {
 
         venta.setDetalles(detallesConVenta);
 
-        // El precio ya incluye IVA, extraemos el IVA del total
-        BigDecimal montoTotal = subtotalGeneral;
-        BigDecimal ivaTotal;
+        // CÁLCULOS FINANCIEROS:
+        // 1. El precio de venta YA incluye IVA (precio bruto)
+        BigDecimal montoBruto = subtotalGeneral;
 
-        if (metodoPago.getIvaAsociado() != null && metodoPago.getIvaAsociado() > 0) {
-            BigDecimal factorIva = BigDecimal.ONE.add(
-                    BigDecimal.valueOf(metodoPago.getIvaAsociado()).divide(BigDecimal.valueOf(100))
-            );
-            ivaTotal = montoTotal.subtract(montoTotal.divide(factorIva, 2, java.math.RoundingMode.HALF_UP));
-        } else {
-            ivaTotal = BigDecimal.ZERO;
+        // 2. Calcular comisión SOLO si es pago con tarjeta (2.30% sobre el MONTO BRUTO)
+        BigDecimal comisionTotal = BigDecimal.ZERO;
+
+        if (esPagoConTarjeta(metodoPago.getNombre())) {
+            // Comisión sobre el MONTO BRUTO (total de la transacción)
+            BigDecimal comisionNeta = montoBruto.multiply(PORCENTAJE_COMISION)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            // IVA sobre la comisión
+            BigDecimal ivaComision;
+            if (metodoPago.getIvaAsociado() != null && metodoPago.getIvaAsociado() > 0) {
+                ivaComision = comisionNeta.multiply(BigDecimal.valueOf(metodoPago.getIvaAsociado()))
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            } else {
+                ivaComision = BigDecimal.ZERO;
+            }
+
+            // Comisión total (comisión neta + IVA de la comisión)
+            comisionTotal = comisionNeta.add(ivaComision);
         }
 
-        venta.setIvaTotal(ivaTotal);
-        venta.setMontoTotal(montoTotal);
+        // 3. Extraer el IVA del precio bruto (IVA del producto, no de la comisión)
+        BigDecimal ivaTotal;
+        BigDecimal montoSinIva;
+
+        if (metodoPago.getIvaAsociado() != null && metodoPago.getIvaAsociado() > 0) {
+            // Factor IVA: 1 + (IVA/100). Ej: 1.19 para IVA 19%
+            BigDecimal factorIva = BigDecimal.ONE.add(
+                    BigDecimal.valueOf(metodoPago.getIvaAsociado()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+            );
+
+            // Monto sin IVA = Bruto / Factor IVA
+            montoSinIva = montoBruto.divide(factorIva, 2, RoundingMode.HALF_UP);
+
+            // IVA del producto = Bruto - Sin IVA
+            ivaTotal = montoBruto.subtract(montoSinIva);
+        } else {
+            ivaTotal = BigDecimal.ZERO;
+            montoSinIva = montoBruto;
+        }
+
+        // 4. Monto Neto FINAL = Monto sin IVA del producto - Comisión total
+        BigDecimal montoNeto = montoSinIva.subtract(comisionTotal);
+
+        // Guardar todos los valores calculados
+        venta.setMontoNeto(montoNeto);      // Lo que realmente recibes
+        venta.setIvaTotal(ivaTotal);        // IVA del producto
+        venta.setComision(comisionTotal);   // Comisión calculada sobre monto bruto
+        venta.setMontoBruto(montoBruto);
+        venta.setMontoTotal(montoBruto);    // Para compatibilidad
 
         return ventaRepository.save(venta);
     }
@@ -104,7 +148,7 @@ public class VentaService {
         // Limpiar detalles antiguos
         venta.getDetalles().clear();
 
-        // Agregar nuevos detalles
+        // Agregar nuevos detalles y recalcular
         BigDecimal subtotalGeneral = BigDecimal.ZERO;
         for (DetalleVenta detalle : ventaActualizada.getDetalles()) {
             Producto producto = productoRepository.findById(detalle.getProducto().getIdProducto())
@@ -123,21 +167,50 @@ public class VentaService {
             actualizarInventario(producto.getIdProducto(), detalle.getCantidad());
         }
 
-        // Recalcular totales
-        BigDecimal montoTotal = subtotalGeneral;
+        // Recalcular todos los montos
+        BigDecimal montoBruto = subtotalGeneral;
+
+        // Calcular comisión sobre el MONTO BRUTO
+        BigDecimal comisionTotal = BigDecimal.ZERO;
+
+        if (esPagoConTarjeta(venta.getMetodoPago().getNombre())) {
+            BigDecimal comisionNeta = montoBruto.multiply(PORCENTAJE_COMISION)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            BigDecimal ivaComision;
+            if (venta.getMetodoPago().getIvaAsociado() != null && venta.getMetodoPago().getIvaAsociado() > 0) {
+                ivaComision = comisionNeta.multiply(BigDecimal.valueOf(venta.getMetodoPago().getIvaAsociado()))
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+            } else {
+                ivaComision = BigDecimal.ZERO;
+            }
+
+            comisionTotal = comisionNeta.add(ivaComision);
+        }
+
+        // Extraer IVA del producto
         BigDecimal ivaTotal;
+        BigDecimal montoSinIva;
 
         if (venta.getMetodoPago().getIvaAsociado() != null && venta.getMetodoPago().getIvaAsociado() > 0) {
             BigDecimal factorIva = BigDecimal.ONE.add(
-                    BigDecimal.valueOf(venta.getMetodoPago().getIvaAsociado()).divide(BigDecimal.valueOf(100))
+                    BigDecimal.valueOf(venta.getMetodoPago().getIvaAsociado()).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
             );
-            ivaTotal = montoTotal.subtract(montoTotal.divide(factorIva, 2, java.math.RoundingMode.HALF_UP));
+            montoSinIva = montoBruto.divide(factorIva, 2, RoundingMode.HALF_UP);
+            ivaTotal = montoBruto.subtract(montoSinIva);
         } else {
             ivaTotal = BigDecimal.ZERO;
+            montoSinIva = montoBruto;
         }
 
+        // Monto Neto = Monto sin IVA - Comisión
+        BigDecimal montoNeto = montoSinIva.subtract(comisionTotal);
+
+        venta.setMontoNeto(montoNeto);
         venta.setIvaTotal(ivaTotal);
-        venta.setMontoTotal(montoTotal);
+        venta.setComision(comisionTotal);
+        venta.setMontoBruto(montoBruto);
+        venta.setMontoTotal(montoBruto);
 
         return ventaRepository.save(venta);
     }
@@ -170,6 +243,23 @@ public class VentaService {
             inventario.setFechaActualizacion(LocalDateTime.now());
             inventarioRepository.save(inventario);
         }
+    }
+
+    /**
+     * Verifica si el método de pago es con tarjeta (crédito o débito)
+     */
+    private boolean esPagoConTarjeta(String nombreMetodoPago) {
+        if (nombreMetodoPago == null) {
+            return false;
+        }
+
+        String nombreLower = nombreMetodoPago.toLowerCase();
+        return nombreLower.contains("tarjeta") ||
+                nombreLower.contains("crédito") ||
+                nombreLower.contains("credito") ||
+                nombreLower.contains("débito") ||
+                nombreLower.contains("debito") ||
+                nombreLower.contains("prepago");
     }
 
     public List<Venta> listarVentas() {

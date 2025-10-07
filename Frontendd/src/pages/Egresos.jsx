@@ -53,8 +53,6 @@ export default function Egresos() {
     }
 
     try {
-      const metodoPago = metodosPago.find(m => m.idMetodoPago === parseInt(formCompra.idMetodoPago))
-
       const compraData = {
         fecha: new Date(formCompra.fecha).toISOString(),
         metodoPago: { 
@@ -162,7 +160,7 @@ export default function Egresos() {
     }
   }
 
-  // Combinar compras y gastos para la tabla con cálculo de neto, IVA y bruto
+  // Combinar compras y gastos para la tabla - SIMPLIFICADO
   const rowsEgresos = [...compras, ...gastos]
     .sort((a, b) => {
       const fechaA = Array.isArray(a.fecha) ? new Date(a.fecha[0], a.fecha[1] - 1, a.fecha[2]) : new Date(a.fecha)
@@ -185,19 +183,17 @@ export default function Egresos() {
         }
       }
 
-      // Calcular bruto, IVA y neto
-      const montoBruto = esCompra ? (item.montoTotal || 0) : (item.monto || 0)
-      const ivaTotal = esCompra ? (item.ivaTotal || 0) : 0
-      const montoNeto = Math.round(montoBruto - ivaTotal)
+      // Monto total (lo que se pagó)
+      const monto = esCompra 
+        ? Math.round(item.montoTotal || 0)
+        : Math.round(item.monto || 0)
       
       return [
         fechaFormateada,
         esCompra 
           ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
           : item.descripcion,
-        `$ ${montoNeto.toLocaleString('es-CL')}`,
-        `$ ${Math.round(ivaTotal).toLocaleString('es-CL')}`,
-        `$ ${Math.round(montoBruto).toLocaleString('es-CL')}`,
+        `$ ${monto.toLocaleString('es-CL')}`,
         item.metodoPago?.nombre || 'N/A'
       ]
     })
@@ -353,7 +349,7 @@ export default function Egresos() {
       </Card>
       
       <Card title="Egresos del mes" subtitle="Últimos egresos registrados">
-        <Table columns={["Fecha", "Detalle", "Monto Neto", "IVA", "Monto Bruto", "Método"]} rows={rowsEgresos} />
+        <Table columns={["Fecha", "Detalle", "Monto", "Método"]} rows={rowsEgresos} />
       </Card>
     </div>
   )
