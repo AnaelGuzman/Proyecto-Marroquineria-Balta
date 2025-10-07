@@ -65,13 +65,11 @@ export default function Egresos() {
           descripcion: formCompra.descripcion,
           cantidad: parseInt(formCompra.cantidad),
           precioUnitario: parseFloat(formCompra.precioUnitario)
-          // El backend calcula subtotal/monto/iva
         }]
       }
 
       console.log('Enviando compra:', JSON.stringify(compraData, null, 2))
 
-      // Enviar la compra (sin parsear la respuesta porque puede tener referencias circulares)
       await fetch('http://localhost:8080/api/compras', {
         method: 'POST',
         headers: { 
@@ -84,24 +82,8 @@ export default function Egresos() {
         return r
       })
 
-      // Construir la compra localmente para mostrarla en la tabla
-      const nuevaCompra = {
-        fecha: new Date(formCompra.fecha).toISOString(),
-        metodoPago: metodoPago,
-        observaciones: formCompra.observaciones,
-        detalles: [{
-          descripcion: formCompra.descripcion,
-          cantidad: formCompra.cantidad,
-          precioUnitario: formCompra.precioUnitario
-        }]
-      }
-
-      // Aquí podrías añadirla a tu estado local o recargar
-      // por ejemplo si usas un setCompras([...compras, nuevaCompra])
-
       alert('Compra registrada exitosamente')
 
-      // Resetear formulario
       setFormCompra({
         descripcion: '',
         cantidad: 1,
@@ -111,14 +93,12 @@ export default function Egresos() {
         observaciones: ''
       })
 
-      // Volver a cargar datos de la tabla
       cargarDatos()
     } catch (error) {
       console.error('Error completo:', error)
       alert('Error al registrar la compra: ' + error.message)
     }
   }
-
 
   const handleGuardarGasto = async () => {
     if (!formGasto.descripcion || !formGasto.idMetodoPago || formGasto.monto <= 0) {
@@ -182,7 +162,7 @@ export default function Egresos() {
     }
   }
 
-  // Combinar compras y gastos para la tabla con manejo de fechas
+  // Combinar compras y gastos para la tabla con cálculo de neto, IVA y bruto
   const rowsEgresos = [...compras, ...gastos]
     .sort((a, b) => {
       const fechaA = Array.isArray(a.fecha) ? new Date(a.fecha[0], a.fecha[1] - 1, a.fecha[2]) : new Date(a.fecha)
@@ -204,13 +184,20 @@ export default function Egresos() {
           fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
         }
       }
+
+      // Calcular bruto, IVA y neto
+      const montoBruto = esCompra ? (item.montoTotal || 0) : (item.monto || 0)
+      const ivaTotal = esCompra ? (item.ivaTotal || 0) : 0
+      const montoNeto = Math.round(montoBruto - ivaTotal)
       
       return [
         fechaFormateada,
         esCompra 
           ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
           : item.descripcion,
-        `$ ${(esCompra ? item.montoTotal : item.monto || 0).toLocaleString('es-CL')}`,
+        `$ ${montoNeto.toLocaleString('es-CL')}`,
+        `$ ${Math.round(ivaTotal).toLocaleString('es-CL')}`,
+        `$ ${Math.round(montoBruto).toLocaleString('es-CL')}`,
         item.metodoPago?.nombre || 'N/A'
       ]
     })
@@ -366,7 +353,7 @@ export default function Egresos() {
       </Card>
       
       <Card title="Egresos del mes" subtitle="Últimos egresos registrados">
-        <Table columns={["Fecha", "Detalle", "Monto", "Método"]} rows={rowsEgresos} />
+        <Table columns={["Fecha", "Detalle", "Monto Neto", "IVA", "Monto Bruto", "Método"]} rows={rowsEgresos} />
       </Card>
     </div>
   )

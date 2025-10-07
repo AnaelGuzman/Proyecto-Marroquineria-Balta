@@ -9,14 +9,13 @@ export default function Ingresos() {
   const [ventas, setVentas] = useState([])
   const [loading, setLoading] = useState(true)
   
-  // Actualiza el estado inicial con categoriaId
   const [formData, setFormData] = useState({
     idProducto: '',
     cantidad: 1,
     idMetodoPago: '',
     fecha: new Date().toISOString().split('T')[0],
     observaciones: '',
-    categoriaId: '' // Nuevo campo para la categoría
+    categoriaId: ''
   })
 
   useEffect(() => {
@@ -25,7 +24,6 @@ export default function Ingresos() {
 
   const cargarDatos = async () => {
     try {
-      // Cargar uno por uno para identificar cuál falla
       const prods = await api.productos.getAll().catch(err => {
         console.error('Error cargando productos:', err)
         return []
@@ -41,7 +39,6 @@ export default function Ingresos() {
         return []
       })
       
-      // Las ventas pueden fallar por referencias circulares
       const vents = await api.ventas.getAll().catch(err => {
         console.error('Error cargando ventas (esperado):', err)
         return []
@@ -81,7 +78,6 @@ export default function Ingresos() {
 
       console.log('Enviando venta:', JSON.stringify(ventaData, null, 2))
       
-      // Enviar la venta pero NO usar la respuesta porque tiene referencias circulares
       await fetch('http://localhost:8080/api/ventas', {
         method: 'POST',
         headers: { 
@@ -91,11 +87,9 @@ export default function Ingresos() {
         body: JSON.stringify(ventaData)
       }).then(r => {
         if (!r.ok) throw new Error(`Error ${r.status}`)
-        // No parseamos el JSON, solo verificamos que fue exitoso
         return r
       })
       
-      // Construir la venta localmente para mostrarla en la tabla
       const nuevaVenta = {
         fecha: new Date(formData.fecha).toISOString(),
         montoTotal: producto.precio * formData.cantidad,
@@ -117,7 +111,7 @@ export default function Ingresos() {
         idMetodoPago: '',
         fecha: new Date().toISOString().split('T')[0],
         observaciones: '',
-        categoriaId: '' // Reiniciar categoriaId
+        categoriaId: ''
       })
     } catch (error) {
       console.error('Error completo:', error)
@@ -136,7 +130,7 @@ export default function Ingresos() {
       idMetodoPago: '',
       fecha: new Date().toISOString().split('T')[0],
       observaciones: '',
-      categoriaId: '' // Resetear también la categoría
+      categoriaId: ''
     })
   }
 
@@ -159,16 +153,14 @@ export default function Ingresos() {
   const rows = ventas.slice(-10).reverse().map(v => {
     const primerProducto = v.detalles && v.detalles.length > 0 ? v.detalles[0].producto?.nombre : 'N/A'
     
-    // Manejar fecha que viene como array [año, mes, día, hora, min, seg, nano]
+    // Manejar fecha que viene como array
     let fechaFormateada = 'N/A'
     if (v.fecha) {
       try {
         if (Array.isArray(v.fecha)) {
-          // Convertir array a Date (mes en JS es 0-indexed, por eso restamos 1)
           const fecha = new Date(v.fecha[0], v.fecha[1] - 1, v.fecha[2])
           fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
         } else {
-          // Si viene como string ISO
           const fecha = new Date(v.fecha)
           fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
         }
@@ -176,11 +168,18 @@ export default function Ingresos() {
         console.error('Error formateando fecha:', e)
       }
     }
+
+    // Calcular neto, IVA y bruto
+    const montoBruto = v.montoTotal || 0
+    const ivaTotal = v.ivaTotal || 0
+    const montoNeto = Math.round(montoBruto - ivaTotal)
     
     return [
       fechaFormateada,
       primerProducto,
-      `$ ${(v.montoTotal || 0).toLocaleString('es-CL')}`,
+      `$ ${montoNeto.toLocaleString('es-CL')}`,
+      `$ ${Math.round(ivaTotal).toLocaleString('es-CL')}`,
+      `$ ${Math.round(montoBruto).toLocaleString('es-CL')}`,
       v.metodoPago?.nombre || 'Efectivo'
     ]
   })
@@ -201,14 +200,12 @@ export default function Ingresos() {
                 const selectedProductId = e.target.value;
                 if (selectedProductId) {
                   const producto = productos.find(p => p.idProducto === parseInt(selectedProductId));
-                  // Actualiza el producto y la categoría asociada automáticamente
                   setFormData({
                     ...formData,
                     idProducto: selectedProductId,
                     categoriaId: producto?.categoria?.idCategoria || ''
                   });
                 } else {
-                  // Si no hay producto seleccionado, resetea categoría también
                   setFormData({
                     ...formData, 
                     idProducto: '',
@@ -296,7 +293,7 @@ export default function Ingresos() {
       </Card>
 
       <Card title="Ingresos del mes" subtitle="Últimas ventas registradas">
-        <Table columns={['Fecha', 'Detalle', 'Monto', 'Medio']} rows={rows} />
+        <Table columns={['Fecha', 'Detalle', 'Monto Neto', 'IVA', 'Monto Bruto', 'Medio']} rows={rows} />
       </Card>
     </div>
   )
