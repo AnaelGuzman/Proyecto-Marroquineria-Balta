@@ -9,12 +9,14 @@ export default function Ingresos() {
   const [ventas, setVentas] = useState([])
   const [loading, setLoading] = useState(true)
   
+  // Actualiza el estado inicial con categoriaId
   const [formData, setFormData] = useState({
     idProducto: '',
     cantidad: 1,
     idMetodoPago: '',
     fecha: new Date().toISOString().split('T')[0],
-    observaciones: ''
+    observaciones: '',
+    categoriaId: '' // Nuevo campo para la categoría
   })
 
   useEffect(() => {
@@ -114,7 +116,8 @@ export default function Ingresos() {
         cantidad: 1,
         idMetodoPago: '',
         fecha: new Date().toISOString().split('T')[0],
-        observaciones: ''
+        observaciones: '',
+        categoriaId: '' // Reiniciar categoriaId
       })
     } catch (error) {
       console.error('Error completo:', error)
@@ -132,7 +135,8 @@ export default function Ingresos() {
       cantidad: 1,
       idMetodoPago: '',
       fecha: new Date().toISOString().split('T')[0],
-      observaciones: ''
+      observaciones: '',
+      categoriaId: '' // Resetear también la categoría
     })
   }
 
@@ -193,7 +197,25 @@ export default function Ingresos() {
             <label className="field-label">Nombre del producto</label>
             <select 
               value={formData.idProducto}
-              onChange={(e) => setFormData({ ...formData, idProducto: e.target.value })}
+              onChange={(e) => {
+                const selectedProductId = e.target.value;
+                if (selectedProductId) {
+                  const producto = productos.find(p => p.idProducto === parseInt(selectedProductId));
+                  // Actualiza el producto y la categoría asociada automáticamente
+                  setFormData({
+                    ...formData,
+                    idProducto: selectedProductId,
+                    categoriaId: producto?.categoria?.idCategoria || ''
+                  });
+                } else {
+                  // Si no hay producto seleccionado, resetea categoría también
+                  setFormData({
+                    ...formData, 
+                    idProducto: '',
+                    categoriaId: ''
+                  });
+                }
+              }}
             >
               <option value="">Seleccionar producto</option>
               {productos.map(p => (
@@ -206,7 +228,11 @@ export default function Ingresos() {
 
           <div className="field col-6">
             <label className="field-label">Categoría</label>
-            <select defaultValue="">
+            <select 
+              value={formData.categoriaId} 
+              onChange={(e) => setFormData({ ...formData, categoriaId: e.target.value })}
+              disabled={formData.idProducto !== ''}
+            >
               <option value="">Seleccionar</option>
               {categorias.map(c => (
                 <option key={c.idCategoria} value={c.idCategoria}>{c.nombre}</option>
