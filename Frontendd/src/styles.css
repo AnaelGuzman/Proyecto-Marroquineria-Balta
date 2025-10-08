@@ -209,6 +209,16 @@ input[type="number"]{ -moz-appearance: textfield; }
 
 /* Si dentro de un field hay un contenedor flex (ej. + - input), lo alineamos */
 .field > div { display: flex; align-items: center; gap: 12px; }
+.field > div.quantity-control {
+  gap: 6px; /* Menos espacio entre botones e input */
+}
+
+.quantity-control input {
+  max-width: 250px; /* Limita el ancho del input de cantidad */
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  text-align: center;
+}
 
 /* mobile / grid helpers */
 @media(min-width:900px){
@@ -306,10 +316,37 @@ table.table tbody tr:nth-child(even){background:hsl(0, 0%, 96%)}
   }
   .btn,
   .btn.ghost{
-    min-height:2.4rem;
-    padding:0.45rem 0.5rem;
-    font-size:0.88rem;
+    min-height:1.8rem;
+    height:auto;
+    padding:0.25rem 0.5rem;
+    font-size:0.85rem;
   }
+  
+  .field > div .btn,
+  .toolbar .btn{
+    min-height:1.6rem;
+    height:auto;
+    padding:0.25rem 0.6rem;
+    font-size:0.8rem;
+  }
+  
+  /* Botones de incremento/decremento más pequeños */
+  .btn.ghost[aria-label="Restar"],
+  .btn.ghost[aria-label="Sumar"] {
+    min-height:1.5rem;
+    height:1.5rem;
+    width:1.5rem;
+    padding:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  
+  /* Ajuste para botones en la barra de herramientas */
+  .toolbar {
+    gap:0.4rem;
+  }
+  
   textarea{
     min-height:4.5rem;
   }
@@ -326,4 +363,191 @@ table.table tbody tr:nth-child(even){background:hsl(0, 0%, 96%)}
     font-size:0.72rem;
     line-height:1.25;
   }
+  
+  /* Reducir el espacio horizontal en las tablas */
+  table.table thead th,
+  table.table td {
+    padding: 0.5rem 0.35rem;
+    font-size: 0.75rem;
+  }
+  
+  /* Hacer que las tablas tengan scroll horizontal en móvil */
+  .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Ajustes para la página de ventas específicamente */
+  .large-text .form-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .large-text .btn,
+  .large-text .btn.ghost {
+    min-height: 1.9rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+  }
+  
+  .large-text input,
+  .large-text select {
+    min-height: 2rem;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .large-text .field-label {
+    margin-bottom: 0;
+  }
+  
+  /* Permite más espacio para el contenido */
+  .stack.large-text {
+    gap: 0.7rem;
+  }
+  
+  /* Tamaño de tarjeta más compacto */
+  .large-text .card-body {
+    padding: 0.7rem;
+  }
+  
+  /* Adaptaciones específicas para la tabla de ventas */
+  .large-text table.table th:nth-child(4),
+  .large-text table.table td:nth-child(4),
+  .large-text table.table th:nth-child(5),
+  .large-text table.table td:nth-child(5) {
+    display: none; /* Oculta columnas IVA y Comisión en móvil */
+  }
 }
+
+/* Para tablets pequeñas */
+@media(min-width:600px) and (max-width:899px) {
+  .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Estilos para react-select - alineado con otros campos */
+.field .css-13cymwt-control,
+.field .css-t3ipsp-control,
+.field .css-1mnk8g1-control {
+  min-height: 62px !important;
+  height: 62px !important;
+  width: 100% !important;
+  font-size: 1.18rem !important;
+  background: rgb(241, 237, 232) !important;
+  border: 1px solid transparent !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Contenedor principal de react-select */
+.field > div[class*="css-"] {
+  width: 100% !important;
+}
+
+/* Ajustar el contenedor de valores de react-select */
+.field .css-hlgwow,
+.field .css-1wy0on6 {
+  padding: 0 1.1rem !important;
+  margin: 0 !important;
+  height: 62px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.field .css-1dimb5e-singleValue {
+  font-size: 1.18rem !important;
+  color: var(--text) !important;
+  margin: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.field .css-1jqq78o-placeholder {
+  font-size: 1.18rem !important;
+  color: #9aa3ad !important;
+  margin: 0 !important;
+}
+
+/* Evitar cambios de tamaño al seleccionar */
+.field .css-13cymwt-control:hover,
+.field .css-t3ipsp-control:hover,
+.field .css-1mnk8g1-control:hover,
+.field .css-13cymwt-control--is-focused,
+.field .css-t3ipsp-control--is-focused,
+.field .css-1mnk8g1-control--is-focused {
+  min-height: 62px !important;
+  height: 62px !important;
+  width: 100% !important;
+  border: 1px solid transparent !important;
+  box-shadow: none !important;
+  transition: none !important;
+}
+
+/* Indicadores de react-select (flechas, clear) */
+.field .css-1xc3v61-indicatorContainer,
+.field .css-15lsz6c-indicatorContainer {
+  padding: 8px !important;
+}
+
+@media(max-width:599px) {
+  .quantity-control input {
+    max-width: 60px;
+    min-width: 50px;
+  }
+  
+  .field > div.quantity-control {
+    gap: 4px;
+  }
+  
+  /* React-select en móvil - ajustado al tamaño de otros campos */
+  .field .css-13cymwt-control,
+  .field .css-t3ipsp-control,
+  .field .css-1mnk8g1-control,
+  .field .css-13cymwt-control:hover,
+  .field .css-t3ipsp-control:hover,
+  .field .css-1mnk8g1-control:hover,
+  .field .css-13cymwt-control--is-focused,
+  .field .css-t3ipsp-control--is-focused,
+  .field .css-1mnk8g1-control--is-focused {
+    min-height: 2.4rem !important;
+    height: 2.4rem !important;
+    max-height: 2.4rem !important;
+    width: 100% !important;
+    font-size: 0.85rem !important;
+  }
+  
+  .field .css-hlgwow,
+  .field .css-1wy0on6 {
+    padding: 0.35rem 0.55rem !important;
+    height: 2.4rem !important;
+    min-height: 2.4rem !important;
+  }
+  
+  .field .css-1dimb5e-singleValue {
+    font-size: 0.85rem !important;
+  }
+  
+  .field .css-1jqq78o-placeholder {
+    font-size: 0.85rem !important;
+  }
+  
+  .field .css-1xc3v61-indicatorContainer,
+  .field .css-15lsz6c-indicatorContainer {
+    padding: 4px !important;
+  }
+  
+  /* Ajustar el input interno de react-select */
+  .field .css-1dimb5e-singleValue,
+  .field .css-qbdosj-Input,
+  .field input[type="text"] {
+    font-size: 0.85rem !important;
+    line-height: 1 !important;
+  }
+}
+

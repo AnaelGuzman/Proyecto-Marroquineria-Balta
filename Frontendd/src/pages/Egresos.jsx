@@ -247,15 +247,14 @@ export default function Egresos() {
             </div>
             <div className="field col-6">
               <label className="field-label">Cantidad</label>
-              <div>
+              <div className="quantity-control">
                 <Button variant="ghost" aria-label="Restar" onClick={decrementarCantidad}>−</Button>
                 <input 
                   type="number" 
                   value={formCompra.cantidad} 
                   onChange={(e) => setFormCompra({ ...formCompra, cantidad: parseInt(e.target.value) || 1 })}
                   min={1} 
-                  step={1} 
-                  style={{ flex: 1, padding: '0 .6rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '1.05rem' }} 
+                  step={1}
                 />
                 <Button variant="ghost" aria-label="Sumar" onClick={incrementarCantidad}>+</Button>
               </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import Select from 'react-select'
 import { Card, Toolbar, Button, Table } from '../components/UI.jsx'
 import { api } from '../services/api/index.js'
 
@@ -176,6 +177,146 @@ export default function Ingresos() {
     ]
   })
 
+  // Opciones para react-select
+  const productOptions = productos.map(p => ({
+    value: p.idProducto,
+    label: `${p.nombre} - $${p.precio?.toLocaleString('es-CL')}`,
+    producto: p
+  }))
+
+  const customStyles = {
+    container: (provided) => ({
+      ...provided,
+      width: '100%'
+    }),
+    control: (provided, state) => ({
+      ...provided,
+      minHeight: '62px',
+      height: '62px',
+      width: '100%',
+      fontSize: '1.18rem',
+      background: 'rgb(241, 237, 232)',
+      border: '1px solid transparent',
+      borderRadius: '8px',
+      boxShadow: 'none',
+      transition: 'none',
+      '&:hover': {
+        border: '1px solid transparent',
+        boxShadow: 'none'
+      }
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: '0 1.1rem',
+      height: '62px',
+      display: 'flex',
+      alignItems: 'center'
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      margin: 0,
+      maxWidth: '100%',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }),
+    input: (provided) => ({
+      ...provided,
+      margin: 0,
+      padding: 0
+    }),
+    menu: (provided) => ({
+      ...provided,
+      fontSize: '1.18rem',
+      zIndex: 9999
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      fontSize: '1.05rem',
+      padding: '0.8rem 1rem'
+    })
+  }
+
+  const customStylesMobile = {
+    container: (provided) => ({
+      ...provided,
+      width: '100%'
+    }),
+    control: (provided, state) => ({
+      ...provided,
+      minHeight: '2.4rem',
+      height: '2.4rem',
+      maxHeight: '2.4rem',
+      width: '100%',
+      fontSize: '0.85rem',
+      background: 'rgb(241, 237, 232)',
+      border: '1px solid transparent',
+      borderRadius: '8px',
+      boxShadow: 'none',
+      transition: 'none',
+      overflow: 'hidden',
+      '&:hover': {
+        border: '1px solid transparent',
+        boxShadow: 'none'
+      }
+    }),
+    valueContainer: (provided) => ({
+      ...provided,
+      padding: '0.35rem 0.55rem',
+      height: '2.4rem',
+      minHeight: '2.4rem',
+      display: 'flex',
+      alignItems: 'center'
+    }),
+    singleValue: (provided) => ({
+      ...provided,
+      margin: 0,
+      fontSize: '0.85rem',
+      lineHeight: '1',
+      maxWidth: '100%',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    }),
+    input: (provided) => ({
+      ...provided,
+      margin: 0,
+      padding: 0,
+      fontSize: '0.85rem',
+      lineHeight: '1'
+    }),
+    placeholder: (provided) => ({
+      ...provided,
+      fontSize: '0.85rem',
+      lineHeight: '1'
+    }),
+    indicatorsContainer: (provided) => ({
+      ...provided,
+      height: '2.4rem'
+    }),
+    dropdownIndicator: (provided) => ({
+      ...provided,
+      padding: '4px'
+    }),
+    clearIndicator: (provided) => ({
+      ...provided,
+      padding: '4px'
+    }),
+    menu: (provided) => ({
+      ...provided,
+      fontSize: '0.85rem',
+      zIndex: 9999
+    }),
+    option: (provided, state) => ({
+      ...provided,
+      fontSize: '0.8rem',
+      padding: '0.5rem 0.6rem'
+    })
+  }
+
+  // Detectar si es móvil
+  const isMobile = window.innerWidth <= 599
+
   if (loading) {
     return <div className="stack large-text"><Card title="Cargando..."><p>Obteniendo datos...</p></Card></div>
   }
@@ -186,33 +327,31 @@ export default function Ingresos() {
         <div className="form-grid">
           <div className="field col-6">
             <label className="field-label">Nombre del producto</label>
-            <select 
-              value={formData.idProducto}
-              onChange={(e) => {
-                const selectedProductId = e.target.value;
-                if (selectedProductId) {
-                  const producto = productos.find(p => p.idProducto === parseInt(selectedProductId));
+            <Select
+              options={productOptions}
+              placeholder="Buscar producto..."
+              isClearable
+              isSearchable
+              styles={isMobile ? customStylesMobile : customStyles}
+              noOptionsMessage={() => "No se encontraron productos"}
+              value={productOptions.find(opt => opt.value === parseInt(formData.idProducto)) || null}
+              onChange={(selectedOption) => {
+                if (selectedOption) {
+                  const producto = selectedOption.producto
                   setFormData({
                     ...formData,
-                    idProducto: selectedProductId,
+                    idProducto: selectedOption.value.toString(),
                     categoriaId: producto?.categoria?.idCategoria || ''
-                  });
+                  })
                 } else {
                   setFormData({
                     ...formData, 
                     idProducto: '',
                     categoriaId: ''
-                  });
+                  })
                 }
               }}
-            >
-              <option value="">Seleccionar producto</option>
-              {productos.map(p => (
-                <option key={p.idProducto} value={p.idProducto}>
-                  {p.nombre} - ${p.precio?.toLocaleString('es-CL')}
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           <div className="field col-6">
@@ -240,7 +379,7 @@ export default function Ingresos() {
 
           <div className="field col-6">
             <label className="field-label">Cantidad</label>
-            <div>
+            <div className="quantity-control">
               <Button variant="ghost" aria-label="Restar" onClick={decrementarCantidad}>−</Button>
               <input 
                 type="number" 
@@ -248,7 +387,6 @@ export default function Ingresos() {
                 onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 1 })}
                 min={1} 
                 step={1} 
-                style={{ flex: 1, padding: '0 .6rem', borderRadius: 10, border: '1px solid var(--border)', fontSize: '1.05rem' }} 
               />
               <Button variant="ghost" aria-label="Sumar" onClick={incrementarCantidad}>+</Button>
             </div>
