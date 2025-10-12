@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +49,30 @@ public class CompraService {
 
         compra.setDetalles(detallesConCompra);
         compra.setMontoTotal(montoTotal);
+
+        // Usar el tipo de documento que viene del frontend
+        String tipoDocumento = compra.getTipoDocumento();
+        if (tipoDocumento == null || tipoDocumento.trim().isEmpty()) {
+            tipoDocumento = "sin-documento";
+        }
+
+        // Calcular IVA según tipo de documento
+        BigDecimal ivaTotal;
+        BigDecimal montoNeto;
+
+        if ("factura".equals(tipoDocumento)) {
+            // Con factura: IVA es recuperable
+            // Monto neto = Total / 1.19
+            montoNeto = montoTotal.divide(new BigDecimal("1.19"), 2, RoundingMode.HALF_UP);
+            ivaTotal = montoTotal.subtract(montoNeto);
+        } else {
+            // Con boleta o sin documento: IVA NO es recuperable
+            ivaTotal = BigDecimal.ZERO;
+            montoNeto = montoTotal;
+        }
+
+        compra.setMontoNeto(montoNeto);
+        compra.setIvaTotal(ivaTotal);
 
         return compraRepository.save(compra);
     }

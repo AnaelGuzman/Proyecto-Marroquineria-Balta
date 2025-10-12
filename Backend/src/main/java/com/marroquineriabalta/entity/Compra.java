@@ -28,6 +28,15 @@ public class Compra {
     @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
     private BigDecimal montoTotal;
 
+    @Column(name = "monto_neto", precision = 10, scale = 2)
+    private BigDecimal montoNeto;
+
+    @Column(name = "iva_total", precision = 10, scale = 2)
+    private BigDecimal ivaTotal;
+
+    @Column(name = "tipo_documento", length = 20)
+    private String tipoDocumento;
+
     @ManyToOne
     @JoinColumn(name = "id_metodo_pago")
     private MetodoPago metodoPago;
