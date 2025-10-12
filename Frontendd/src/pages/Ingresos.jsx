@@ -9,6 +9,7 @@ export default function Ingresos() {
   const [metodosPago, setMetodosPago] = useState([])
   const [ventas, setVentas] = useState([])
   const [loading, setLoading] = useState(true)
+  const [observacionesModal, setObservacionesModal] = useState(null)
   
   const [formData, setFormData] = useState({
     idProducto: '',
@@ -102,7 +103,6 @@ export default function Ingresos() {
         categoriaId: ''
       })
       
-      // Recargar ventas
       cargarDatos()
     } catch (error) {
       console.error('Error completo:', error)
@@ -141,43 +141,6 @@ export default function Ingresos() {
     return producto ? producto.precio * formData.cantidad : 0
   }
 
-  const rows = ventas.slice(-10).reverse().map(v => {
-    const primerProducto = v.detalles && v.detalles.length > 0 ? v.detalles[0].producto?.nombre : 'N/A'
-    
-    // Manejar fecha que viene como array
-    let fechaFormateada = 'N/A'
-    if (v.fecha) {
-      try {
-        if (Array.isArray(v.fecha)) {
-          const fecha = new Date(v.fecha[0], v.fecha[1] - 1, v.fecha[2])
-          fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-        } else {
-          const fecha = new Date(v.fecha)
-          fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-        }
-      } catch (e) {
-        console.error('Error formateando fecha:', e)
-      }
-    }
-
-    // Usar los valores calculados por el backend si existen, sino calcular
-    const montoNeto = v.montoNeto ? Math.round(v.montoNeto) : Math.round((v.montoTotal || 0) - (v.ivaTotal || 0))
-    const ivaTotal = v.ivaTotal ? Math.round(v.ivaTotal) : 0
-    const comision = v.comision ? Math.round(v.comision) : 0
-    const montoBruto = v.montoBruto ? Math.round(v.montoBruto) : Math.round(v.montoTotal || 0)
-    
-    return [
-      fechaFormateada,
-      primerProducto,
-      `$ ${montoNeto.toLocaleString('es-CL')}`,
-      `$ ${ivaTotal.toLocaleString('es-CL')}`,
-      `$ ${comision.toLocaleString('es-CL')}`,
-      `$ ${montoBruto.toLocaleString('es-CL')}`,
-      v.metodoPago?.nombre || 'Efectivo'
-    ]
-  })
-
-  // Opciones para react-select
   const productOptions = productos.map(p => ({
     value: p.idProducto,
     label: `${p.nombre} - $${p.precio?.toLocaleString('es-CL')}`,
@@ -314,7 +277,6 @@ export default function Ingresos() {
     })
   }
 
-  // Detectar si es móvil
   const isMobile = window.innerWidth <= 599
 
   if (loading) {
@@ -413,6 +375,26 @@ export default function Ingresos() {
               ))}
             </select>
           </div>
+
+          <div className="field col-12">
+            <label className="field-label">Observaciones (opcional)</label>
+            <textarea 
+              value={formData.observaciones}
+              onChange={(e) => setFormData({ ...formData, observaciones: e.target.value })}
+              placeholder="Ingrese notas o comentarios adicionales sobre esta venta..."
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                fontSize: '1rem',
+                borderRadius: '8px',
+                border: '1px solid transparent',
+                background: 'rgb(241, 237, 232)',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
         </div>
 
         <Toolbar>
@@ -423,8 +405,299 @@ export default function Ingresos() {
       </Card>
 
       <Card title="Ingresos del mes" subtitle="Últimas ventas registradas">
-        <Table columns={['Fecha', 'Detalle', 'Neto', 'IVA', 'Comisión', 'Bruto', 'Medio']} rows={rows} />
+        <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgb(230, 220, 210)' }}>
+          <table style={{ 
+            width: '100%', 
+            borderCollapse: 'separate',
+            borderSpacing: 0,
+            background: 'white'
+          }}>
+            <thead>
+              <tr style={{ background: 'linear-gradient(to bottom, rgb(235, 225, 215), rgb(225, 215, 205))' }}>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'left', 
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Fecha</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Detalle</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'right',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Neto</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'right',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>IVA</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'right',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Comisión</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'right',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Bruto</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'left',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Medio</th>
+                <th style={{ 
+                  padding: '1rem 0.75rem', 
+                  textAlign: 'center',
+                  fontWeight: '600',
+                  color: 'rgb(70, 60, 50)',
+                  fontSize: '0.95rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  borderBottom: '2px solid rgb(200, 180, 160)'
+                }}>Obs</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ventas.slice(-10).reverse().map((v, idx) => {
+                const primerProducto = v.detalles && v.detalles.length > 0 ? v.detalles[0].producto?.nombre : 'N/A'
+                
+                let fechaFormateada = 'N/A'
+                if (v.fecha) {
+                  try {
+                    if (Array.isArray(v.fecha)) {
+                      const fecha = new Date(v.fecha[0], v.fecha[1] - 1, v.fecha[2])
+                      fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
+                    } else {
+                      const fecha = new Date(v.fecha)
+                      fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
+                    }
+                  } catch (e) {
+                    console.error('Error formateando fecha:', e)
+                  }
+                }
+
+                const montoNeto = v.montoNeto ? Math.round(v.montoNeto) : Math.round((v.montoTotal || 0) - (v.ivaTotal || 0))
+                const ivaTotal = v.ivaTotal ? Math.round(v.ivaTotal) : 0
+                const comision = v.comision ? Math.round(v.comision) : 0
+                const montoBruto = v.montoBruto ? Math.round(v.montoBruto) : Math.round(v.montoTotal || 0)
+                
+                return (
+                  <tr 
+                    key={idx} 
+                    style={{ 
+                      borderBottom: '1px solid rgb(240, 235, 230)',
+                      background: idx % 2 === 0 ? 'white' : 'rgb(252, 250, 248)',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgb(245, 240, 235)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'white' : 'rgb(252, 250, 248)'}
+                  >
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem',
+                      color: 'rgb(90, 80, 70)',
+                      fontSize: '0.95rem'
+                    }}>{fechaFormateada}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem',
+                      color: 'rgb(60, 50, 40)',
+                      fontWeight: '500',
+                      fontSize: '0.95rem'
+                    }}>{primerProducto}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem', 
+                      textAlign: 'right',
+                      color: 'rgb(80, 70, 60)',
+                      fontSize: '0.95rem',
+                      fontWeight: '500'
+                    }}>{`$ ${montoNeto.toLocaleString('es-CL')}`}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem', 
+                      textAlign: 'right',
+                      color: 'rgb(120, 110, 100)',
+                      fontSize: '0.9rem'
+                    }}>{`$ ${ivaTotal.toLocaleString('es-CL')}`}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem', 
+                      textAlign: 'right',
+                      color: 'rgb(120, 110, 100)',
+                      fontSize: '0.9rem'
+                    }}>{`$ ${comision.toLocaleString('es-CL')}`}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem', 
+                      textAlign: 'right',
+                      color: 'rgb(180, 140, 100)',
+                      fontWeight: '600',
+                      fontSize: '1rem'
+                    }}>{`$ ${montoBruto.toLocaleString('es-CL')}`}</td>
+                    <td style={{ 
+                      padding: '0.85rem 0.75rem',
+                      color: 'rgb(100, 90, 80)',
+                      fontSize: '0.9rem'
+                    }}>{v.metodoPago?.nombre || 'Efectivo'}</td>
+                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
+                      {v.observaciones && v.observaciones.trim() !== '' ? (
+                        <button
+                          onClick={() => setObservacionesModal(v.observaciones)}
+                          style={{
+                            background: 'linear-gradient(135deg, rgb(220, 210, 195), rgb(210, 200, 185))',
+                            border: 'none',
+                            borderRadius: '8px',
+                            padding: '0.4rem 0.8rem',
+                            fontSize: '0.85rem',
+                            cursor: 'pointer',
+                            fontWeight: '600',
+                            color: 'rgb(80, 70, 60)',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgb(200, 190, 175), rgb(190, 180, 165))'
+                            e.currentTarget.style.transform = 'translateY(-2px)'
+                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgb(220, 210, 195), rgb(210, 200, 185))'
+                            e.currentTarget.style.transform = 'translateY(0)'
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          📝 Ver
+                        </button>
+                      ) : (
+                        <span style={{ color: '#ccc', fontSize: '1.1rem' }}>−</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </Card>
+
+      {observacionesModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '1rem',
+            backdropFilter: 'blur(4px)',
+            animation: 'fadeIn 0.2s ease-out'
+          }}
+          onClick={() => setObservacionesModal(null)}
+        >
+          <style>
+            {`
+              @keyframes fadeIn {
+                from { opacity: 0; }
+                to { opacity: 1; }
+              }
+              @keyframes slideUp {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+              }
+            `}
+          </style>
+          <div 
+            style={{
+              background: 'white',
+              borderRadius: '16px',
+              padding: '2rem',
+              maxWidth: '550px',
+              width: '100%',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              border: '2px solid rgb(220, 210, 195)',
+              animation: 'slideUp 0.3s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.75rem', 
+              marginBottom: '1.5rem', 
+              paddingBottom: '1rem', 
+              borderBottom: '2px solid rgb(241, 237, 232)' 
+            }}>
+              <span style={{ fontSize: '2rem' }}>📝</span>
+              <h3 style={{ 
+                margin: 0, 
+                fontSize: '1.5rem', 
+                color: 'rgb(80, 70, 60)', 
+                fontWeight: '600' 
+              }}>
+                Observaciones de la venta
+              </h3>
+            </div>
+            <div style={{
+              background: 'rgb(250, 248, 245)',
+              padding: '1.25rem',
+              borderRadius: '10px',
+              borderLeft: '4px solid rgb(180, 140, 100)',
+              marginBottom: '1.5rem'
+            }}>
+              <p style={{
+                margin: 0,
+                fontSize: '1.05rem',
+                lineHeight: '1.6',
+                color: 'rgb(60, 50, 40)',
+                whiteSpace: 'pre-wrap',
+                wordWrap: 'break-word'
+              }}>{observacionesModal}</p>
+            </div>
+            <Button onClick={() => setObservacionesModal(null)} style={{ width: '100%' }}>
+              Cerrar
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
