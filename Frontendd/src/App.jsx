@@ -50,7 +50,7 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <small>Maqueta visual • Sin backend</small>
+          <small></small>
         </div>
       </aside>
       {sidebarOpen && (
