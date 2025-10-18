@@ -31,24 +31,29 @@ public class Venta {
     @Column(name = "iva_total", precision = 10, scale = 2)
     private BigDecimal ivaTotal;
 
-    @Column(name = "comision", precision = 10, scale = 2)
-    private BigDecimal comision;
+    @Column(name = "comision_total", precision = 10, scale = 2)
+    private BigDecimal comisionTotal;
 
     @Column(name = "monto_bruto", nullable = false, precision = 10, scale = 2)
     private BigDecimal montoBruto;
 
-    // Este campo lo mantenemos por compatibilidad, pero ahora usamos montoBruto
-    @Column(name = "monto_total", nullable = false, precision = 10, scale = 2)
-    private BigDecimal montoTotal;
-
-    @ManyToOne
-    @JoinColumn(name = "id_metodo_pago")
-    private MetodoPago metodoPago;
-
     @Column(columnDefinition = "TEXT")
     private String observaciones;
 
-    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @JsonManagedReference(value = "venta-metodos-pago")
+    private List<MetodoPagoVenta> metodosPago = new ArrayList<>();
+
+    @OneToMany(mappedBy = "venta", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference(value = "venta-detalles")
     private List<DetalleVenta> detalles = new ArrayList<>();
+
+    public void agregarMetodoPago(MetodoPago metodoPago, BigDecimal montoAsignado, BigDecimal comisionCalculada) {
+        MetodoPagoVenta metodoPagoVenta = new MetodoPagoVenta();
+        metodoPagoVenta.setVenta(this);
+        metodoPagoVenta.setMetodoPago(metodoPago);
+        metodoPagoVenta.setMontoAsignado(montoAsignado);
+        metodoPagoVenta.setComisionCalculada(comisionCalculada);
+        this.metodosPago.add(metodoPagoVenta);
+    }
 }

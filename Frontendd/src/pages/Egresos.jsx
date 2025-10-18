@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Toolbar, Button } from '../components/UI.jsx'
 import { api } from '../services/api/index.js'
+import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete } from '@mui/icons-material';
 
 export default function Egresos() {
   const [compras, setCompras] = useState([])
@@ -27,20 +27,80 @@ export default function Egresos() {
     fecha: new Date().toISOString().split('T')[0]
   })
 
+  const [resumen, setResumen] = useState([
+    { 
+      label: 'Compras del Mes', 
+      value: '$ 0',
+      icon: <ShoppingCart />,
+      color: '#5D4037',
+      trend: 'down'
+    },
+    { 
+      label: 'Gastos del Mes', 
+      value: '$ 0',
+      icon: <Receipt />,
+      color: '#8D6E63',
+      trend: 'down'
+    },
+    { 
+      label: 'Total Egresos', 
+      value: '$ 0',
+      icon: <TrendingDown />,
+      color: '#F44336',
+      trend: 'down'
+    },
+  ])
+
   useEffect(() => {
     cargarDatos()
   }, [])
 
   const cargarDatos = async () => {
     try {
-      const [comps, gast, metodos] = await Promise.all([
+      setLoading(true)
+      const now = new Date()
+      const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+      const fin = now.toISOString()
+
+      const [comps, gast, metodos, totalCompras, totalGastos] = await Promise.all([
         api.compras.getAll().catch(() => []),
         api.gastos.getAll().catch(() => []),
-        api.metodosPago.getAll().catch(() => [])
+        api.metodosPago.getAll().catch(() => []),
+        api.compras.getTotalPorPeriodo(inicio, fin).catch(() => 0),
+        api.gastos.getTotalPorPeriodo(inicio, fin).catch(() => 0)
       ])
-      setCompras(comps)
-      setGastos(gast)
-      setMetodosPago(metodos)
+
+      setCompras(comps || [])
+      setGastos(gast || [])
+      setMetodosPago(metodos || [])
+
+      const comprasMes = parseFloat(totalCompras) || 0
+      const gastosMes = parseFloat(totalGastos) || 0
+      const totalEgresos = comprasMes + gastosMes
+
+      setResumen([
+        { 
+          label: 'Compras del Mes', 
+          value: `$ ${comprasMes.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          icon: <ShoppingCart />,
+          color: '#5D4037',
+          trend: 'down'
+        },
+        { 
+          label: 'Gastos del Mes', 
+          value: `$ ${gastosMes.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          icon: <Receipt />,
+          color: '#8D6E63',
+          trend: 'down'
+        },
+        { 
+          label: 'Total Egresos', 
+          value: `$ ${totalEgresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          icon: <TrendingDown />,
+          color: '#F44336',
+          trend: 'down'
+        },
+      ])
     } catch (error) {
       console.error('Error al cargar datos:', error)
     } finally {
@@ -49,14 +109,14 @@ export default function Egresos() {
   }
 
   const calcularTotalCompra = () => {
-    return formCompra.precioUnitario * formCompra.cantidad
+    return (formCompra.precioUnitario || 0) * (formCompra.cantidad || 1)
   }
 
   const calcularIVARecuperable = () => {
     if (formCompra.tipoDocumento === 'factura') {
       const total = calcularTotalCompra()
-      const iva = total / 1.19 * 0.19
-      return Math.round(iva)
+      const iva = total - (total / 1.19)
+      return Math.round(iva * 100) / 100
     }
     return 0
   }
@@ -64,7 +124,7 @@ export default function Egresos() {
   const calcularCostoReal = () => {
     const total = calcularTotalCompra()
     const ivaRecuperable = calcularIVARecuperable()
-    return total - ivaRecuperable
+    return Math.round((total - ivaRecuperable) * 100) / 100
   }
 
   const handleGuardarCompra = async () => {
@@ -84,22 +144,12 @@ export default function Egresos() {
         detalles: [{
           descripcion: formCompra.descripcion,
           cantidad: parseInt(formCompra.cantidad),
-          precioUnitario: parseFloat(formCompra.precioUnitario)
+          precioUnitario: parseFloat(formCompra.precioUnitario),
+          subtotal: calcularTotalCompra()
         }]
       }
 
-      await fetch('http://localhost:8080/api/compras', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(compraData)
-      }).then(r => {
-        if (!r.ok) throw new Error(`Error ${r.status}`)
-        return r.json()
-      })
-
+      await api.compras.registrar(compraData)
       alert('Compra registrada exitosamente')
 
       setFormCompra({
@@ -112,10 +162,10 @@ export default function Egresos() {
         observaciones: ''
       })
 
-      cargarDatos()
+      await cargarDatos()
     } catch (error) {
-      console.error('Error completo:', error)
-      alert('Error al registrar la compra: ' + error.message)
+      console.error('Error al registrar compra:', error)
+      alert('Error al registrar la compra: ' + (error.message || 'Error desconocido'))
     }
   }
 
@@ -142,10 +192,10 @@ export default function Egresos() {
         idMetodoPago: '',
         fecha: new Date().toISOString().split('T')[0]
       })
-      cargarDatos()
+      await cargarDatos()
     } catch (error) {
       console.error('Error al registrar gasto:', error)
-      alert('Error al registrar el gasto: ' + error.message)
+      alert('Error al registrar el gasto: ' + (error.message || 'Error desconocido'))
     }
   }
 
@@ -180,8 +230,44 @@ export default function Egresos() {
     }
   }
 
-  if (loading) {
-    return <div className="stack large-text"><Card title="Cargando..."><p>Obteniendo datos...</p></Card></div>
+  const formatearFecha = (fechaData) => {
+    try {
+      let fecha;
+      
+      if (Array.isArray(fechaData)) {
+        fecha = new Date(fechaData[0], fechaData[1] - 1, fechaData[2]);
+      } else if (typeof fechaData === 'string') {
+        fecha = new Date(fechaData);
+      } else if (fechaData instanceof Date) {
+        fecha = fechaData;
+      } else {
+        return 'Fecha inválida';
+      }
+
+      if (isNaN(fecha.getTime())) {
+        return 'Fecha inválida';
+      }
+
+      return fecha.toLocaleDateString('es-CL', { 
+        day: '2-digit', 
+        month: 'short', 
+        year: 'numeric' 
+      });
+    } catch (e) {
+      return 'Fecha inválida';
+    }
+  }
+
+  if (loading && compras.length === 0 && gastos.length === 0) {
+    return (
+      <div className="egresos-container">
+        <div className="egresos-card">
+          <div className="egresos-loading">
+            <p>Cargando datos de compras y gastos...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   const egresosCombinados = [...compras, ...gastos]
@@ -192,421 +278,830 @@ export default function Egresos() {
     })
     .slice(0, 10)
 
+  const tablaEgresos = egresosCombinados.map((item, idx) => {
+    const esCompra = item.montoTotal !== undefined
+    
+    let fechaFormateada = 'N/A'
+    if (item.fecha) {
+      try {
+        fechaFormateada = formatearFecha(item.fecha)
+      } catch (e) {
+        console.error('Error formateando fecha:', e)
+      }
+    }
+
+    const montoTotal = esCompra 
+      ? (item.montoTotal || 0)
+      : (item.monto || 0)
+
+    const detalle = esCompra 
+      ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
+      : item.descripcion
+
+    return [
+      <div key={`fecha-${idx}`} className="tabla-fecha">{fechaFormateada}</div>,
+      <span 
+        key={`tipo-${idx}`}
+        className={`tipo-badge ${esCompra ? 'tipo-compra' : 'tipo-gasto'}`}
+      >
+        {esCompra ? '🛒 Compra' : '💸 Gasto'}
+      </span>,
+      <div key={`detalle-${idx}`} className="tabla-detalle">{detalle}</div>,
+      <div key={`monto-${idx}`} className="tabla-monto">
+        $ {montoTotal.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+      </div>,
+      <div key={`metodo-${idx}`} className="tabla-metodo">
+        {item.metodoPago?.nombre || 'N/A'}
+      </div>,
+      esCompra && item.observaciones && item.observaciones.trim() !== '' ? (
+        <button 
+          key={`obs-${idx}`}
+          className="btn-observaciones"
+          onClick={() => setObservacionesModal(item.observaciones)}
+        >
+          📝 Ver
+        </button>
+      ) : (
+        <span key={`obs-${idx}`} className="sin-observaciones">—</span>
+      )
+    ]
+  })
+
   return (
-    <div className="stack large-text">
-      <Card title="Registrar egreso" subtitle="Registra una compra o gasto">
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label className="field-label">Tipo de egreso</label>
-          <select 
-            value={tipoEgreso} 
-            onChange={(e) => setTipoEgreso(e.target.value)}
-            style={{ fontSize: '1rem' }}
-          >
-            <option value="compra">Compra de insumos/productos</option>
-            <option value="gasto">Gasto general</option>
-          </select>
+    <div className="egresos-container">
+      <style jsx>{`
+        .egresos-container {
+          padding: 2rem;
+          background: #EFEBE9;
+          min-height: 100vh;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        .egresos-header {
+          background: linear-gradient(135deg, #5D4037, #8D6E63);
+          color: white;
+          border-radius: 16px;
+          margin-bottom: 2rem;
+          box-shadow: 0 8px 20px rgba(93, 64, 55, 0.2);
+          overflow: hidden;
+        }
+
+        .egresos-card {
+          background: #FAF9F7;
+          border: 1px solid #D7CCC8;
+          border-radius: 16px;
+          box-shadow: 0 4px 20px rgba(93, 64, 55, 0.1);
+          transition: all 0.3s ease;
+          overflow: hidden;
+          margin-bottom: 2rem;
+        }
+
+        .egresos-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 30px rgba(93, 64, 55, 0.15);
+        }
+
+        .egresos-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #5D4037, #8D6E63);
+        }
+
+        .card-header {
+          padding: 1.5rem 2rem;
+          border-bottom: 1px solid #D7CCC8;
+          background: linear-gradient(135deg, #FAF9F7, #F5F3F0);
+        }
+
+        .card-title {
+          font-size: 1.5rem;
+          margin: 0 0 0.5rem 0;
+          color: #3E2723;
+          font-weight: 600;
+        }
+
+        .card-subtitle {
+          color: #8D6E63;
+          font-size: 0.9rem;
+          margin: 0;
+        }
+
+        .card-body {
+          padding: 2rem;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+          gap: 1.5rem;
+          margin-bottom: 2rem;
+        }
+
+        .stat-card {
+          background: linear-gradient(135deg, #FAF9F7, #F5F3F0);
+          border: 1px solid #D7CCC8;
+          padding: 1.5rem;
+          border-radius: 12px;
+          text-align: center;
+          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #5D4037, #8D6E63);
+        }
+
+        .stat-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(93, 64, 55, 0.1);
+        }
+
+        .stat-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 60px;
+          height: 60px;
+          border-radius: 50%;
+          margin: 0 auto 1rem;
+          font-size: 28px;
+        }
+
+        .stat-label {
+          color: #8D6E63;
+          font-size: 0.95rem;
+          font-weight: 500;
+          margin-bottom: 0.5rem;
+          display: block;
+        }
+
+        .stat-value {
+          font-size: 2rem;
+          font-weight: 700;
+          color: #3E2723;
+          display: block;
+          background: linear-gradient(135deg, #5D4037, #8D6E63);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .form-grid {
+          display: grid;
+          grid-template-columns: repeat(12, 1fr);
+          gap: 1.5rem;
+        }
+
+        .form-field {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+          grid-column: span 12;
+        }
+
+        .form-field.col-6 {
+          grid-column: span 6;
+        }
+
+        .form-field.col-12 {
+          grid-column: span 12;
+        }
+
+        .field-label {
+          font-size: 1rem;
+          color: #3E2723;
+          margin-bottom: 0.25rem;
+          font-weight: 500;
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        input, select, textarea {
+          background: #FAF9F7;
+          border: 2px solid #D7CCC8;
+          color: #3E2723;
+          padding: 0.75rem 1rem;
+          border-radius: 8px;
+          outline: none;
+          font-size: 1rem;
+          height: 48px;
+          line-height: 1.4;
+          display: block;
+          width: 100%;
+          box-shadow: none;
+          transition: all 0.3s ease;
+          font-family: inherit;
+        }
+
+        input:focus, select:focus, textarea:focus {
+          border-color: #5D4037;
+          box-shadow: 0 0 0 3px rgba(93, 64, 55, 0.1);
+        }
+
+        input::placeholder, textarea::placeholder {
+          color: #8D6E63;
+          opacity: 0.7;
+        }
+
+        textarea {
+          min-height: 120px;
+          padding: 1rem;
+          resize: vertical;
+          height: auto;
+        }
+
+        .btn {
+          height: 48px;
+          min-height: 48px;
+          padding: 0 1.5rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          line-height: 1;
+          border-radius: 8px;
+          font-size: 1rem;
+          font-weight: 500;
+          border: 2px solid transparent;
+          background: #5D4037;
+          color: #fff;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          text-decoration: none;
+          gap: 0.5rem;
+          font-family: inherit;
+        }
+
+        .btn:hover {
+          background: #8D6E63;
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(93, 64, 55, 0.2);
+        }
+
+        .btn.ghost {
+          background: transparent;
+          border: 2px solid #D7CCC8;
+          color: #3E2723;
+        }
+
+        .btn.ghost:hover {
+          background: #D7CCC8;
+          border-color: #5D4037;
+        }
+
+        .btn.small {
+          height: 36px;
+          min-height: 36px;
+          padding: 0 1rem;
+          font-size: 0.9rem;
+        }
+
+        .toolbar {
+          display: flex;
+          gap: 1rem;
+          margin-top: 1.5rem;
+          flex-wrap: wrap;
+        }
+
+        .quantity-control {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+        }
+
+        .quantity-control input {
+          text-align: center;
+          flex: 1;
+        }
+
+        .resumen-financiero {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1rem;
+          margin: 1rem 0;
+        }
+
+        .resumen-item {
+          padding: 1.25rem;
+          border-radius: 12px;
+          text-align: center;
+          font-weight: 600;
+        }
+
+        .resumen-iva {
+          background: linear-gradient(135deg, #E8F5E8, #C8E6C9);
+          border: 2px solid #4CAF50;
+          color: #2E7D32;
+        }
+
+        .resumen-costo {
+          background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+          border: 2px solid #FF9800;
+          color: #EF6C00;
+        }
+
+        .resumen-total {
+          background: linear-gradient(135deg, #5D4037, #8D6E63);
+          border: 2px solid #5D4037;
+          color: white;
+        }
+
+        .tabla-container {
+          overflow: auto;
+          border: 1px solid #D7CCC8;
+          border-radius: 12px;
+          background: #FAF9F7;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .tabla {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          background: #FAF9F7;
+        }
+
+        .tabla thead th {
+          font-size: 1rem;
+          position: sticky;
+          top: 0;
+          background: linear-gradient(135deg, #5D4037, #8D6E63);
+          text-align: left;
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #D7CCC8;
+          font-weight: 600;
+          color: #FFF;
+        }
+
+        .tabla td {
+          font-size: 0.95rem;
+          padding: 1.25rem 1.5rem;
+          border-bottom: 1px solid #D7CCC8;
+          color: #3E2723;
+        }
+
+        .tabla tbody tr {
+          transition: background 0.3s ease;
+        }
+
+        .tabla tbody tr:hover {
+          background: #D7CCC8;
+        }
+
+        .tabla tbody tr:nth-child(even) {
+          background: #F5F3F0;
+        }
+
+        .tipo-badge {
+          padding: 0.4rem 1rem;
+          border-radius: 20px;
+          font-size: 0.85rem;
+          font-weight: 600;
+          display: inline-block;
+          min-width: 80px;
+          text-align: center;
+        }
+
+        .tipo-compra {
+          background: #E8F5E8;
+          color: #2E7D32;
+        }
+
+        .tipo-gasto {
+          background: #FFEBEE;
+          color: #C62828;
+        }
+
+        .tabla-fecha, .tabla-detalle, .tabla-monto, .tabla-metodo {
+          font-weight: 500;
+        }
+
+        .tabla-monto {
+          text-align: right;
+          font-weight: 600;
+          color: #5D4037;
+          font-size: 1.05rem;
+        }
+
+        .btn-observaciones {
+          background: transparent;
+          border: 2px solid #D7CCC8;
+          color: #3E2723;
+          padding: 0.4rem 0.8rem;
+          border-radius: 6px;
+          cursor: pointer;
+          font-size: 0.85rem;
+          transition: all 0.3s ease;
+          font-family: inherit;
+        }
+
+        .btn-observaciones:hover {
+          background: #D7CCC8;
+          border-color: #5D4037;
+        }
+
+        .sin-observaciones {
+          color: #8D6E63;
+        }
+
+        .egresos-loading {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 3rem;
+          color: #8D6E63;
+          font-size: 1.1rem;
+        }
+
+        .chart-placeholder {
+          position: relative;
+          min-height: 300px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 0.6rem 0 1.2rem;
+          background: #F5F3F0;
+          border-radius: 12px;
+          border: 2px dashed #D7CCC8;
+        }
+
+        @media (max-width: 768px) {
+          .egresos-container {
+            padding: 1rem;
+          }
+
+          .form-field.col-6 {
+            grid-column: span 12;
+          }
+
+          .stats-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .resumen-financiero {
+            grid-template-columns: 1fr;
+          }
+
+          .toolbar {
+            flex-direction: column;
+          }
+
+          .btn {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      {/* Header con Resumen */}
+      <div className="egresos-card egresos-header">
+        <div className="card-header">
+          <h1 className="card-title">Gestión de Egresos</h1>
+          <p className="card-subtitle">Control de compras y gastos de la marroquinería</p>
         </div>
+        <div className="card-body">
+          <div className="stats-grid">
+            {resumen.map((r, index) => (
+              <div key={r.label} className="stat-card">
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginBottom: '1rem'
+                }}>
+                  <div className="stat-icon" style={{ backgroundColor: `${r.color}20`, color: r.color }}>
+                    {React.cloneElement(r.icon, { sx: { fontSize: 28 } })}
+                  </div>
+                  <span style={{
+                    fontSize: '0.85rem',
+                    fontWeight: '600',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '20px',
+                    background: r.trend === 'up' ? '#E8F5E8' : '#FFEBEE',
+                    color: r.trend === 'up' ? '#2E7D32' : '#C62828'
+                  }}>
+                    {r.trend === 'up' ? '↗' : '↘'}
+                  </span>
+                </div>
+                <span className="stat-label">{r.label}</span>
+                <span className="stat-value">{r.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
-        {tipoEgreso === 'compra' ? (
-          <div className="form-grid">
-            <div className="field col-6">
-              <label className="field-label">Descripción del producto</label>
-              <input 
-                type="text" 
-                placeholder='Ej: cuero, hilo, hebillas, remaches' 
-                value={formCompra.descripcion}
-                onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
-              />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
+        {/* Formulario de Registro */}
+        <div style={{ gridColumn: 'span 12' }}>
+          <div className="egresos-card">
+            <div className="card-header">
+              <h2 className="card-title">Registrar Nuevo Egreso</h2>
+              <p className="card-subtitle">Agregue una compra de insumos o gasto operativo</p>
             </div>
+            <div className="card-body">
+              <div className="form-field">
+                <label className="field-label">
+                  <Analytics sx={{ fontSize: 24 }} />
+                  Tipo de Egreso
+                </label>
+                <select 
+                  value={tipoEgreso} 
+                  onChange={(e) => setTipoEgreso(e.target.value)}
+                >
+                  <option value="compra">🛒 Compra de Insumos</option>
+                  <option value="gasto">💸 Gasto Operativo</option>
+                </select>
+              </div>
 
-            <div className="field col-6">
-              <label className="field-label">Precio unitario</label>
-              <input 
-                type="number" 
-                placeholder="0" 
-                min={0} 
-                step={100} 
-                value={formCompra.precioUnitario || ''}
-                onChange={(e) => setFormCompra({ ...formCompra, precioUnitario: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
+              {tipoEgreso === 'compra' ? (
+                <div className="form-grid">
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <Description sx={{ fontSize: 20 }} />
+                      Descripción del Producto
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder='Ej: Cuero premium, hilos, hebillas, remaches...' 
+                      value={formCompra.descripcion}
+                      onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
+                    />
+                  </div>
 
-            <div className="field col-6">
-              <label className="field-label">Cantidad</label>
-              <div className="quantity-control">
-                <Button variant="ghost" aria-label="Restar" onClick={decrementarCantidad}>−</Button>
-                <input 
-                  type="number" 
-                  value={formCompra.cantidad} 
-                  onChange={(e) => setFormCompra({ ...formCompra, cantidad: parseInt(e.target.value) || 1 })}
-                  min={1} 
-                  step={1}
-                />
-                <Button variant="ghost" aria-label="Sumar" onClick={incrementarCantidad}>+</Button>
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <AttachMoney sx={{ fontSize: 20 }} />
+                      Precio Unitario
+                    </label>
+                    <input 
+                      type="number" 
+                      placeholder="0" 
+                      min={0} 
+                      step={100} 
+                      value={formCompra.precioUnitario || ''}
+                      onChange={(e) => setFormCompra({ ...formCompra, precioUnitario: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Cantidad</label>
+                    <div className="quantity-control">
+                      <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
+                      <input 
+                        type="number" 
+                        value={formCompra.cantidad} 
+                        onChange={(e) => setFormCompra({ ...formCompra, cantidad: parseInt(e.target.value) || 1 })}
+                        min={1} 
+                        step={1}
+                      />
+                      <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
+                    </div>
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Total Compra</label>
+                    <input 
+                      type="text" 
+                      value={`$ ${calcularTotalCompra().toLocaleString('es-CL', { minimumFractionDigits: 2 })}`} 
+                      disabled 
+                      style={{ 
+                        fontWeight: '600',
+                        color: '#5D4037',
+                        background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
+                        fontSize: '1.1rem'
+                      }}
+                    />
+                  </div>
+
+                  {/* Resumen Financiero Compra */}
+                  <div className="form-field col-12">
+                    <label className="field-label">
+                      <Receipt sx={{ fontSize: 24 }} />
+                      Resumen Financiero
+                    </label>
+                    
+                    <div className="resumen-financiero">
+                      <div className="resumen-item resumen-iva">
+                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                          IVA Recuperable
+                        </div>
+                        <div style={{ fontSize: '1.1rem' }}>
+                          $ {calcularIVARecuperable().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      
+                      <div className="resumen-item resumen-costo">
+                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                          Costo Real
+                        </div>
+                        <div style={{ fontSize: '1.1rem' }}>
+                          $ {calcularCostoReal().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                      
+                      <div className="resumen-item resumen-total">
+                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                          Total Bruto
+                        </div>
+                        <div style={{ fontSize: '1.1rem' }}>
+                          $ {calcularTotalCompra().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <CalendarToday sx={{ fontSize: 20 }} />
+                      Fecha
+                    </label>
+                    <input 
+                      type="date" 
+                      value={formCompra.fecha}
+                      onChange={(e) => setFormCompra({ ...formCompra, fecha: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Método de Pago</label>
+                    <select 
+                      value={formCompra.idMetodoPago}
+                      onChange={(e) => setFormCompra({ ...formCompra, idMetodoPago: e.target.value })}
+                    >
+                      <option value="">Seleccionar método...</option>
+                      {metodosPago.map(m => (
+                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Tipo de Documento</label>
+                    <select 
+                      value={formCompra.tipoDocumento}
+                      onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
+                    >
+                      <option value="factura">📄 Factura (IVA recuperable)</option>
+                      <option value="boleta">🧾 Boleta (IVA no recuperable)</option>
+                      <option value="sin-documento">📝 Sin documento</option>
+                    </select>
+                  </div>
+
+                  <div className="form-field col-12">
+                    <label className="field-label">
+                      <Description sx={{ fontSize: 20 }} />
+                      Observaciones (opcional)
+                    </label>
+                    <textarea 
+                      placeholder="Notas adicionales sobre esta compra..." 
+                      rows={3}
+                      value={formCompra.observaciones}
+                      onChange={(e) => setFormCompra({ ...formCompra, observaciones: e.target.value })}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="form-grid">
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <Description sx={{ fontSize: 20 }} />
+                      Descripción del Gasto
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder='Ej: Arriendo, servicios, publicidad, envíos...' 
+                      value={formGasto.descripcion}
+                      onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <AttachMoney sx={{ fontSize: 20 }} />
+                      Monto del Gasto
+                    </label>
+                    <input 
+                      type="number" 
+                      placeholder="$ 0" 
+                      min={0} 
+                      step={100} 
+                      value={formGasto.monto}
+                      onChange={(e) => setFormGasto({ ...formGasto, monto: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <CalendarToday sx={{ fontSize: 20 }} />
+                      Fecha
+                    </label>
+                    <input 
+                      type="date" 
+                      value={formGasto.fecha}
+                      onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Método de Pago</label>
+                    <select 
+                      value={formGasto.idMetodoPago}
+                      onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
+                    >
+                      <option value="">Seleccionar método...</option>
+                      {metodosPago.map(m => (
+                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              <div className="toolbar">
+                <button className="btn" onClick={tipoEgreso === 'compra' ? handleGuardarCompra : handleGuardarGasto}>
+                  <AttachMoney sx={{ fontSize: 20 }} />
+                  Registrar {tipoEgreso === 'compra' ? 'Compra' : 'Gasto'}
+                </button>
+                <button className="btn ghost" onClick={handleCancelar}>
+                  Cancelar
+                </button>
               </div>
             </div>
-
-            <div className="field col-6">
-              <label className="field-label">Total</label>
-              <input 
-                type="text" 
-                value={`$ ${calcularTotalCompra().toLocaleString('es-CL')}`} 
-                disabled 
-                style={{ 
-                  fontWeight: '600',
-                  color: 'rgb(180, 140, 100)'
-                }}
-              />
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Fecha</label>
-              <input 
-                type="date" 
-                value={formCompra.fecha}
-                onChange={(e) => setFormCompra({ ...formCompra, fecha: e.target.value })}
-              />
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Tipo de pago</label>
-              <select 
-                value={formCompra.idMetodoPago}
-                onChange={(e) => setFormCompra({ ...formCompra, idMetodoPago: e.target.value })}
-              >
-                <option value="">Seleccionar método</option>
-                {metodosPago.map(m => (
-                  <option key={m.idMetodoPago} value={m.idMetodoPago}>{m.nombre}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Tipo de documento</label>
-              <select 
-                value={formCompra.tipoDocumento}
-                onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
-                style={{ fontSize: '1rem' }}
-              >
-                <option value="factura">Factura (IVA recuperable)</option>
-                <option value="boleta">Boleta (IVA no recuperable)</option>
-                <option value="sin-documento">Sin documento</option>
-              </select>
-            </div>
-
-            <div className="field col-12">
-              <label className="field-label">Observaciones (opcional)</label>
-              <textarea 
-                placeholder="Notas adicionales sobre esta compra..." 
-                rows={3}
-                value={formCompra.observaciones}
-                onChange={(e) => setFormCompra({ ...formCompra, observaciones: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  fontSize: '1rem',
-                  borderRadius: '8px',
-                  border: '1px solid transparent',
-                  background: 'rgb(241, 237, 232)',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-              />
-            </div>
           </div>
-        ) : (
-          <div className="form-grid">
-            <div className="field col-6">
-              <label className="field-label">Descripción del gasto</label>
-              <input 
-                type="text" 
-                placeholder='Ej: publicidad, envíos, arriendo' 
-                value={formGasto.descripcion}
-                onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
-              />
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Monto</label>
-              <input 
-                type="number" 
-                placeholder="$ 0" 
-                min={0} 
-                step={100} 
-                value={formGasto.monto}
-                onChange={(e) => setFormGasto({ ...formGasto, monto: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Fecha</label>
-              <input 
-                type="date" 
-                value={formGasto.fecha}
-                onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
-              />
-            </div>
-
-            <div className="field col-6">
-              <label className="field-label">Tipo de pago</label>
-              <select 
-                value={formGasto.idMetodoPago}
-                onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
-              >
-                <option value="">Seleccionar método</option>
-                {metodosPago.map(m => (
-                  <option key={m.idMetodoPago} value={m.idMetodoPago}>{m.nombre}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        )}
-
-        <Toolbar>
-          <Button onClick={tipoEgreso === 'compra' ? handleGuardarCompra : handleGuardarGasto}>
-            Guardar
-          </Button>
-          <Button variant="ghost" onClick={handleCancelar}>Cancelar</Button>
-        </Toolbar>
-      </Card>
-      
-      <Card title="Egresos del mes" subtitle="Últimos egresos registrados">
-        <div style={{ overflowX: 'auto', borderRadius: '12px', border: '1px solid rgb(230, 220, 210)' }}>
-          <table style={{ 
-            width: '100%', 
-            borderCollapse: 'separate',
-            borderSpacing: 0,
-            background: 'white'
-          }}>
-            <thead>
-              <tr style={{ background: 'linear-gradient(to bottom, rgb(235, 225, 215), rgb(225, 215, 205))' }}>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'left', 
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Fecha</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Tipo</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Detalle</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Total</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Neto</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'right',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>IVA</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'left',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Medio</th>
-                <th style={{ 
-                  padding: '1rem 0.75rem', 
-                  textAlign: 'center',
-                  fontWeight: '600',
-                  color: 'rgb(70, 60, 50)',
-                  fontSize: '0.95rem',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                  borderBottom: '2px solid rgb(200, 180, 160)'
-                }}>Obs</th>
-              </tr>
-            </thead>
-            <tbody>
-              {egresosCombinados.map((item, idx) => {
-                const esCompra = item.montoTotal !== undefined
-                
-                let fechaFormateada = 'N/A'
-                if (item.fecha) {
-                  try {
-                    if (Array.isArray(item.fecha)) {
-                      const fecha = new Date(item.fecha[0], item.fecha[1] - 1, item.fecha[2])
-                      fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-                    } else {
-                      const fecha = new Date(item.fecha)
-                      fechaFormateada = fecha.toLocaleDateString('es-CL', { day: '2-digit', month: 'short' })
-                    }
-                  } catch (e) {
-                    console.error('Error formateando fecha:', e)
-                  }
-                }
-
-                const montoTotal = esCompra 
-                  ? Math.round(item.montoTotal || 0)
-                  : Math.round(item.monto || 0)
-
-                const montoNeto = esCompra && item.montoNeto
-                  ? Math.round(item.montoNeto)
-                  : montoTotal
-
-                const ivaRecuperable = esCompra && item.ivaTotal 
-                  ? Math.round(item.ivaTotal)
-                  : 0
-
-                const detalle = esCompra 
-                  ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
-                  : item.descripcion
-
-                return (
-                  <tr 
-                    key={idx} 
-                    style={{ 
-                      borderBottom: '1px solid rgb(240, 235, 230)',
-                      background: idx % 2 === 0 ? 'white' : 'rgb(252, 250, 248)',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgb(245, 240, 235)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? 'white' : 'rgb(252, 250, 248)'}
-                  >
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem',
-                      color: 'rgb(90, 80, 70)',
-                      fontSize: '0.95rem'
-                    }}>{fechaFormateada}</td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem',
-                      fontSize: '0.9rem'
-                    }}>
-                      <span style={{
-                        display: 'inline-block',
-                        padding: '0.25rem 0.6rem',
-                        borderRadius: '6px',
-                        fontSize: '0.85rem',
-                        fontWeight: '600',
-                        background: esCompra ? 'rgb(200, 220, 240)' : 'rgb(255, 220, 200)',
-                        color: esCompra ? 'rgb(40, 70, 100)' : 'rgb(120, 60, 20)'
-                      }}>
-                        {esCompra ? 'Compra' : 'Gasto'}
-                      </span>
-                    </td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem',
-                      color: 'rgb(60, 50, 40)',
-                      fontWeight: '500',
-                      fontSize: '0.95rem'
-                    }}>{detalle}</td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem', 
-                      textAlign: 'right',
-                      color: 'rgb(180, 60, 60)',
-                      fontWeight: '600',
-                      fontSize: '1rem'
-                    }}>{`$ ${montoTotal.toLocaleString('es-CL')}`}</td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem', 
-                      textAlign: 'right',
-                      color: ivaRecuperable > 0 ? 'rgb(60, 140, 60)' : 'rgb(180, 60, 60)',
-                      fontWeight: '600',
-                      fontSize: '1rem'
-                    }}>{`$ ${montoNeto.toLocaleString('es-CL')}`}</td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem', 
-                      textAlign: 'right',
-                      color: ivaRecuperable > 0 ? 'rgb(60, 140, 60)' : 'rgb(150, 150, 150)',
-                      fontWeight: '500',
-                      fontSize: '0.95rem'
-                    }}>
-                      {ivaRecuperable > 0 
-                        ? `$ ${ivaRecuperable.toLocaleString('es-CL')}` 
-                        : '-'
-                      }
-                    </td>
-                    <td style={{ 
-                      padding: '0.85rem 0.75rem',
-                      color: 'rgb(100, 90, 80)',
-                      fontSize: '0.95rem'
-                    }}>{item.metodoPago?.nombre || 'N/A'}</td>
-                    <td style={{ padding: '0.85rem 0.75rem', textAlign: 'center' }}>
-                      {esCompra && item.observaciones && item.observaciones.trim() !== '' ? (
-                        <button
-                          onClick={() => setObservacionesModal(item.observaciones)}
-                          style={{
-                            background: 'linear-gradient(135deg, rgb(220, 210, 195), rgb(210, 200, 185))',
-                            border: 'none',
-                            borderRadius: '8px',
-                            padding: '0.4rem 0.8rem',
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                            fontWeight: '600',
-                            color: 'rgb(80, 70, 60)',
-                            transition: 'all 0.2s',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgb(200, 190, 175), rgb(190, 180, 165))'
-                            e.currentTarget.style.transform = 'translateY(-2px)'
-                            e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)'
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'linear-gradient(135deg, rgb(220, 210, 195), rgb(210, 200, 185))'
-                            e.currentTarget.style.transform = 'translateY(0)'
-                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)'
-                          }}
-                        >
-                          📝 Ver
-                        </button>
-                      ) : (
-                        <span style={{ color: '#ccc', fontSize: '1.1rem' }}>−</span>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
         </div>
-      </Card>
 
+        {/* Panel de Análisis */}
+        <div style={{ gridColumn: 'span 12' }}>
+          <div className="egresos-card">
+            <div className="card-header">
+              <h2 className="card-title">Análisis de Egresos</h2>
+              <p className="card-subtitle">Distribución y tendencias de compras vs gastos</p>
+            </div>
+            <div className="card-body">
+              <div className="chart-placeholder">
+                <div style={{ textAlign: 'center', color: '#8D6E63' }}>
+                  <Analytics sx={{ fontSize: 64, color: '#8D6E63', marginBottom: '1rem', opacity: 0.5 }} />
+                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Dashboard de Egresos</div>
+                  <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                    Visualización de compras vs gastos mensuales
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabla de Movimientos */}
+      <div className="egresos-card">
+        <div className="card-header">
+          <h2 className="card-title">Movimientos Recientes</h2>
+          <p className="card-subtitle">Últimos egresos registrados en el sistema</p>
+        </div>
+        <div className="card-body">
+          <div className="tabla-container">
+            <table className="tabla">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Detalle</th>
+                  <th>Monto</th>
+                  <th>Medio Pago</th>
+                  <th>Observaciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tablaEgresos.map((fila, index) => (
+                  <tr key={index}>
+                    {fila.map((celda, celdaIndex) => (
+                      <td key={celdaIndex}>{celda}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Modal de Observaciones */}
       {observacionesModal && (
         <div 
           style={{
@@ -620,34 +1115,19 @@ export default function Egresos() {
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 10000,
-            padding: '1rem',
-            backdropFilter: 'blur(4px)',
-            animation: 'fadeIn 0.2s ease-out'
+            padding: '1rem'
           }}
           onClick={() => setObservacionesModal(null)}
         >
-          <style>
-            {`
-              @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-              }
-              @keyframes slideUp {
-                from { transform: translateY(20px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-              }
-            `}
-          </style>
           <div 
             style={{
-              background: 'white',
+              background: '#FAF9F7',
               borderRadius: '16px',
               padding: '2rem',
-              maxWidth: '550px',
+              maxWidth: '600px',
               width: '100%',
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              border: '2px solid rgb(220, 210, 195)',
-              animation: 'slideUp 0.3s ease-out'
+              border: '2px solid #D7CCC8'
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -657,37 +1137,45 @@ export default function Egresos() {
               gap: '0.75rem', 
               marginBottom: '1.5rem', 
               paddingBottom: '1rem', 
-              borderBottom: '2px solid rgb(241, 237, 232)' 
+              borderBottom: '2px solid #D7CCC8' 
             }}>
-              <span style={{ fontSize: '2rem' }}>📝</span>
+              <div style={{
+                background: 'linear-gradient(135deg, #5D4037, #8D6E63)',
+                padding: '0.75rem',
+                borderRadius: '12px',
+                color: 'white'
+              }}>
+                <Description sx={{ fontSize: 24 }} />
+              </div>
               <h3 style={{ 
                 margin: 0, 
                 fontSize: '1.5rem', 
-                color: 'rgb(80, 70, 60)', 
+                color: '#3E2723', 
                 fontWeight: '600' 
               }}>
-                Observaciones de la compra
+                Observaciones del Egreso
               </h3>
             </div>
             <div style={{
-              background: 'rgb(250, 248, 245)',
-              padding: '1.25rem',
-              borderRadius: '10px',
-              borderLeft: '4px solid rgb(180, 140, 100)',
+              background: '#D7CCC8',
+              padding: '1.5rem',
+              borderRadius: '12px',
+              borderLeft: '4px solid #5D4037',
               marginBottom: '1.5rem'
             }}>
-              <p style={{
-                margin: 0,
-                fontSize: '1.05rem',
-                lineHeight: '1.6',
-                color: 'rgb(60, 50, 40)',
-                whiteSpace: 'pre-wrap',
-                wordWrap: 'break-word'
-              }}>{observacionesModal}</p>
+              <p style={{ 
+                margin: 0, 
+                fontSize: '1.05rem', 
+                lineHeight: '1.6', 
+                color: '#3E2723', 
+                whiteSpace: 'pre-wrap' 
+              }}>
+                {observacionesModal}
+              </p>
             </div>
-            <Button onClick={() => setObservacionesModal(null)} style={{ width: '100%' }}>
+            <button className="btn" onClick={() => setObservacionesModal(null)} style={{ width: '100%' }}>
               Cerrar
-            </Button>
+            </button>
           </div>
         </div>
       )}

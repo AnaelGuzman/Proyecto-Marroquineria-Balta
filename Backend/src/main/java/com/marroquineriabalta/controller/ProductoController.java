@@ -3,9 +3,12 @@ package com.marroquineriabalta.controller;
 import com.marroquineriabalta.entity.Producto;
 import com.marroquineriabalta.service.ProductoService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -58,6 +61,7 @@ public class ProductoController {
         }
     }
 
+    //Filtros por nombre o categoria
     @GetMapping("/buscar")
     public ResponseEntity<List<Producto>> buscarProductos(@RequestParam String nombre) {
         return ResponseEntity.ok(productoService.buscarPorNombre(nombre));
@@ -66,5 +70,12 @@ public class ProductoController {
     @GetMapping("/categoria/{idCategoria}")
     public ResponseEntity<List<Producto>> obtenerPorCategoria(@PathVariable Long idCategoria) {
         return ResponseEntity.ok(productoService.obtenerProductosPorCategoria(idCategoria));
+    }
+
+    @GetMapping("/mas-vendidos")
+    public ResponseEntity<List<Object[]>> obtenerProductosMasVendidos(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime inicio,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
+        return ResponseEntity.ok(productoService.obtenerProductosMasVendidos(inicio, fin));
     }
 }

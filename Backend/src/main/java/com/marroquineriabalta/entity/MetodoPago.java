@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "metodo_pago")
@@ -17,9 +19,12 @@ public class MetodoPago {
     @Column(name = "id_metodo_pago")
     private Long idMetodoPago;
 
-    @Column(name = "iva_asociado")
-    private Integer ivaAsociado;
+    @Column(name = "comision_asociada")
+    private Double comisionAsociada;
 
     @Column(nullable = false, unique = true, length = 50)
     private String nombre;
+
+    @OneToMany(mappedBy = "metodoPago", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<MetodoPagoVenta> ventas = new ArrayList<>();
 }

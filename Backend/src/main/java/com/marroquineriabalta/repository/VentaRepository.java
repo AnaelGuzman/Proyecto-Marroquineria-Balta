@@ -14,11 +14,12 @@ public interface VentaRepository extends JpaRepository<Venta, Long> {
 
     List<Venta> findByFechaBetween(LocalDateTime inicio, LocalDateTime fin);
 
-    @Query("SELECT SUM(v.montoTotal) FROM Venta v WHERE v.fecha BETWEEN :inicio AND :fin")
+    @Query("SELECT SUM(v.montoBruto) FROM Venta v WHERE v.fecha BETWEEN :inicio AND :fin")
     BigDecimal sumMontoTotalByFechaBetween(@Param("inicio") LocalDateTime inicio,
                                            @Param("fin") LocalDateTime fin);
 
-    @Query("SELECT COUNT(v) FROM Venta v WHERE v.fecha BETWEEN :inicio AND :fin")
-    Long countVentasByFechaBetween(@Param("inicio") LocalDateTime inicio,
-                                   @Param("fin") LocalDateTime fin);
+    @Query("SELECT SUM(v.montoBruto) FROM Venta v JOIN v.metodosPago mp WHERE mp.metodoPago.idMetodoPago = :idMetodoPago AND v.fecha BETWEEN :inicio AND :fin")
+    BigDecimal sumMontoBrutoByMetodoPagoAndPeriodo(@Param("idMetodoPago") Long idMetodoPago,
+                                                   @Param("inicio") LocalDateTime inicio,
+                                                   @Param("fin") LocalDateTime fin);
 }

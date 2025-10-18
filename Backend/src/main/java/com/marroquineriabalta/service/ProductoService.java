@@ -7,6 +7,8 @@ import com.marroquineriabalta.repository.ProductoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -67,5 +69,8 @@ public class ProductoService {
 
     public List<Producto> obtenerProductosPorCategoria(Long idCategoria) {
         return productoRepository.findByCategoriaIdCategoria(idCategoria);
+    }
+    public List<Object[]> obtenerProductosMasVendidos(LocalDateTime inicio, LocalDateTime fin) {
+        return productoRepository.findProductosMasVendidos(inicio, fin);
     }
 }

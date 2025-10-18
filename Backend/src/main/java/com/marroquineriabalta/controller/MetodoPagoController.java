@@ -1,5 +1,6 @@
 package com.marroquineriabalta.controller;
 
+import com.marroquineriabalta.dto.MetodoPagoDTO;
 import com.marroquineriabalta.entity.MetodoPago;
 import com.marroquineriabalta.service.MetodoPagoService;
 import lombok.RequiredArgsConstructor;
@@ -7,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/metodos-pago")
@@ -27,14 +29,26 @@ public class MetodoPagoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<MetodoPago>> listarMetodosPago() {
-        return ResponseEntity.ok(metodoPagoService.listarMetodosPago());
+    public ResponseEntity<List<MetodoPagoDTO>> listarMetodosPago() {
+        List<MetodoPago> metodos = metodoPagoService.listarMetodosPago();
+        List<MetodoPagoDTO> dtos = metodos.stream()
+                .map(m -> new MetodoPagoDTO(
+                        m.getIdMetodoPago(),
+                        m.getComisionAsociada(),
+                        m.getNombre()
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(dtos);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<?> obtenerMetodoPago(@PathVariable Long id) {
         return metodoPagoService.obtenerMetodoPagoPorId(id)
-                .map(ResponseEntity::ok)
+                .map(m -> ResponseEntity.ok(new MetodoPagoDTO(
+                        m.getIdMetodoPago(),
+                        m.getComisionAsociada(),
+                        m.getNombre()
+                )))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -56,5 +70,12 @@ public class MetodoPagoController {
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    // NUEVO ENDPOINT: Verificar si un método de pago está en uso
+    @GetMapping("/{id}/en-uso")
+    public ResponseEntity<Boolean> verificarEnUso(@PathVariable Long id) {
+        boolean enUso = metodoPagoService.estaEnUso(id);
+        return ResponseEntity.ok(enUso);
     }
 }

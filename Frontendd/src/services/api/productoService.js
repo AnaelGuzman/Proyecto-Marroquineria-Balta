@@ -41,5 +41,14 @@ export const productoService = {
     fetch(`${API_BASE_URL}/productos/buscar?nombre=${nombre}`).then(handleResponse),
   
   getPorCategoria: (idCategoria) => 
-    fetch(`${API_BASE_URL}/productos/categoria/${idCategoria}`).then(handleResponse)
+    fetch(`${API_BASE_URL}/productos/categoria/${idCategoria}`).then(handleResponse),
+  
+  // NUEVA FUNCIÓN - Productos más vendidos
+  getMasVendidos: (inicio, fin) => 
+    fetch(`${API_BASE_URL}/productos/mas-vendidos?inicio=${inicio.toISOString()}&fin=${fin.toISOString()}`)
+      .then(handleResponse)
+      .catch(err => {
+        console.error('Error en getMasVendidos:', err);
+        return [];
+      })
 };

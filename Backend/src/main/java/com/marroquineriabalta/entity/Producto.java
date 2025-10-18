@@ -25,7 +25,7 @@ public class Producto {
     private String descripcion;
 
     @Column(nullable = false, precision = 10, scale = 2)
-    private BigDecimal precio;
+    private BigDecimal precio;//precio bruto con impuesto e comision
 
     @ManyToOne
     @JoinColumn(name = "id_categoria")

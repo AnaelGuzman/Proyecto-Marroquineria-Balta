@@ -1,23 +1,128 @@
 import React, { useMemo, useState } from 'react'
+import { ThemeProvider, createTheme } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import Dashboard from './pages/Dashboard.jsx'
-import Ingresos from './pages/Ingresos.jsx'
+import Ingresos from './pages/Venta/Ingresos.jsx'
+import StatVentas from './pages/Venta/EstadisticasVentas.jsx'
 import Egresos from './pages/Egresos.jsx'
 import Reportes from './pages/Reportes.jsx'
 import Inventario from './pages/Inventario.jsx'
+import Configuracion from './pages/Met-Cat.jsx'
+import MenuItem from './components/MenuItem.jsx';
 import Logo from './components/Logo.jsx'
 import { Field, Button } from './components/UI.jsx'
 
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#5D4037',
+      light: '#8D6E63',
+      dark: '#3E2723',
+    },
+    secondary: {
+      main: '#A1887F',
+      light: '#D7CCC8',
+      dark: '#795548',
+    },
+    background: {
+      default: '#EFEBE9',
+      paper: '#FAF9F7',
+    },
+    text: {
+      primary: '#3E2723',
+      secondary: '#5D4037',
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h1: {
+      fontSize: '2.5rem',
+      fontWeight: 600,
+      color: '#3E2723',
+    },
+    h3: {
+      fontSize: '1.8rem',
+      fontWeight: 600,
+      color: '#3E2723',
+    },
+  },
+  shape: {
+    borderRadius: 12,
+  },
+  components: {
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          boxShadow: '0 4px 20px rgba(93, 64, 55, 0.1)',
+          border: '1px solid #D7CCC8',
+        },
+      },
+    },
+  },
+});
+
+// En App.jsx - actualiza la constante routes
 const routes = [
-  { path: '#/', label: 'Inicio', element: Dashboard },
-  { path: '#/ingresos', label: 'Venta', element: Ingresos },
-  { path: '#/egresos', label: 'Compra', element: Egresos },
-  { path: '#/inventario', label: 'Inventario', element: Inventario },
-  { path: '#/reportes', label: 'Estadísticas', element: Reportes },
+  { 
+    path: '#/', 
+    label: 'Inicio', 
+    element: Dashboard,
+    icon: ''
+  },
+  { 
+    path: '#/ingresos', 
+    label: 'Venta', 
+    element: Ingresos,
+    icon: '',
+    submenu: [
+      { path: '#/ingresos', label: 'Registrar Venta' },
+      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas',element: StatVentas }
+    ]
+  },
+  { 
+    path: '#/egresos', 
+    label: 'Compra', 
+    element: Egresos,
+    icon: '',
+    submenu: [
+      { path: '#/egresos', label: 'Registrar Compra' },
+    ]
+  },
+  { 
+    path: '#/inventario', 
+    label: 'Inventario Productos', 
+    element: Inventario,
+    icon: '',
+    submenu: [
+      { path: '#/inventario', label: 'Gestión de Inventario' },
+    ]
+  },
+  { 
+    path: '#/reportes', 
+    label: 'Estadísticas', 
+    element: Reportes,
+    icon: '',
+    submenu: [
+      { path: '#/reportes', label: 'Dashboard General' },
+    ]
+  },
+  { 
+    path: '#/configuracion', 
+    label: 'Configuración', 
+    element: Configuracion,
+    icon: '',
+    submenu: [
+      { path: '#/configuracion', label: 'Métodos y Categorías' },
+      { path: '#/usuarios', label: 'Usuarios' },
+    ]
+  },
 ]
 
 export default function App() {
   const [hash, setHash] = useState(window.location.hash || '#/')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  
   React.useEffect(() => {
     const onHashChange = () => {
       setHash(window.location.hash || '#/')
@@ -28,41 +133,62 @@ export default function App() {
   }, [])
 
   const Active = useMemo(() => {
-    const match = routes.find(r => hash === r.path) || routes[0]
-    return match.element
-  }, [hash])
+    // Buscar coincidencia directa o dentro de submenús
+    let match = routes.find(r => hash === r.path);
+    
+    if (!match) {
+      for (const route of routes) {
+        if (route.submenu) {
+          const sub = route.submenu.find(s => hash === s.path);
+          if (sub) {
+            match = sub;
+            break;
+          }
+        }
+      }
+    }
+
+    return match ? match.element : routes[0].element;
+  }, [hash]);
+
 
   return (
-    <div className={`shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
-      <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="brand">
-          <Logo />
-          <div className="brand-text">
-            <strong>BALTA</strong>
-            <span className="muted">Administración</span>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div className={`shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
+        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+          <div className="brand">
+            <Logo />
+            <div className="brand-text">
+              <strong>BALTA</strong>
+              <span className="muted">Marroquinería</span>
+            </div>
           </div>
-        </div>
-        <nav className="nav">
-          {routes.map(r => (
-            <a key={r.path} href={r.path} className={hash === r.path ? 'active' : ''}>
-              {r.label}
-            </a>
-          ))}
-        </nav>
-        <div className="sidebar-footer">
-          <small>Maqueta visual • Sin backend</small>
-        </div>
-      </aside>
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
-      )}
-      <main className="content">
-        <Header hash={hash} onToggleSidebar={() => setSidebarOpen(s => !s)} />
-        <div className="page">
-          <Active />
-        </div>
-      </main>
-    </div>
+          <nav className="nav">
+            {routes.map(route => (
+              <MenuItem 
+                key={route.path} 
+                route={route} 
+                hash={hash}
+                onNavigate={() => setSidebarOpen(false)}
+              />
+            ))}
+          </nav>
+          <div className="sidebar-footer">
+            <small>Conectado al backend</small>
+          </div>
+        </aside>
+        {sidebarOpen && (
+          <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+        )}
+        <main className="content">
+          <Header hash={hash} onToggleSidebar={() => setSidebarOpen(s => !s)} />
+          <div className="page">
+            <Active />
+          </div>
+        </main>
+      </div>
+    </ThemeProvider>
   )
 }
 
@@ -72,10 +198,7 @@ function Header({ hash, onToggleSidebar }) {
     return route?.label ?? 'Inicio'
   }, [hash])
 
-  // Estado para controlar el pop-up del calendario de agendamientos
   const [showCalendar, setShowCalendar] = useState(false)
-
-  // Fecha de hoy para el calendario (solo maqueta)
   const today = new Date().toISOString().split('T')[0]
 
   return (
@@ -91,12 +214,10 @@ function Header({ hash, onToggleSidebar }) {
         <h1>{title}</h1>
         <div className="spacer" />
 
-        {/* Botón de agendamientos con el mismo estilo que el perfil */}
         <Button variant="ghost" small onClick={() => setShowCalendar(true)}>
           Agendamientos
         </Button>
 
-        {/* Botón de perfil, ahora con el mismo estilo */}
         <Button variant="ghost" small title="Solo demostración">
           <span className="avatar" style={{ marginRight: '0.5rem' }}>⚙️</span>
           Marco antonio
@@ -114,20 +235,19 @@ function Header({ hash, onToggleSidebar }) {
             alignItems: 'center',
             zIndex: 1000,
           }}
-          onClick={() => setShowCalendar(false)} // Cierre al hacer clic fuera
+          onClick={() => setShowCalendar(false)}
         >
           <div
             style={{
               background: '#fff',
               padding: '1.5rem',
-              borderRadius: '8px',
+              borderRadius: '12px',
               minWidth: 300,
               position: 'relative',
             }}
-            onClick={e => e.stopPropagation()} // Evitar cierre al hacer clic dentro
+            onClick={e => e.stopPropagation()}
           >
             <h3 style={{ marginTop: 0 }}>Selecciona fecha</h3>
-            {/* Puedes reemplazar esto por un componente de calendario */}
             <Field label="Fecha" type="date" defaultValue={today} />
             <div style={{ marginTop: '1rem', textAlign: 'right' }}>
               <Button onClick={() => setShowCalendar(false)}>Cerrar</Button>
