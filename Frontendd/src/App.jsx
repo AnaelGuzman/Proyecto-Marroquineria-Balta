@@ -6,7 +6,7 @@ import Ingresos from './pages/Venta/Ingresos.jsx'
 import StatVentas from './pages/Venta/EstadisticasVentas.jsx'
 import Egresos from './pages/Egresos.jsx'
 import Reportes from './pages/Reportes.jsx'
-import Inventario from './pages/Inventario.jsx'
+import Inventario from './pages/Inventario/Inventario.jsx'
 import Configuracion from './pages/Met-Cat.jsx'
 import MenuItem from './components/MenuItem.jsx';
 import Logo from './components/Logo.jsx'
