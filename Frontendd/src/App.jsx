@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import Dashboard from './pages/Dashboard.jsx'
@@ -122,6 +122,12 @@ const routes = [
 export default function App() {
   const [hash, setHash] = useState(window.location.hash || '#/')
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [openMenuPath, setOpenMenuPath] = useState(null);
+  const sidebarRef = useRef(null);
+  const touchStartX = useRef(0);
+  const touchCurrentX = useRef(0);
+  const isSwiping = useRef(false);
+  const SIDEBAR_WIDTH = 280;
   
   React.useEffect(() => {
     const onHashChange = () => {
@@ -131,6 +137,69 @@ export default function App() {
     window.addEventListener('hashchange', onHashChange)
     return () => window.removeEventListener('hashchange', onHashChange)
   }, [])
+
+  React.useEffect(() => {
+    const activeRouteParent = routes.find(r => r.submenu?.some(s => s.path === hash));
+    if (activeRouteParent) {
+      setOpenMenuPath(activeRouteParent.path);
+    }
+  }, [hash]);
+
+  // Gestos táctiles para cerrar el sidebar deslizando
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+
+    const handleTouchStart = (e) => {
+      if (!sidebarOpen) return;
+      touchStartX.current = e.touches[0].clientX;
+      touchCurrentX.current = touchStartX.current; // evita diff negativo en taps
+      isSwiping.current = false;
+    };
+
+    const handleTouchMove = (e) => {
+      if (!sidebarOpen) return;
+      touchCurrentX.current = e.touches[0].clientX;
+      const dx = touchCurrentX.current - touchStartX.current;
+
+      // Ignora movimientos pequeños (tap)
+      if (dx > -10) return;
+
+      isSwiping.current = true;
+      // Sigue el dedo hacia la izquierda, limitado al ancho del sidebar
+      sidebar.style.transition = 'none';
+      sidebar.style.transform = `translateX(${Math.max(dx, -SIDEBAR_WIDTH)}px)`;
+    };
+
+    const handleTouchEnd = () => {
+      if (!sidebarOpen) return;
+      const dx = touchCurrentX.current - touchStartX.current;
+
+      // Solo cierra si fue un swipe real hacia la izquierda
+      if (isSwiping.current && dx < -80) {
+        setSidebarOpen(false);
+      }
+
+      // Reset transform/transition
+      sidebar.style.transition = '';
+      sidebar.style.transform = '';
+      isSwiping.current = false;
+    };
+
+    sidebar.addEventListener('touchstart', handleTouchStart, { passive: true });
+    sidebar.addEventListener('touchmove', handleTouchMove, { passive: true });
+    sidebar.addEventListener('touchend', handleTouchEnd);
+
+    return () => {
+      sidebar.removeEventListener('touchstart', handleTouchStart);
+      sidebar.removeEventListener('touchmove', handleTouchMove);
+      sidebar.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [sidebarOpen]);
+
+  const handleMenuToggle = (path) => {
+    setOpenMenuPath(prevPath => (prevPath === path ? null : path));
+  };
 
   const Active = useMemo(() => {
     // Buscar coincidencia directa o dentro de submenús
@@ -155,8 +224,18 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      {/* Botón hamburguesa con clase condicional para ocultarlo */}
+      <button
+        type="button"
+        className={`hamburger-btn ${sidebarOpen ? 'hide' : ''}`}
+        onClick={() => setSidebarOpen(true)}
+        aria-label="Abrir menú"
+      >
+        ☰
+      </button>
+
       <div className={`shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
-        <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+        <aside ref={sidebarRef} className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="brand">
             <Logo />
             <div className="brand-text">
@@ -170,6 +249,8 @@ export default function App() {
                 key={route.path} 
                 route={route} 
                 hash={hash}
+                isOpen={openMenuPath === route.path}
+                onToggle={() => handleMenuToggle(route.path)}
                 onNavigate={() => setSidebarOpen(false)}
               />
             ))}
@@ -178,11 +259,22 @@ export default function App() {
             <small>Conectado al backend</small>
           </div>
         </aside>
+        {/* Overlay con clase show condicional */}
         {sidebarOpen && (
-          <div className="sidebar-overlay" onClick={() => setSidebarOpen(false)} />
+          <div 
+            className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`}
+            onClick={() => setSidebarOpen(false)} 
+          />
         )}
-        <main className="content">
-          <Header hash={hash} onToggleSidebar={() => setSidebarOpen(s => !s)} />
+        <main 
+          className="content"
+          style={{ 
+            flex: 1, 
+            overflowY: 'auto',
+            height: '100vh' 
+          }}
+        >
+          <Header hash={hash} />
           <div className="page">
             <Active />
           </div>
@@ -192,7 +284,7 @@ export default function App() {
   )
 }
 
-function Header({ hash, onToggleSidebar }) {
+function Header({ hash }) { // Eliminamos onToggleSidebar de las props
   const title = useMemo(() => {
     const route = routes.find(r => hash === r.path)
     return route?.label ?? 'Inicio'
@@ -203,14 +295,16 @@ function Header({ hash, onToggleSidebar }) {
 
   return (
     <>
-      <header className="topbar">
-        <button
-          type="button"
-          className="hamburger-btn"
-          onClick={onToggleSidebar}
-        >
-          ☰
-        </button>
+      <header 
+        className="topbar"
+        style={{
+          position: 'sticky', /* Fija el header al hacer scroll */
+          top: 0,
+          zIndex: 1000, /* Se asegura que esté sobre el contenido de la página */
+          backgroundColor: 'var(--bg-default, #EFEBE9)' /* Evita transparencia */
+        }}
+      >
+        {/* El botón de hamburguesa ya no está aquí */}
         <h1>{title}</h1>
         <div className="spacer" />
 

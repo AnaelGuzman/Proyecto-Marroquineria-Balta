@@ -1,0 +1,121 @@
+/* Estilos específicos para pantallas con un ancho máximo de 899px */
+@media (max-width: 899px) {
+  /* Ajuste de fuente base para pantallas pequeñas */
+  html {
+    font-size: 16px;
+  }
+
+  .shell{
+    /* Eliminamos el grid y usamos flexbox para el layout móvil */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .sidebar{
+    position:fixed;
+    top:0;
+    left:0;
+    bottom:0;
+    width:280px;
+    transform:translateX(-100%);
+    z-index:1200;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar.open{
+    transform:translateX(0);
+  }
+
+  .sidebar-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.5);
+    display:block;
+    z-index:1150;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+
+  .sidebar-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .hamburger-btn{
+    display:inline-flex !important; /* Hacemos visible el botón en móvil */
+    align-items:center;
+    justify-content:center;
+    opacity: 1;
+    pointer-events: all;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+  }
+
+  /* Ocultar botón cuando sidebar está abierto */
+  .hamburger-btn.hide {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100px);
+  }
+
+  .page {
+    padding: 1.5rem 1rem;
+  }
+
+  .topbar {
+    padding: 0.75rem 1rem 0.75rem 4.5rem;
+    gap: 1rem;
+  }
+
+  .topbar h1 {
+    font-size: 1.5rem;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .field {
+    grid-column: span 1;
+  }
+
+  .topbar .btn span:not(.avatar) {
+    display: none;
+  }
+
+  .topbar .btn {
+    min-width: 48px;
+    padding: 0 0.75rem;
+  }
+
+  .grid > .card {
+    grid-column: span 12 !important;
+  }
+
+  .stats-grid > .card {
+    min-height: 400px;
+  }
+
+  .chart-placeholder {
+    min-height: 350px;
+  }
+}
+
+@media (max-width: 600px) {
+  .stats-grid > .card {
+    min-height: 350px;
+  }
+  
+  .chart-placeholder {
+    min-height: 300px;
+  }
+  
+  .page {
+    padding: 1rem;
+  }
+}

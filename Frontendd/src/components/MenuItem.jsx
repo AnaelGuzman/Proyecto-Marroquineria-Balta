@@ -1,17 +1,17 @@
 // src/components/MenuItem.jsx
-import React, { useState } from 'react';
+import React from 'react';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 
-export default function MenuItem({ route, hash, onNavigate }) {
-  const [submenuOpen, setSubmenuOpen] = useState(false);
+export default function MenuItem({ route, hash, onNavigate, isOpen, onToggle }) {
   const hasSubmenu = route.submenu && route.submenu.length > 0;
   const isActive = hash === route.path || (hasSubmenu && route.submenu.some(item => hash === item.path));
 
   const handleClick = (e) => {
     if (hasSubmenu) {
       e.preventDefault();
-      setSubmenuOpen(!submenuOpen);
+      onToggle();
     } else {
+      window.location.hash = route.path;
       onNavigate();
     }
   };
@@ -36,12 +36,12 @@ export default function MenuItem({ route, hash, onNavigate }) {
         </span>
         {hasSubmenu && (
           <span className="nav-arrow">
-            {submenuOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
+            {isOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
           </span>
         )}
       </a>
       
-      {hasSubmenu && submenuOpen && (
+      {hasSubmenu && isOpen && (
         <div className="submenu">
           {route.submenu.map((subItem, index) => (
             <a
