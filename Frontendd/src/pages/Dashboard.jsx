@@ -72,16 +72,17 @@ export default function Dashboard() {
       setLoading(true)
       const now = new Date()
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
-      const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
       
-      // Fechas para el día actual - CORREGIDO: Solo fecha, sin hora
-      const inicioDia = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      // Fechas para el día actual - CORREGIDO
+      const inicioDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
       const finDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
 
       const [
         totalVentasMes, 
         totalComprasMes, 
         totalGastosMes, 
+        ventasDelDia, // CAMBIADO: Usar endpoint de periodo
         todasLasVentas,
         todasLasCompras,
         productosBajoStock
@@ -91,7 +92,10 @@ export default function Dashboard() {
         api.compras.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString()).catch(() => 0),
         api.gastos.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString()).catch(() => 0),
         
-        // Todas las ventas para cálculos
+        // NUEVO: Ventas del día usando el endpoint correcto
+        api.ventas.getPorPeriodo(inicioDia.toISOString(), finDia.toISOString()).catch(() => []),
+        
+        // Todas las ventas para movimientos recientes
         api.ventas.getAll().catch(() => []),
         
         // Todas las compras para movimientos recientes
@@ -130,15 +134,10 @@ export default function Dashboard() {
         },
       ])
 
-      // CÁLCULO DE MÉTRICAS DEL DÍA - CORREGIDO
-      const ventasDelDia = todasLasVentas.filter(venta => {
-        const fechaVenta = obtenerFechaDesdeDato(venta.fecha)
-        return fechaVenta.toDateString() === now.toDateString()
-      })
-
+      // CÁLCULO DE MÉTRICAS DEL DÍA - SIMPLIFICADO
       const cantidadVentasDia = ventasDelDia.length
       
-      // CORREGIDO: Calcular productos vendidos correctamente
+      // Calcular productos vendidos correctamente
       const productosVendidosDia = ventasDelDia.reduce((total, venta) => {
         if (venta.detalles && Array.isArray(venta.detalles)) {
           return total + venta.detalles.reduce((sum, detalle) => {
@@ -192,7 +191,7 @@ export default function Dashboard() {
         </span>
       ]))
 
-      // MOVIMIENTOS RECIENTES - CORREGIDO: Incluir compras y ventas
+      // MOVIMIENTOS RECIENTES - Sin cambios
       const movimientosRecientes = []
 
       // Procesar ventas recientes (últimas 2 semanas)
@@ -200,7 +199,7 @@ export default function Dashboard() {
         const fechaVenta = obtenerFechaDesdeDato(venta.fecha)
         const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
         return fechaVenta >= dosSemanasAtras
-      }).slice(-10) // Últimas 10 ventas
+      }).slice(-10)
 
       ventasRecientes.reverse().forEach(venta => {
         const primerProducto = venta.detalles && venta.detalles.length > 0 
@@ -219,12 +218,12 @@ export default function Dashboard() {
         })
       })
 
-      // Procesar compras recientes (últimas 2 semanas) - NUEVO
+      // Procesar compras recientes
       const comprasRecientes = todasLasCompras.filter(compra => {
         const fechaCompra = obtenerFechaDesdeDato(compra.fecha)
         const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
         return fechaCompra >= dosSemanasAtras
-      }).slice(-10) // Últimas 10 compras
+      }).slice(-10)
 
       comprasRecientes.reverse().forEach(compra => {
         const primerProducto = compra.detalles && compra.detalles.length > 0 
@@ -243,7 +242,7 @@ export default function Dashboard() {
         })
       })
 
-      // Ordenar por fecha (más reciente primero) y tomar los 10 más recientes
+      // Ordenar por fecha y tomar los 10 más recientes
       const movimientosOrdenados = movimientosRecientes
         .sort((a, b) => b.fechaOriginal - a.fechaOriginal)
         .slice(0, 10)

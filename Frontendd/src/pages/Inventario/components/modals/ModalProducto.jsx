@@ -118,7 +118,9 @@ export default function ModalProducto({
               <input
                 type="number"
                 value={formData.precio}
-                onChange={(e) => setFormData({ ...formData, precio: parseFloat(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                onFocus={(e) => { if (e.target.value === '0') setFormData({ ...formData, precio: '' }) }}
+                onBlur={(e) => { if (e.target.value === '') setFormData({ ...formData, precio: 0 }) }}
                 min="0"
                 step="100"
                 required
@@ -140,7 +142,9 @@ export default function ModalProducto({
               <input
                 type="number"
                 value={formData.cantidad}
-                onChange={(e) => setFormData({ ...formData, cantidad: parseInt(e.target.value) || 0 })}
+                onChange={(e) => setFormData({ ...formData, cantidad: e.target.value })}
+                onFocus={(e) => { if (e.target.value === '0') setFormData({ ...formData, cantidad: '' }) }}
+                onBlur={(e) => { if (e.target.value === '') setFormData({ ...formData, cantidad: 0 }) }}
                 min="0"
                 style={{
                   width: '100%',
