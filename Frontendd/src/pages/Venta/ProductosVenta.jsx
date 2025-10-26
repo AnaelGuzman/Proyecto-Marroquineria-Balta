@@ -93,7 +93,7 @@ export default function ProductosVenta({
                   productos.filter(p => p.idProducto.toString() === item.idProducto)
                 ).map(p => (
                   <option key={p.idProducto} value={p.idProducto}>
-                    {p.nombre} - ${p.precio?.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                    {p.nombre} - ${Math.round(p.precio || 0).toLocaleString('es-CL')}
                   </option>
                 ))}
               </select>
@@ -142,7 +142,7 @@ export default function ProductosVenta({
                   Precio
                 </div>
                 <div style={{ fontWeight: '600', color: 'var(--brand)' }}>
-                  ${(item.precioUnitario || 0).toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                  ${Math.round(item.precioUnitario || 0).toLocaleString('es-CL')}
                 </div>
               </div>
 
@@ -151,7 +151,7 @@ export default function ProductosVenta({
                   Subtotal
                 </div>
                 <div style={{ fontWeight: '600', color: 'var(--success)' }}>
-                  ${calcularSubtotalProducto(item).toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                  ${Math.round(calcularSubtotalProducto(item)).toLocaleString('es-CL')}
                 </div>
               </div>
               
@@ -198,7 +198,7 @@ export default function ProductosVenta({
             fontSize: '1.1rem'
           }}>
              Total Productos: {productosSeleccionados.length} | 
-             Total Venta: ${calcularTotal().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+             Total Venta: ${Math.round(calcularTotal()).toLocaleString('es-CL')}
           </div>
         </div>
       )}

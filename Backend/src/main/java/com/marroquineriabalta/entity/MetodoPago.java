@@ -1,5 +1,6 @@
 package com.marroquineriabalta.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -26,5 +27,6 @@ public class MetodoPago {
     private String nombre;
 
     @OneToMany(mappedBy = "metodoPago", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<MetodoPagoVenta> ventas = new ArrayList<>();
 }

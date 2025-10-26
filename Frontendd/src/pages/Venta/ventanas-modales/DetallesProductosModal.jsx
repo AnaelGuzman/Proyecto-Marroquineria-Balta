@@ -69,7 +69,7 @@ export default function DetallesProductosModal({ detalles, onClose }) {
                   {detalle.producto?.nombre || 'Producto no disponible'}
                 </div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
-                  ${detalle.precioUnitario?.toLocaleString('es-CL', { minimumFractionDigits: 2 })} c/u
+                  ${Math.round(detalle.precioUnitario || 0).toLocaleString('es-CL')} c/u
                 </div>
               </div>
               <div style={{ textAlign: 'right' }}>
@@ -77,7 +77,7 @@ export default function DetallesProductosModal({ detalles, onClose }) {
                   {detalle.cantidad} und
                 </div>
                 <div style={{ fontWeight: '600', color: 'var(--success)' }}>
-                  ${detalle.subtotal?.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                  ${Math.round(detalle.subtotal || 0).toLocaleString('es-CL')}
                 </div>
               </div>
             </div>

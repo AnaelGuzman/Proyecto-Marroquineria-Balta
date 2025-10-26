@@ -36,9 +36,8 @@ public class VentaService {
         // 1. Calcular subtotal de productos (precios CON IVA)
         BigDecimal montoBruto = calcularSubtotalProductos(venta);
 
-        // 2. Calcular componentes del precio
-        BigDecimal montoSinIva = montoBruto.divide(FACTOR_IVA, 2, RoundingMode.HALF_UP);
-        BigDecimal ivaTotal = montoBruto.subtract(montoSinIva);
+        // 2. Calcular IVA de los productos
+        BigDecimal ivaProductos = montoBruto.subtract(montoBruto.divide(FACTOR_IVA, 2, RoundingMode.HALF_UP));
 
         // 3. Validar suma de métodos de pago
         BigDecimal sumaMontosAsignados = venta.getMetodosPago().stream()
@@ -50,7 +49,7 @@ public class VentaService {
                     sumaMontosAsignados + ") debe ser igual al monto bruto de la venta (" + montoBruto + ")");
         }
 
-        // 4. Calcular comisiones por método de pago
+        // 4. Calcular comisiones por método de pago (CON IVA incluido)
         BigDecimal comisionTotal = BigDecimal.ZERO;
         List<MetodoPagoVenta> metodosPagoCalculados = new ArrayList<>();
 
@@ -59,7 +58,8 @@ public class VentaService {
                             metodoPagoVenta.getMetodoPago().getIdMetodoPago())
                     .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
 
-            BigDecimal comisionCalculada = calcularComision(
+            // CAMBIO: Calcular comisión CON IVA incluido
+            BigDecimal comisionCalculada = calcularComisionConIva(
                     metodoPagoVenta.getMontoAsignado(),
                     metodoPago.getNombre(),
                     metodoPago.getComisionAsociada()
@@ -75,11 +75,13 @@ public class VentaService {
 
         venta.setMetodosPago(metodosPagoCalculados);
 
-        // CORRECCIÓN: NETO = MONTO_SIN_IVA (no restar comisiones aquí)
-        venta.setMontoNeto(montoSinIva); // $4,201.68
-        venta.setIvaTotal(ivaTotal);     // $798.32
-        venta.setComisionTotal(comisionTotal); // $115.00
-        venta.setMontoBruto(montoBruto); // $5,000.00
+        // CAMBIO: Neto = Bruto - IVA productos - Comisión total (con IVA)
+        BigDecimal montoNeto = montoBruto.subtract(ivaProductos).subtract(comisionTotal);
+
+        venta.setMontoNeto(montoNeto);
+        venta.setIvaTotal(ivaProductos);
+        venta.setComisionTotal(comisionTotal);
+        venta.setMontoBruto(montoBruto);
 
         return ventaRepository.save(venta);
     }
@@ -106,15 +108,18 @@ public class VentaService {
         return subtotalGeneral;
     }
 
-    // CORRECCIÓN PRINCIPAL: Comisión sin IVA adicional
-    private BigDecimal calcularComision(BigDecimal montoAsignado, String nombreMetodoPago, Double comisionAsociada) {
+    // NUEVO MÉTODO: Comisión CON IVA incluido
+    private BigDecimal calcularComisionConIva(BigDecimal montoAsignado, String nombreMetodoPago, Double comisionAsociada) {
         if (!esPagoConTarjeta(nombreMetodoPago) || comisionAsociada == null || comisionAsociada == 0) {
             return BigDecimal.ZERO;
         }
 
-        // SOLO comisión neta, sin agregar IVA extra
-        return montoAsignado.multiply(BigDecimal.valueOf(comisionAsociada))
+        // Comisión base (sin IVA)
+        BigDecimal comisionBase = montoAsignado.multiply(BigDecimal.valueOf(comisionAsociada))
                 .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        // Comisión total = Comisión base * 1.19 (incluye IVA de la comisión)
+        return comisionBase.multiply(FACTOR_IVA).setScale(2, RoundingMode.HALF_UP);
     }
 
     private void validarVenta(Venta venta) {
@@ -143,8 +148,7 @@ public class VentaService {
         venta.setDetalles(ventaActualizada.getDetalles());
 
         BigDecimal montoBruto = subtotalGeneral;
-        BigDecimal montoSinIva = montoBruto.divide(FACTOR_IVA, 2, RoundingMode.HALF_UP);
-        BigDecimal ivaTotal = montoBruto.subtract(montoSinIva);
+        BigDecimal ivaProductos = montoBruto.subtract(montoBruto.divide(FACTOR_IVA, 2, RoundingMode.HALF_UP));
 
         BigDecimal comisionTotal = BigDecimal.ZERO;
         List<MetodoPagoVenta> metodosPagoCalculados = new ArrayList<>();
@@ -154,8 +158,8 @@ public class VentaService {
                             metodoPagoVenta.getMetodoPago().getIdMetodoPago())
                     .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
 
-            // CORRECCIÓN: Comisión sin IVA adicional
-            BigDecimal comisionCalculada = calcularComision(
+            // CAMBIO: Comisión CON IVA incluido
+            BigDecimal comisionCalculada = calcularComisionConIva(
                     metodoPagoVenta.getMontoAsignado(),
                     metodoPago.getNombre(),
                     metodoPago.getComisionAsociada()
@@ -171,9 +175,11 @@ public class VentaService {
 
         venta.setMetodosPago(metodosPagoCalculados);
 
-        // CORRECCIÓN: Neto = Monto sin IVA - Comisiones
-        venta.setMontoNeto(montoSinIva.subtract(comisionTotal));
-        venta.setIvaTotal(ivaTotal);
+        // CAMBIO: Neto = Bruto - IVA productos - Comisión total (con IVA)
+        BigDecimal montoNeto = montoBruto.subtract(ivaProductos).subtract(comisionTotal);
+
+        venta.setMontoNeto(montoNeto);
+        venta.setIvaTotal(ivaProductos);
         venta.setComisionTotal(comisionTotal);
         venta.setMontoBruto(montoBruto);
 

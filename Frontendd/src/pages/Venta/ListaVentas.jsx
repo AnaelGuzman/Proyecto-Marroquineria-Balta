@@ -12,7 +12,7 @@ export default function ListaVentas({
   const obtenerMetodosPagoVenta = (venta) => {
     if (venta.metodosPago && venta.metodosPago.length > 0) {
       return venta.metodosPago.map(mp => 
-        `${mp.metodoPago?.nombre}: $${mp.montoAsignado?.toLocaleString('es-CL', { minimumFractionDigits: 2 })}`
+        `${mp.metodoPago?.nombre}: $${Math.round(mp.montoAsignado || 0).toLocaleString('es-CL')}`
       ).join(', ');
     }
     return 'Sin métodos de pago';
@@ -69,13 +69,13 @@ export default function ListaVentas({
           formatearFecha(venta.fecha),
           obtenerProductosVenta(venta),
           <div key={venta.idVenta} style={{ textAlign: 'right', color: 'var(--text)' }}>
-            ${venta.montoNeto?.toLocaleString('es-CL', { minimumFractionDigits: 2 }) || '0.00'}
+            ${Math.round(venta.montoNeto || 0).toLocaleString('es-CL')}
           </div>,
           <div key={venta.idVenta} style={{ textAlign: 'right', color: 'var(--muted)' }}>
-            ${venta.ivaTotal?.toLocaleString('es-CL', { minimumFractionDigits: 2 }) || '0.00'}
+            ${Math.round(venta.ivaTotal || 0).toLocaleString('es-CL')}
           </div>,
           <div key={venta.idVenta} style={{ textAlign: 'right', color: 'var(--muted)' }}>
-            ${venta.comisionTotal?.toLocaleString('es-CL', { minimumFractionDigits: 2 }) || '0.00'}
+            ${Math.round(venta.comisionTotal || 0).toLocaleString('es-CL')}
           </div>,
           <div key={venta.idVenta} style={{ 
             textAlign: 'right', 
@@ -83,7 +83,7 @@ export default function ListaVentas({
             fontWeight: '600',
             fontSize: '1.05rem'
           }}>
-            ${venta.montoBruto?.toLocaleString('es-CL', { minimumFractionDigits: 2 }) || '0.00'}
+            ${Math.round(venta.montoBruto || 0).toLocaleString('es-CL')}
           </div>,
           <div key={venta.idVenta} style={{ 
             color: 'var(--text)',

@@ -16,11 +16,10 @@ export default function FormularioVenta({
 
   const calcularResumen = () => {
     const bruto = calcularTotal();
-    const neto = bruto / 1.19;
-    const iva = bruto - neto;
+    const ivaProductos = bruto - (bruto / 1.19);
     
-    // Calcular comisiones totales
-    const comisionTotal = metodosPagoSeleccionados.reduce((total, metodo) => {
+    // Calcular comisiones totales (base sin IVA)
+    const comisionBase = metodosPagoSeleccionados.reduce((total, metodo) => {
       if (metodo.idMetodoPago && metodo.montoAsignado) {
         const metodoPagoComision = metodosPago.find(m => m.idMetodoPago === parseInt(metodo.idMetodoPago));
         if (metodoPagoComision?.comisionAsociada) {
@@ -29,11 +28,17 @@ export default function FormularioVenta({
       }
       return total;
     }, 0);
+    
+    // Comisión total incluye IVA de la comisión
+    const comisionTotal = comisionBase * 1.19;
+    
+    // Neto = Bruto - IVA de productos - Comisión total (con IVA)
+    const neto = bruto - ivaProductos - comisionTotal;
 
     return {
       bruto: bruto,
       neto: neto,
-      iva: iva,
+      iva: ivaProductos,
       comision: comisionTotal
     };
   };
@@ -84,7 +89,7 @@ export default function FormularioVenta({
                 Neto
               </div>
               <div style={{ fontWeight: '600', color: '#2E7D32', fontSize: '1.2rem' }}>
-                ${resumen.neto.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                ${Math.round(resumen.neto).toLocaleString('es-CL')}
               </div>
             </div>
             
@@ -99,7 +104,7 @@ export default function FormularioVenta({
                 IVA (19%)
               </div>
               <div style={{ fontWeight: '600', color: '#1565C0', fontSize: '1.2rem' }}>
-                ${resumen.iva.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                ${Math.round(resumen.iva).toLocaleString('es-CL')}
               </div>
             </div>
             
@@ -111,10 +116,10 @@ export default function FormularioVenta({
               textAlign: 'center'
             }}>
               <div style={{ fontSize: '0.9rem', color: '#EF6C00', marginBottom: '0.5rem' }}>
-                Comisión
+                Comisión + IVA
               </div>
               <div style={{ fontWeight: '600', color: '#EF6C00', fontSize: '1.2rem' }}>
-                ${resumen.comision.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                ${Math.round(resumen.comision).toLocaleString('es-CL')}
               </div>
             </div>
             
@@ -129,7 +134,7 @@ export default function FormularioVenta({
                 Bruto
               </div>
               <div style={{ fontWeight: '600', color: 'white', fontSize: '1.2rem' }}>
-                ${resumen.bruto.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                ${Math.round(resumen.bruto).toLocaleString('es-CL')}
               </div>
             </div>
           </div>
@@ -161,7 +166,7 @@ export default function FormularioVenta({
           </label>
           <input 
             type="text" 
-            value={`$ ${calcularTotal().toLocaleString('es-CL', { minimumFractionDigits: 2 })}`} 
+            value={`$ ${Math.round(calcularTotal()).toLocaleString('es-CL')}`} 
             disabled 
             style={{
               background: 'linear-gradient(135deg, var(--success), #66BB6A)',

@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react'
-import { Card, Table } from '../components/UI.jsx'
-import { api } from '../services/api/index.js'
+import React, { useState, useEffect } from 'react';
+import { Card, Table } from '../components/UI.jsx';
+import { api } from '../services/api/index.js';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -35,8 +35,8 @@ export default function Dashboard() {
       icon: <AccountBalance />,
       color: '#5D4037',
       trend: 'neutral'
-    },
-  ])
+    }
+  ]);
   
   const [metricas, setMetricas] = useState([
     {
@@ -57,58 +57,111 @@ export default function Dashboard() {
       icon: <Warning />,
       color: '#F44336'
     }
-  ])
+  ]);
 
-  const [recientes, setRecientes] = useState([])
-  const [bajoStock, setBajoStock] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [recientes, setRecientes] = useState([]);
+  const [bajoStock, setBajoStock] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    cargarDatos()
-  }, [])
+    cargarDatos();
+  }, []);
 
   const cargarDatos = async () => {
     try {
-      setLoading(true)
-      const now = new Date()
-      const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
-      const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      setLoading(true);
+      const now = new Date();
       
-      // Fechas para el día actual - CORREGIDO
-      const inicioDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0)
-      const finDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+      // Fechas del mes
+      const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
+      const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      // CORREGIDO: Fechas del día en formato local (sin convertir a UTC)
+      const inicioDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+      const finDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+
+      // Crear fechas en formato ISO pero ajustadas a la zona horaria local
+      const formatearFechaLocal = (fecha) => {
+        const year = fecha.getFullYear();
+        const month = String(fecha.getMonth() + 1).padStart(2, '0');
+        const day = String(fecha.getDate()).padStart(2, '0');
+        const hours = String(fecha.getHours()).padStart(2, '0');
+        const minutes = String(fecha.getMinutes()).padStart(2, '0');
+        const seconds = String(fecha.getSeconds()).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      };
+
+      const inicioDiaStr = formatearFechaLocal(inicioDia);
+      const finDiaStr = formatearFechaLocal(finDia);
+
+      console.log('🔍 DEBUG - Rango de búsqueda del día:', {
+        inicio: inicioDiaStr,
+        fin: finDiaStr,
+        fechaActual: now
+      });
 
       const [
         totalVentasMes, 
         totalComprasMes, 
         totalGastosMes, 
-        ventasDelDia, // CAMBIADO: Usar endpoint de periodo
+        ventasDelDia,
         todasLasVentas,
         todasLasCompras,
         productosBajoStock
       ] = await Promise.all([
         // Totales del mes
-        api.ventas.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString()).catch(() => 0),
-        api.compras.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString()).catch(() => 0),
-        api.gastos.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString()).catch(() => 0),
+        api.ventas.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
+          .catch(err => {
+            console.error('Error en totalVentasMes:', err);
+            return 0;
+          }),
+        api.compras.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
+          .catch(err => {
+            console.error('Error en totalComprasMes:', err);
+            return 0;
+          }),
+        api.gastos.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
+          .catch(err => {
+            console.error('Error en totalGastosMes:', err);
+            return 0;
+          }),
         
-        // NUEVO: Ventas del día usando el endpoint correcto
-        api.ventas.getPorPeriodo(inicioDia.toISOString(), finDia.toISOString()).catch(() => []),
+        // CORREGIDO: Ventas del día con fechas locales
+        api.ventas.getPorPeriodo(inicioDiaStr, finDiaStr)
+          .catch(err => {
+            console.error('❌ Error al obtener ventas del día:', err);
+            return [];
+          }),
         
         // Todas las ventas para movimientos recientes
-        api.ventas.getAll().catch(() => []),
+        api.ventas.getAll()
+          .catch(err => {
+            console.error('Error en todas las ventas:', err);
+            return [];
+          }),
         
         // Todas las compras para movimientos recientes
-        api.compras.getAll().catch(() => []),
+        api.compras.getAll()
+          .catch(err => {
+            console.error('Error en todas las compras:', err);
+            return [];
+          }),
         
         // Productos bajo stock
-        api.inventario.getBajoStock(10).catch(() => [])
-      ])
+        api.inventario.getBajoStock(10)
+          .catch(err => {
+            console.error('Error en productos bajo stock:', err);
+            return [];
+          })
+      ]);
+
+      console.log('📊 Ventas del día obtenidas:', ventasDelDia);
+      console.log('📊 Total de ventas del día:', ventasDelDia?.length || 0);
 
       // CÁLCULO DE RESUMEN FINANCIERO
-      const ingresos = parseFloat(totalVentasMes) || 0
-      const egresos = (parseFloat(totalComprasMes) || 0) + (parseFloat(totalGastosMes) || 0)
-      const saldo = ingresos - egresos
+      const ingresos = parseFloat(totalVentasMes) || 0;
+      const egresos = (parseFloat(totalComprasMes) || 0) + (parseFloat(totalGastosMes) || 0);
+      const saldo = ingresos - egresos;
 
       setResumen([
         { 
@@ -131,23 +184,29 @@ export default function Dashboard() {
           icon: <AccountBalance />,
           color: saldo >= 0 ? '#4CAF50' : '#F44336',
           trend: saldo >= 0 ? 'up' : 'down'
-        },
-      ])
-
-      // CÁLCULO DE MÉTRICAS DEL DÍA - SIMPLIFICADO
-      const cantidadVentasDia = ventasDelDia.length
-      
-      // Calcular productos vendidos correctamente
-      const productosVendidosDia = ventasDelDia.reduce((total, venta) => {
-        if (venta.detalles && Array.isArray(venta.detalles)) {
-          return total + venta.detalles.reduce((sum, detalle) => {
-            return sum + (parseInt(detalle.cantidad) || 0)
-          }, 0)
         }
-        return total
-      }, 0)
+      ]);
 
-      const productosBajoStockCount = productosBajoStock.length || 0
+      // CÁLCULO DE MÉTRICAS DEL DÍA - CORREGIDO
+      const ventasDelDiaArray = Array.isArray(ventasDelDia) ? ventasDelDia : [];
+      const cantidadVentasDia = ventasDelDiaArray.length;
+      
+      // Calcular productos vendidos correctamente con validación
+      const productosVendidosDia = ventasDelDiaArray.reduce((total, venta) => {
+        if (venta && venta.detalles && Array.isArray(venta.detalles)) {
+          return total + venta.detalles.reduce((sum, detalle) => {
+            return sum + (parseInt(detalle?.cantidad) || 0);
+          }, 0);
+        }
+        return total;
+      }, 0);
+
+      console.log('✅ Métricas calculadas:', {
+        cantidadVentas: cantidadVentasDia,
+        productosVendidos: productosVendidosDia
+      });
+
+      const productosBajoStockCount = Array.isArray(productosBajoStock) ? productosBajoStock.length : 0;
 
       setMetricas([
         {
@@ -168,79 +227,82 @@ export default function Dashboard() {
           icon: <Warning />,
           color: productosBajoStockCount > 0 ? '#F44336' : '#4CAF50'
         }
-      ])
+      ]);
 
-      // PRODUCTOS BAJO STOCK
-      setBajoStock(productosBajoStock.slice(0, 5).map(producto => [
-        producto.producto?.nombre || 'Producto',
+      // PRODUCTOS BAJO STOCK - CORREGIDO
+      const productosBajoStockArray = Array.isArray(productosBajoStock) ? productosBajoStock : [];
+      setBajoStock(productosBajoStockArray.slice(0, 5).map(producto => [
+        producto?.producto?.nombre || 'Producto',
         <span style={{ 
-          color: producto.cantidadProducto < 5 ? '#F44336' : '#FF9800',
+          color: (producto?.cantidadProducto || 0) < 5 ? '#F44336' : '#FF9800',
           fontWeight: '600'
         }}>
-          {producto.cantidadProducto} unidades
+          {producto?.cantidadProducto || 0} unidades
         </span>,
         <span style={{ 
-          background: producto.cantidadProducto < 5 ? '#FFEBEE' : '#FFF3E0',
-          color: producto.cantidadProducto < 5 ? '#C62828' : '#EF6C00',
+          background: (producto?.cantidadProducto || 0) < 5 ? '#FFEBEE' : '#FFF3E0',
+          color: (producto?.cantidadProducto || 0) < 5 ? '#C62828' : '#EF6C00',
           padding: '0.25rem 0.75rem',
           borderRadius: '20px',
           fontSize: '0.85rem',
           fontWeight: '500'
         }}>
-          {producto.cantidadProducto < 5 ? 'Crítico' : 'Bajo'}
+          {(producto?.cantidadProducto || 0) < 5 ? 'Crítico' : 'Bajo'}
         </span>
-      ]))
+      ]));
 
-      // MOVIMIENTOS RECIENTES - Sin cambios
-      const movimientosRecientes = []
+      // MOVIMIENTOS RECIENTES
+      const movimientosRecientes = [];
+      const todasLasVentasArray = Array.isArray(todasLasVentas) ? todasLasVentas : [];
+      const todasLasComprasArray = Array.isArray(todasLasCompras) ? todasLasCompras : [];
 
       // Procesar ventas recientes (últimas 2 semanas)
-      const ventasRecientes = todasLasVentas.filter(venta => {
-        const fechaVenta = obtenerFechaDesdeDato(venta.fecha)
-        const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-        return fechaVenta >= dosSemanasAtras
-      }).slice(-10)
+      const ventasRecientes = todasLasVentasArray.filter(venta => {
+        const fechaVenta = obtenerFechaDesdeDato(venta?.fecha);
+        const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        return fechaVenta >= dosSemanasAtras;
+      }).slice(-10);
 
       ventasRecientes.reverse().forEach(venta => {
-        const primerProducto = venta.detalles && venta.detalles.length > 0 
-          ? (venta.detalles[0].producto?.nombre || 'Producto')
-          : 'Venta sin productos'
+        const primerProducto = venta?.detalles && Array.isArray(venta.detalles) && venta.detalles.length > 0
+          ? (venta.detalles[0]?.producto?.nombre || 'Producto')
+          : 'Venta sin productos';
         
-        const fechaFormateada = formatearFecha(venta.fecha)
-        const monto = venta.montoBruto || venta.montoTotal || 0
+        const fechaFormateada = formatearFecha(venta?.fecha);
+        const monto = venta?.montoBruto || venta?.montoTotal || 0;
         
         movimientosRecientes.push({
           fecha: fechaFormateada,
           descripcion: primerProducto,
           monto: monto,
           tipo: 'venta',
-          fechaOriginal: obtenerFechaDesdeDato(venta.fecha)
-        })
-      })
+          fechaOriginal: obtenerFechaDesdeDato(venta?.fecha)
+        });
+      });
 
       // Procesar compras recientes
-      const comprasRecientes = todasLasCompras.filter(compra => {
-        const fechaCompra = obtenerFechaDesdeDato(compra.fecha)
-        const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-        return fechaCompra >= dosSemanasAtras
-      }).slice(-10)
+      const comprasRecientes = todasLasComprasArray.filter(compra => {
+        const fechaCompra = obtenerFechaDesdeDato(compra?.fecha);
+        const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+        return fechaCompra >= dosSemanasAtras;
+      }).slice(-10);
 
       comprasRecientes.reverse().forEach(compra => {
-        const primerProducto = compra.detalles && compra.detalles.length > 0 
-          ? (compra.detalles[0].descripcion || 'Insumo')
-          : 'Compra sin detalles'
+        const primerProducto = compra?.detalles && Array.isArray(compra.detalles) && compra.detalles.length > 0
+          ? (compra.detalles[0]?.descripcion || 'Insumo')
+          : 'Compra sin detalles';
         
-        const fechaFormateada = formatearFecha(compra.fecha)
-        const monto = compra.montoTotal || 0
+        const fechaFormateada = formatearFecha(compra?.fecha);
+        const monto = compra?.montoTotal || 0;
         
         movimientosRecientes.push({
           fecha: fechaFormateada,
           descripcion: primerProducto,
           monto: monto,
           tipo: 'compra',
-          fechaOriginal: obtenerFechaDesdeDato(compra.fecha)
-        })
-      })
+          fechaOriginal: obtenerFechaDesdeDato(compra?.fecha)
+        });
+      });
 
       // Ordenar por fecha y tomar los 10 más recientes
       const movimientosOrdenados = movimientosRecientes
@@ -263,20 +325,22 @@ export default function Dashboard() {
           }}>
             {mov.tipo === 'venta' ? '🛒 Venta' : '📦 Compra'}
           </span>
-        ])
+        ]);
 
-      setRecientes(movimientosOrdenados)
+      setRecientes(movimientosOrdenados);
 
     } catch (error) {
-      console.error('Error al cargar dashboard:', error)
+      console.error('❌ Error al cargar dashboard:', error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // FUNCIÓN AUXILIAR PARA OBTENER FECHA DESDE DIFERENTES FORMATOS
   const obtenerFechaDesdeDato = (fechaData) => {
     try {
+      if (!fechaData) return new Date();
+      
       let fecha;
       
       if (Array.isArray(fechaData)) {
@@ -286,22 +350,23 @@ export default function Dashboard() {
       } else if (fechaData instanceof Date) {
         fecha = fechaData;
       } else {
-        fecha = new Date(); // Fallback a fecha actual
+        fecha = new Date();
       }
 
       if (isNaN(fecha.getTime())) {
-        return new Date(); // Fallback a fecha actual si es inválida
+        return new Date();
       }
 
       return fecha;
     } catch (e) {
-      return new Date(); // Fallback a fecha actual en caso de error
+      console.error('Error al obtener fecha:', e);
+      return new Date();
     }
-  }
+  };
 
   const formatearFecha = (fechaData) => {
     try {
-      const fecha = obtenerFechaDesdeDato(fechaData)
+      const fecha = obtenerFechaDesdeDato(fechaData);
       const hoy = new Date();
       const ayer = new Date(hoy);
       ayer.setDate(ayer.getDate() - 1);
@@ -317,9 +382,10 @@ export default function Dashboard() {
         });
       }
     } catch (e) {
+      console.error('Error al formatear fecha:', e);
       return 'Fecha inválida';
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -330,7 +396,7 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
-    )
+    );
   }
 
   return (
@@ -338,7 +404,7 @@ export default function Dashboard() {
       {/* RESUMEN FINANCIERO */}
       <Card title="Resumen Financiero" subtitle="Vista general del desempeño mensual" accent="accent">
         <div className="stats">
-          {resumen.map((r, index) => (
+          {resumen.map((r) => (
             <div key={r.label} className="stat">
               <div style={{ 
                 display: 'flex', 
@@ -381,7 +447,7 @@ export default function Dashboard() {
         <div style={{ gridColumn: 'span 8' }}>
           <Card title="Métricas del Día" subtitle="Actividad comercial del día de hoy">
             <div className="stats">
-              {metricas.map((metrica, index) => (
+              {metricas.map((metrica) => (
                 <div key={metrica.label} className="stat">
                   <div style={{ 
                     display: 'flex', 
@@ -456,5 +522,5 @@ export default function Dashboard() {
         )}
       </Card>
     </div>
-  )
+  );
 }

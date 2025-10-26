@@ -128,30 +128,60 @@ export default function Egresos() {
   }
 
   const handleGuardarCompra = async () => {
-    if (!formCompra.descripcion || !formCompra.idMetodoPago || formCompra.precioUnitario <= 0) {
-      alert('Por favor complete todos los campos requeridos')
+    // Validaciones
+    if (!formCompra.descripcion?.trim()) {
+      alert('Por favor ingrese una descripción')
+      return
+    }
+    
+    if (!formCompra.idMetodoPago) {
+      alert('Por favor seleccione un método de pago')
+      return
+    }
+    
+    if (!formCompra.precioUnitario || formCompra.precioUnitario <= 0) {
+      alert('El precio unitario debe ser mayor a 0')
+      return
+    }
+
+    if (!formCompra.cantidad || formCompra.cantidad <= 0) {
+      alert('La cantidad debe ser mayor a 0')
       return
     }
 
     try {
+      // Preparar datos con validación
+      const cantidad = parseInt(formCompra.cantidad)
+      const precioUnitario = parseFloat(formCompra.precioUnitario)
+      const subtotal = cantidad * precioUnitario
+      
+      // Construir objeto limpio sin propiedades undefined
       const compraData = {
         fecha: new Date(formCompra.fecha).toISOString(),
         metodoPago: { 
-          idMetodoPago: parseInt(formCompra.idMetodoPago) 
+          idMetodoPago: parseInt(formCompra.idMetodoPago)
         },
-        tipoDocumento: formCompra.tipoDocumento,
-        observaciones: formCompra.observaciones || "",
-        detalles: [{
-          descripcion: formCompra.descripcion,
-          cantidad: parseInt(formCompra.cantidad),
-          precioUnitario: parseFloat(formCompra.precioUnitario),
-          subtotal: calcularTotalCompra()
-        }]
+        tipoDocumento: formCompra.tipoDocumento || 'sin-documento',
+        observaciones: (formCompra.observaciones || '').trim(),
+        detalles: [
+          {
+            descripcion: formCompra.descripcion.trim(),
+            cantidad: cantidad,
+            precioUnitario: precioUnitario,
+            subtotal: subtotal
+          }
+        ]
       }
 
-      await api.compras.registrar(compraData)
-      alert('Compra registrada exitosamente')
+      console.log('📤 Datos a enviar:', JSON.stringify(compraData, null, 2))
 
+      const response = await api.compras.registrar(compraData)
+      
+      console.log('✅ Respuesta exitosa:', response)
+      
+      alert('✅ Compra registrada exitosamente')
+
+      // Limpiar formulario
       setFormCompra({
         descripcion: '',
         cantidad: 1,
@@ -162,10 +192,24 @@ export default function Egresos() {
         observaciones: ''
       })
 
+      // Recargar datos
       await cargarDatos()
+      
     } catch (error) {
-      console.error('Error al registrar compra:', error)
-      alert('Error al registrar la compra: ' + (error.message || 'Error desconocido'))
+      console.error('❌ Error completo:', error)
+      
+      // Extraer mensaje de error más claro
+      let mensaje = 'Error desconocido al registrar la compra'
+      
+      if (error.message) {
+        mensaje = error.message
+      } else if (error.response?.data) {
+        mensaje = typeof error.response.data === 'string' 
+          ? error.response.data 
+          : JSON.stringify(error.response.data)
+      }
+      
+      alert('❌ Error al registrar la compra:\n\n' + mensaje)
     }
   }
 
@@ -229,7 +273,7 @@ export default function Egresos() {
       setFormCompra({ ...formCompra, cantidad: formCompra.cantidad - 1 })
     }
   }
-
+  
   const formatearFecha = (fechaData) => {
     try {
       let fecha;
@@ -329,7 +373,7 @@ export default function Egresos() {
 
   return (
     <div className="egresos-container">
-      <style jsx>{`
+      <style>{`
         .egresos-container {
           padding: 2rem;
           background: #EFEBE9;
