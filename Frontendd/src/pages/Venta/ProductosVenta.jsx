@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '../../components/UI.jsx';
 import { Add, Delete, ShoppingCart } from '@mui/icons-material';
+import { Autocomplete, TextField } from '@mui/material';
 
 export default function ProductosVenta({ 
   productos, 
@@ -33,8 +34,8 @@ export default function ProductosVenta({
         borderRadius: '8px',
         border: '1px solid var(--border)'
       }}>
-        <label className="field-label" style={{ margin: 0, fontSize: '1.1rem' }}>
-          <ShoppingCart sx={{ fontSize: 24, marginRight: 1 }} />
+        <label className="field-label" style={{ margin: 0, fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <ShoppingCart sx={{ fontSize: 24 }} />
           Productos ({productosSeleccionados.length})
         </label>
         <Button 
@@ -63,113 +64,237 @@ export default function ProductosVenta({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {productosSeleccionados.map((item, index) => (
-            <div key={index} style={{
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'center',
-              padding: '1.5rem',
-              background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
-              borderRadius: '12px',
-              border: '2px solid var(--border)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}>
-              <select 
-                value={item.idProducto}
-                onChange={(e) => onActualizarProducto(index, 'idProducto', e.target.value)}
-                style={{ 
-                  flex: 2, 
-                  minHeight: '48px',
-                  padding: '0.75rem',
-                  border: '2px solid var(--border)',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  background: 'var(--panel)'
-                }}
-              >
-                <option value="">Seleccionar producto...</option>
-                {/* MEJORA: Mostrar solo productos disponibles */}
-                {productosDisponibles.concat(
-                  productos.filter(p => p.idProducto.toString() === item.idProducto)
-                ).map(p => (
-                  <option key={p.idProducto} value={p.idProducto}>
-                    {p.nombre} - ${Math.round(p.precio || 0).toLocaleString('es-CL')}
-                  </option>
-                ))}
-              </select>
-              
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--muted)' }}>
-                  Cantidad
-                </label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Button 
-                    variant="ghost" 
-                    small 
-                    onClick={() => onDecrementarCantidad(index)}
-                    style={{ minWidth: '36px', padding: '0.25rem' }}
-                  >
-                    −
-                  </Button>
-                  <input 
-                    type="number"
-                    value={item.cantidad}
-                    onChange={(e) => onActualizarProducto(index, 'cantidad', parseInt(e.target.value) || 1)}
-                    min="1"
-                    step="1"
-                    style={{
-                      width: '70px',
-                      textAlign: 'center',
-                      padding: '0.5rem',
-                      border: '2px solid var(--border)',
-                      borderRadius: '8px',
-                      fontSize: '1rem'
+          {productosSeleccionados.map((item, index) => {
+            const opcionesProducto = productos.filter(p => {
+              if (p.idProducto.toString() === item.idProducto) return true;
+              return !productosSeleccionados.some((seleccionado, idxSeleccionado) =>
+                idxSeleccionado !== index && seleccionado.idProducto === p.idProducto.toString()
+              );
+            });
+            const productoSeleccionado = opcionesProducto.find(
+              p => p.idProducto.toString() === item.idProducto
+            ) || null;
+
+            const INPUT_HEIGHT = '48px';
+            const LABEL_HEIGHT = '20px';
+
+            return (
+              <div key={index} style={{
+                display: 'grid',
+                gridTemplateColumns: '2fr 0.8fr 1fr 1fr auto',
+                gap: '1rem',
+                padding: '1.5rem',
+                background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
+                borderRadius: '12px',
+                border: '2px solid var(--border)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+                alignItems: 'flex-end'
+              }}>
+                {/* PRODUCTO */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', height: LABEL_HEIGHT }}>
+                    Producto
+                  </label>
+                  <Autocomplete
+                    options={opcionesProducto}
+                    value={productoSeleccionado}
+                    onChange={(_, nuevoProducto) =>
+                      onActualizarProducto(
+                        index,
+                        'idProducto',
+                        nuevoProducto ? nuevoProducto.idProducto.toString() : ''
+                      )
+                    }
+                    isOptionEqualToValue={(option, value) => option.idProducto === value.idProducto}
+                    getOptionLabel={(option) => option
+                      ? `${option.nombre} - $${Math.round(option.precio || 0).toLocaleString('es-CL')}`
+                      : ''
+                    }
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: '8px',
+                        border: '2px solid var(--border)',
+                        background: 'var(--panel)',
+                        paddingRight: '0.25rem',
+                        height: INPUT_HEIGHT,
+                        '&:hover fieldset': { borderColor: 'var(--brand)' },
+                        '&.Mui-focused fieldset': {
+                          borderColor: 'var(--brand)',
+                          boxShadow: '0 0 0 2px rgba(93, 64, 55, 0.12)'
+                        }
+                      }
                     }}
+                    ListboxProps={{ sx: { borderRadius: '8px' } }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Seleccionar producto..."
+                        size="small"
+                        InputProps={{
+                          ...params.InputProps,
+                          sx: {
+                            height: INPUT_HEIGHT,
+                            '& .MuiInputBase-input': {
+                              padding: '12px',
+                              fontSize: '1rem'
+                            }
+                          }
+                        }}
+                      />
+                    )}
                   />
-                  <Button 
-                    variant="ghost" 
-                    small 
-                    onClick={() => onIncrementarCantidad(index)}
-                    style={{ minWidth: '36px', padding: '0.25rem' }}
-                  >
-                    +
-                  </Button>
                 </div>
-              </div>
 
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>
-                  Precio
+                {/* CANTIDAD */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', height: LABEL_HEIGHT }}>
+                    Cantidad
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', height: INPUT_HEIGHT }}>
+                    <button 
+                      onClick={() => onDecrementarCantidad(index)}
+                      style={{ 
+                        width: '40px', 
+                        height: '48px',
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.2rem',
+                        border: '2px solid var(--border)',
+                        borderRadius: '6px',
+                        background: 'var(--panel)',
+                        color: 'var(--text)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        fontWeight: '600'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'var(--accent)';
+                        e.target.style.borderColor = 'var(--brand)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'var(--panel)';
+                        e.target.style.borderColor = 'var(--border)';
+                      }}
+                    >
+                      −
+                    </button>
+                    <input 
+                      type="number"
+                      value={item.cantidad}
+                      onChange={(e) => onActualizarProducto(index, 'cantidad', parseInt(e.target.value) || 1)}
+                      min="1"
+                      step="1"
+                      style={{
+                        width: '80px',
+                        textAlign: 'center',
+                        padding: '0.4rem',
+                        border: '2px solid var(--border)',
+                        borderRadius: '6px',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        background: 'var(--panel)',
+                        color: 'var(--text)',
+                        height: '100%',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button 
+                      onClick={() => onIncrementarCantidad(index)}
+                      style={{ 
+                        width: '40px', 
+                        height: '48px',
+                        padding: '0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '1.2rem',
+                        border: '2px solid var(--border)',
+                        borderRadius: '6px',
+                        background: 'var(--panel)',
+                        color: 'var(--text)',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        fontWeight: '600'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = 'var(--accent)';
+                        e.target.style.borderColor = 'var(--brand)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = 'var(--panel)';
+                        e.target.style.borderColor = 'var(--border)';
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-                <div style={{ fontWeight: '600', color: 'var(--brand)' }}>
-                  ${Math.round(item.precioUnitario || 0).toLocaleString('es-CL')}
-                </div>
-              </div>
 
-              <div style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--muted)', marginBottom: '0.25rem' }}>
-                  Subtotal
+                {/* PRECIO */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', height: LABEL_HEIGHT }}>
+                    Precio
+                  </label>
+                  <div style={{ 
+                    height: INPUT_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.5rem',
+                    background: 'var(--accent)',
+                    border: '2px solid var(--border)',
+                    borderRadius: '8px',
+                    fontWeight: '600', 
+                    color: 'var(--brand)' 
+                  }}>
+                    ${Math.round(item.precioUnitario || 0).toLocaleString('es-CL')}
+                  </div>
                 </div>
-                <div style={{ fontWeight: '600', color: 'var(--success)' }}>
-                  ${Math.round(calcularSubtotalProducto(item)).toLocaleString('es-CL')}
+
+                {/* SUBTOTAL */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', color: 'var(--muted)', height: LABEL_HEIGHT }}>
+                    Subtotal
+                  </label>
+                  <div style={{ 
+                    height: INPUT_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0.5rem',
+                    background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05))',
+                    border: '2px solid var(--border)',
+                    borderRadius: '8px',
+                    fontWeight: '600', 
+                    color: 'var(--success)' 
+                  }}>
+                    ${Math.round(calcularSubtotalProducto(item)).toLocaleString('es-CL')}
+                  </div>
                 </div>
+
+                {/* ELIMINAR */}
+                <Button 
+                  variant="ghost" 
+                  small 
+                  onClick={() => onEliminarProducto(index)}
+                  style={{ 
+                    minWidth: 'auto', 
+                    padding: '0.75rem',
+                    background: 'var(--error)',
+                    color: 'white',
+                    height: INPUT_HEIGHT,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <Delete sx={{ fontSize: 20 }} />
+                </Button>
               </div>
-              
-              <Button 
-                variant="ghost" 
-                small 
-                onClick={() => onEliminarProducto(index)}
-                style={{ 
-                  minWidth: 'auto', 
-                  padding: '0.75rem',
-                  background: 'var(--error)',
-                  color: 'white'
-                }}
-              >
-                <Delete sx={{ fontSize: 20 }} />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
           
           {/* MEJORA: Mensaje cuando no hay más productos disponibles */}
           {productosDisponibles.length === 0 && productosSeleccionados.length > 0 && (

@@ -60,15 +60,15 @@ export default function FormularioVenta({
             display: 'flex', 
             alignItems: 'center', 
             gap: '0.75rem',
-            marginBottom: '1rem',
-            padding: '1rem',
-            background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
+            marginBottom: '0.75rem',
+            padding: '0.75rem 1rem',
+            background: 'var(--panel-2)',
             borderRadius: '8px',
             border: '1px solid var(--border)'
           }}>
-            <Receipt sx={{ fontSize: 24, color: 'var(--brand)' }} />
-            <label className="field-label" style={{ margin: 0, fontSize: '1.1rem' }}>
-              Resumen Financiero
+            <Receipt sx={{ fontSize: 22, color: 'var(--brand)' }} />
+            <label className="field-label" style={{ margin: 0, fontSize: '1rem' }}>
+              Resumen financiero
             </label>
           </div>
           
@@ -185,21 +185,18 @@ export default function FormularioVenta({
           <textarea 
             value={formData.observaciones}
             onChange={(e) => onFormChange('observaciones', e.target.value)}
-            placeholder="Ingrese notas o comentarios adicionales sobre esta venta..."
-            rows={4}
+            placeholder="Ingrese notas o comentarios adicionales..."
+            rows={2}
             style={{
               width: '100%',
-              padding: '1rem',
-              fontSize: '1rem',
+              padding: '0.65rem 0.75rem',
+              fontSize: '0.95rem',
               borderRadius: '8px',
-              border: '2px solid var(--border)',
+              border: '1px solid var(--border)',
               background: 'var(--panel)',
               resize: 'vertical',
-              fontFamily: 'inherit',
-              transition: 'border-color 0.3s ease'
+              minHeight: '3rem'
             }}
-            onFocus={(e) => e.target.style.borderColor = 'var(--brand)'}
-            onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
           />
         </div>
       </div>
