@@ -107,6 +107,7 @@ export default function Dashboard() {
         ventasDelDia,
         todasLasVentas,
         todasLasCompras,
+        todosLosGastos,
         productosBajoStock
       ] = await Promise.all([
         // Totales del mes
@@ -146,7 +147,14 @@ export default function Dashboard() {
             console.error('Error en todas las compras:', err);
             return [];
           }),
-        
+
+        // Todos los gastos para movimientos recientes
+        api.gastos.getAll()
+          .catch(err => {
+            console.error('Error en todos los gastos:', err);
+            return [];
+          }),
+
         // Productos bajo stock
         api.inventario.getBajoStock(10)
           .catch(err => {
@@ -158,29 +166,46 @@ export default function Dashboard() {
       console.log('📊 Ventas del día obtenidas:', ventasDelDia);
       console.log('📊 Total de ventas del día:', ventasDelDia?.length || 0);
 
-      // CÁLCULO DE RESUMEN FINANCIERO
-      const ingresos = parseFloat(totalVentasMes) || 0;
-      const egresos = (parseFloat(totalComprasMes) || 0) + (parseFloat(totalGastosMes) || 0);
+      // Calcular ingresos netos desde todas las ventas del mes
+      const ventasMesArray = Array.isArray(todasLasVentas) ? todasLasVentas : [];
+      const ingresos = ventasMesArray
+        .filter(v => {
+          const fechaVenta = obtenerFechaDesdeDato(v.fecha);
+          return fechaVenta >= inicioMes && fechaVenta <= finMes;
+        })
+        .reduce((sum, v) => sum + (parseFloat(v?.montoNeto) || 0), 0);
+
+      // Calcular egresos netos desde todas las compras del mes
+      const comprasMesArray = Array.isArray(todasLasCompras) ? todasLasCompras : [];
+      const comprasNeto = comprasMesArray
+        .filter(c => {
+          const fechaCompra = obtenerFechaDesdeDato(c.fecha);
+          return fechaCompra >= inicioMes && fechaCompra <= finMes;
+        })
+        .reduce((sum, c) => sum + (parseFloat(c?.montoNeto) || 0), 0);
+
+      const egresos = comprasNeto + (parseFloat(totalGastosMes) || 0);
+
       const saldo = ingresos - egresos;
 
       setResumen([
         { 
-          label: 'Ingresos (mes)', 
-          value: `$ ${ingresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          label: 'Ingresos Netos (mes)', 
+          value: `$ ${ingresos.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
           icon: <TrendingUp />,
           color: '#4CAF50',
           trend: 'up'
         },
         { 
-          label: 'Egresos (mes)', 
-          value: `$ ${egresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          label: 'Egresos Netos (mes)', 
+          value: `$ ${egresos.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
           icon: <TrendingDown />,
           color: '#F44336',
           trend: 'down'
         },
         { 
           label: 'Saldo estimado', 
-          value: `$ ${saldo.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          value: `$ ${saldo.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
           icon: <AccountBalance />,
           color: saldo >= 0 ? '#4CAF50' : '#F44336',
           trend: saldo >= 0 ? 'up' : 'down'
@@ -269,7 +294,7 @@ export default function Dashboard() {
           : 'Venta sin productos';
         
         const fechaFormateada = formatearFecha(venta?.fecha);
-        const monto = venta?.montoBruto || venta?.montoTotal || 0;
+        const monto = venta?.montoNeto || venta?.montoTotal || 0;
         
         movimientosRecientes.push({
           fecha: fechaFormateada,
@@ -293,7 +318,7 @@ export default function Dashboard() {
           : 'Compra sin detalles';
         
         const fechaFormateada = formatearFecha(compra?.fecha);
-        const monto = compra?.montoTotal || 0;
+        const monto = compra?.montoNeto || 0;
         
         movimientosRecientes.push({
           fecha: fechaFormateada,
@@ -304,6 +329,23 @@ export default function Dashboard() {
         });
       });
 
+      // GASTOS - Agregar a movimientos recientes
+      const todosLosGastosArray = Array.isArray(todosLosGastos) ? todosLosGastos : [];
+      todosLosGastosArray.forEach(gasto => {
+        if (gasto) {
+          const fechaFormateada = formatearFecha(gasto?.fecha);
+          const monto = gasto?.monto || 0;
+          
+          movimientosRecientes.push({
+            fecha: fechaFormateada,
+            descripcion: gasto?.descripcion || 'Gasto general',
+            monto: monto,
+            tipo: 'gasto',
+            fechaOriginal: obtenerFechaDesdeDato(gasto?.fecha)
+          });
+        }
+      });
+
       // Ordenar por fecha y tomar los 10 más recientes
       const movimientosOrdenados = movimientosRecientes
         .sort((a, b) => b.fechaOriginal - a.fechaOriginal)
@@ -311,10 +353,10 @@ export default function Dashboard() {
         .map(mov => [
           mov.fecha,
           mov.descripcion,
-          `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
           <span style={{ 
-            background: mov.tipo === 'venta' ? '#E8F5E8' : '#E3F2FD', 
-            color: mov.tipo === 'venta' ? '#2E7D32' : '#1565C0', 
+            background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
+            color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
             padding: '0.25rem 0.75rem', 
             borderRadius: '20px', 
             fontSize: '0.85rem',
@@ -323,7 +365,7 @@ export default function Dashboard() {
             alignItems: 'center',
             gap: '0.25rem'
           }}>
-            {mov.tipo === 'venta' ? '🛒 Venta' : '📦 Compra'}
+            {mov.tipo === 'venta' ? '🛒 Venta' : mov.tipo === 'compra' ? '📦 Compra' : '💰 Gasto'}
           </span>
         ]);
 

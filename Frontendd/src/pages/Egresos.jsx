@@ -878,7 +878,7 @@ export default function Egresos() {
                     </label>
                     <input 
                       type="text" 
-                      placeholder='Ej: Cuero premium, hilos, hebillas, remaches...' 
+                      placeholder='Ej: cuero, hilos, hebillas, remaches...' 
                       value={formCompra.descripcion}
                       onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
                     />
