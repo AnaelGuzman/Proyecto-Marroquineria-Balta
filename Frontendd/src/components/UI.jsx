@@ -1,4 +1,3 @@
-
 import React from 'react'
 import { 
   Card as MuiCard, 
@@ -172,27 +171,25 @@ export function Table({ columns = [], rows = [], footer }) {
     <div className="table-wrap">
       <MuiTable sx={{ 
         background: 'var(--panel)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        border: '1px solid rgba(0,0,0,0.12)',
         '& .MuiTableHead-root': {
           '& .MuiTableCell-head': {
-            background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
-            color: '#FFF',
+            background: 'linear-gradient(120deg, rgba(119, 80, 65, 0.88), rgba(122, 94, 82, 0.88))',
+            color: '#FDFBF9',
             fontSize: '1rem',
             fontWeight: 600,
-            borderBottom: '1px solid var(--border)'
-          }
-        },
-        '& .MuiTableBody-root': {
-          '& .MuiTableRow-root': {
-            transition: 'background 0.3s ease',
-            '&:hover': { background: 'var(--accent)' },
-            '&:nth-of-type(even)': { background: 'var(--panel-2)' },
-            '& .MuiTableCell-body': {
-              borderBottom: '1px solid var(--border)',
-              color: 'var(--text)',
-              fontSize: '0.95rem'
+            borderBottom: '1px solid rgba(255,255,255,0.18)',
+            borderRight: '1px solid rgba(255,255,255,0.12)',
+            letterSpacing: '0.02em',
+            
+            padding: '0.9rem 1.2rem',
+            '&:last-of-type': {
+              borderRight: 'none'
             }
           }
-        }
+        },
       }}>
         <TableHead>
           <TableRow>

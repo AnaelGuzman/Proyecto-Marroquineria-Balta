@@ -1,6 +1,6 @@
 // components/TablaInventario.jsx
 import React from 'react'
-import { Table, Button } from '../../../components/UI.jsx'
+import { Table } from '../../../components/UI.jsx'
 import { Visibility, Edit, Delete } from '@mui/icons-material'
 
 export default function TablaInventario({ 
@@ -13,17 +13,63 @@ export default function TablaInventario({
   handleEditarProducto,
   setShowConfirmDelete
 }) {
-  const fixedButtonStyle = {
-    minWidth: '30px',
-    textAlign: 'center'
-  }
+  const nativeButtonStyle = {
+    width: '50px',
+    height: '50px',
+    padding: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: '1px solid rgba(0, 0, 0, 0.15)',
+    borderRadius: '15px',
+    background: 'transparent',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  };
 
   const controlContainerStyle = {
     display: 'flex',
     alignItems: 'center',
-    gap: '0.3rem',
-    height: '62px'
-  }
+    gap: '0.5rem',
+    height: '62px',
+    justifyContent: 'center'
+  };
+
+  const inputStyle = {
+    width: '86px',
+    height: '38px',
+    borderRadius: '10px',
+    border: '1px solid rgba(0,0,0,0.18)',
+    background: 'rgba(255,255,255,0.08)',
+    color: 'var(--text)',
+    fontWeight: 600,
+    textAlign: 'center',
+    fontSize: '0.95rem',
+    outline: 'none',
+    transition: 'border-color 0.2s ease, background 0.2s ease'
+  };
+
+  const handleStockManual = (e, productoId, stockActual) => {
+    const valor = parseInt(e.target.value, 10);
+    if (Number.isNaN(valor)) {
+      e.target.value = stockActual;
+      return;
+    }
+    const nuevoStock = Math.max(0, valor);
+    if (nuevoStock === stockActual) return;
+    ajustarStock(productoId, nuevoStock - stockActual);
+  };
+
+  const handlePrecioManual = (e, productoId, precioActual) => {
+    const valor = parseFloat(e.target.value);
+    if (Number.isNaN(valor)) {
+      e.target.value = precioActual;
+      return;
+    }
+    const nuevoPrecio = Math.max(0, Math.round(valor));
+    if (nuevoPrecio === precioActual) return;
+    actualizarPrecio(productoId, nuevoPrecio - precioActual);
+  };
 
   const categoryOptions = categorias.map(c => ({ 
     value: c.idCategoria, 
@@ -49,95 +95,157 @@ export default function TablaInventario({
     
     const stockBajo = item.cantidadProducto <= 10
     const stockCritico = item.cantidadProducto <= 5
+    const stockColor = stockCritico ? '#C62828' : stockBajo ? '#EF6C00' : 'var(--text)';
+    const stockInputStyle = {
+      ...inputStyle,
+      color: stockColor,
+      border: stockCritico
+        ? '1px solid rgba(244, 67, 54, 0.45)'
+        : stockBajo
+        ? '1px solid rgba(255, 152, 0, 0.45)'
+        : inputStyle.border,
+      background: stockCritico
+        ? 'rgba(244, 67, 54, 0.12)'
+        : stockBajo
+        ? 'rgba(255, 152, 0, 0.12)'
+        : inputStyle.background
+    };
 
     return [
-      <div key={`${itemId}-nombre`} style={{ display: 'flex', alignItems: 'center', height: '62px' }}>
-        <span style={{ fontWeight: '600' }}>{prod.nombre || 'Sin nombre'}</span>
-        <div style={{ display: 'flex', gap: '0.25rem', marginLeft: '0.5rem' }}>
-          <Button
-            variant="ghost"
-            small
-            style={fixedButtonStyle}
+      <div key={`${itemId}-nombre`} style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        height: '62px', 
+        width: '100%',
+        gap: '1rem'
+      }}>
+        <span style={{ fontWeight: '600', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {prod.nombre || 'Sin nombre'}
+        </span>
+        <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+          <button
+            style={{ ...nativeButtonStyle, color: 'var(--text)' }}
             aria-label="Ver detalles"
             onClick={() => handleVerDetalles(prod)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <Visibility sx={{ fontSize: 16 }} />
-          </Button>
-          <Button
-            variant="ghost"
-            small
-            style={fixedButtonStyle}
+          </button>
+          <button
+            style={{ ...nativeButtonStyle, color: 'var(--text)' }}
             aria-label="Editar producto"
             onClick={() => handleEditarProducto(prod)}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             <Edit sx={{ fontSize: 16 }} />
-          </Button>
-          <Button
-            variant="ghost"
-            small
-            style={fixedButtonStyle}
+          </button>
+          <button
+            style={{ ...nativeButtonStyle, color: 'var(--error)' }}
             aria-label="Eliminar producto"
             onClick={() => setShowConfirmDelete(prod)}
-            sx={{ color: 'var(--error)' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(244, 67, 54, 0.1)';
+              e.currentTarget.style.borderColor = 'var(--error)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(128, 107, 90, 0.32)';
+            }}
           >
             <Delete sx={{ fontSize: 16 }} />
-          </Button>
+          </button>
         </div>
       </div>,
       <div key={`${itemId}-stock`} style={controlContainerStyle}>
-        <Button
-          variant="ghost"
-          small
+        <button
           aria-label="Disminuir stock"
-          style={fixedButtonStyle}
+          style={{ ...nativeButtonStyle, color: 'var(--text)', fontWeight: 'bold' }}
           onClick={() => ajustarStock(prod.idProducto, -1)}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
         >
           −
-        </Button>
-        <span style={{ 
-          color: stockCritico ? '#F44336' : stockBajo ? '#FF9800' : '#4CAF50',
-          fontWeight: stockBajo ? '600' : '400',
-          background: stockCritico ? '#FFEBEE' : stockBajo ? '#FFF3E0' : 'transparent',
-          padding: stockBajo ? '0.25rem 0.5rem' : '0',
-          borderRadius: stockBajo ? '4px' : '0',
-          minWidth: '40px',
-          display: 'inline-block',
-          textAlign: 'center'
-        }}>
-          {item.cantidadProducto || 0}
-        </span>
-        <Button
-          variant="ghost"
-          small
+        </button>
+        <input
+          key={`${itemId}-stock-input-${item.cantidadProducto || 0}`}
+          type="number"
+          min="0"
+          step="1"
+          defaultValue={item.cantidadProducto || 0}
+          className="inventory-number-input"
+          onBlur={(e) => handleStockManual(e, prod.idProducto, item.cantidadProducto || 0)}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+          onFocus={(e) => e.target.select()}
+          style={stockInputStyle}
+        />
+        <button
           aria-label="Aumentar stock"
-          style={fixedButtonStyle}
+          style={{ ...nativeButtonStyle, color: 'var(--text)', fontWeight: 'bold' }}
           onClick={() => ajustarStock(prod.idProducto, 1)}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
         >
           +
-        </Button>
+        </button>
       </div>,
       <div key={`${itemId}-precio`} style={controlContainerStyle}>
-        <Button
-          variant="ghost"
-          small
+        <button
           aria-label="Disminuir precio"
-          style={fixedButtonStyle}
+          style={{ ...nativeButtonStyle, color: 'var(--text)', fontWeight: 'bold' }}
           onClick={() => actualizarPrecio(prod.idProducto, -1000)}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
         >
           −
-        </Button>
-        <span style={{ fontWeight: '600', color: 'var(--brand)', minWidth: '80px', display: 'inline-block', textAlign: 'center' }}>
-          ${(prod.precio || 0).toLocaleString('es-CL')}
-        </span>
-        <Button
-          variant="ghost"
-          small
+        </button>
+        <input
+          key={`${itemId}-precio-input-${prod.precio || 0}`}
+          type="number"
+          min="0"
+          step="100"
+          defaultValue={prod.precio || 0}
+          className="inventory-number-input"
+          onBlur={(e) => handlePrecioManual(e, prod.idProducto, prod.precio || 0)}
+          onKeyDown={(e) => { if (e.key === 'Enter') e.target.blur(); }}
+          onFocus={(e) => e.target.select()}
+          style={{ ...inputStyle, width: '110px', color: 'var(--brand)' }}
+        />
+        <button
           aria-label="Aumentar precio"
-          style={fixedButtonStyle}
+          style={{ ...nativeButtonStyle, color: 'var(--text)', fontWeight: 'bold' }}
           onClick={() => actualizarPrecio(prod.idProducto, 1000)}
+          onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(128, 107, 90, 0.32)';
+            }}
+          onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
         >
           +
-        </Button>
+        </button>
       </div>,
       <select 
         key={`${itemId}-categoria`}

@@ -796,3 +796,14 @@ table.table tbody tr:nth-child(even){
   background: var(--brand-2);
 }
 
+.inventory-number-input::-webkit-outer-spin-button,
+.inventory-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inventory-number-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+

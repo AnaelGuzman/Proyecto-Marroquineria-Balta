@@ -126,21 +126,34 @@ export function useInventario() {
       const producto = productos.find(p => p.idProducto === idProducto)
       if (!producto) return
       
-      const nuevoPrecio = Math.max(0, producto.precio + delta)
+      const nuevoPrecio = Math.max(0, (producto.precio || 0) + delta)
       
+      // 1. Actualizar en el backend
       await api.productos.update(idProducto, {
         ...producto,
         precio: nuevoPrecio
       })
       
+      // 2. Actualizar el estado de 'productos' localmente
       setProductos(prev => prev.map(p => 
         p.idProducto === idProducto ? { ...p, precio: nuevoPrecio } : p
       ))
+
+      // 3. Actualizar el estado de 'inventario' localmente para reflejar el cambio en la tabla
+      setInventario(prev => prev.map(item => 
+        item.producto?.idProducto === idProducto 
+          ? { ...item, producto: { ...item.producto, precio: nuevoPrecio } } 
+          : item
+      ))
       
-      await cargarDatos()
+      // 4. ELIMINAR la recarga completa de datos
+      // await cargarDatos() // <--- ESTA LÍNEA SE ELIMINA
+
     } catch (error) {
       console.error('Error al actualizar precio:', error)
       alert('Error al actualizar el precio')
+      // Opcional: si falla, recargar para asegurar consistencia
+      await cargarDatos()
     }
   }
 
