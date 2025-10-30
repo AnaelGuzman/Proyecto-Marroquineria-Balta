@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Card, Field, Toolbar, Button, Table } from '../components/UI.jsx'
 import { api } from '../services/api/index.js'
+import { API_BASE_URL } from '../services/api/config.js'
+
 
 export default function Reportes() {
   const now = new Date()
@@ -59,6 +61,39 @@ export default function Reportes() {
     })
   }
 
+  const descargarReporteExcel = async () => {
+    try {
+      const desde = periodo.desde  // yyyy-MM
+      const hasta = periodo.hasta  // yyyy-MM
+      const url = `${API_BASE_URL}/estadisticas/reporte-mensual?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`
+
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        }
+      })
+
+      if (!res.ok) {
+        const txt = await res.text()
+        throw new Error(txt || 'Error al descargar reporte')
+      }
+
+      const blob = await res.blob()
+      const urlBlob = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = urlBlob
+      a.download = `reporte_mensual_${desde}_${hasta}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(urlBlob)
+    } catch (err) {
+      console.error('Error descargando reporte:', err)
+      alert('No se pudo descargar el reporte. Revisa la consola.')
+    }
+  }
+
   const porCategoria = [
     ['Insumos', '$ 338.000'],
     ['Publicidad', '$ 140.000'],
@@ -96,6 +131,7 @@ export default function Reportes() {
         <Toolbar>
           <Button onClick={handleAplicar}>Aplicar</Button>
           <Button variant="ghost" onClick={handleLimpiar}>Limpiar</Button>
+          <Button variant="primary" onClick={descargarReporteExcel}>Descargar Excel</Button>
         </Toolbar>
       </Card>
 
