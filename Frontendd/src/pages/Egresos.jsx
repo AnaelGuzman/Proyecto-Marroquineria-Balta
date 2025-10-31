@@ -15,7 +15,7 @@ export default function Egresos() {
     cantidad: 1,
     precioUnitario: 0,
     idMetodoPago: '',
-    tipoDocumento: 'factura',
+    tipoDocumento: 'boleta',
     fecha: new Date().toISOString().split('T')[0],
     observaciones: ''
   })
@@ -81,21 +81,21 @@ export default function Egresos() {
       setResumen([
         { 
           label: 'Compras del Mes', 
-          value: `$ ${comprasMes.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          value: `$ ${Math.round(comprasMes).toLocaleString('es-CL')}`,
           icon: <ShoppingCart />,
           color: '#5D4037',
           trend: 'down'
         },
         { 
           label: 'Gastos del Mes', 
-          value: `$ ${gastosMes.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          value: `$ ${Math.round(gastosMes).toLocaleString('es-CL')}`,
           icon: <Receipt />,
           color: '#8D6E63',
           trend: 'down'
         },
         { 
           label: 'Total Egresos', 
-          value: `$ ${totalEgresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+          value: `$ ${Math.round(totalEgresos).toLocaleString('es-CL')}`,
           icon: <TrendingDown />,
           color: '#F44336',
           trend: 'down'
@@ -187,7 +187,7 @@ export default function Egresos() {
         cantidad: 1,
         precioUnitario: 0,
         idMetodoPago: '',
-        tipoDocumento: 'factura',
+        tipoDocumento: 'boleta',
         fecha: new Date().toISOString().split('T')[0],
         observaciones: ''
       })
@@ -250,7 +250,7 @@ export default function Egresos() {
         cantidad: 1,
         precioUnitario: 0,
         idMetodoPago: '',
-        tipoDocumento: 'factura',
+        tipoDocumento: 'boleta',
         fecha: new Date().toISOString().split('T')[0],
         observaciones: ''
       })
@@ -342,6 +342,13 @@ export default function Egresos() {
       ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
       : item.descripcion
 
+    // Calcular IVA y monto neto
+    const ivaValor = (esCompra && item.tipoDocumento === 'factura') 
+      ? montoTotal - (montoTotal / 1.19) 
+      : 0
+    
+    const montoNeto = montoTotal - ivaValor
+
     return [
       <div key={`fecha-${idx}`} className="tabla-fecha">{fechaFormateada}</div>,
       <span 
@@ -351,8 +358,14 @@ export default function Egresos() {
         {esCompra ? '🛒 Compra' : '💸 Gasto'}
       </span>,
       <div key={`detalle-${idx}`} className="tabla-detalle">{detalle}</div>,
-      <div key={`monto-${idx}`} className="tabla-monto">
-        $ {montoTotal.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+      <div key={`bruto-${idx}`} className="tabla-monto">
+        {`$${Math.round(montoTotal).toLocaleString('es-CL')}`}
+      </div>,
+      <div key={`neto-${idx}`} className="tabla-monto" style={{ 
+        color: ivaValor > 0 ? '#2E7D32' : '#5D4037',
+        fontWeight: ivaValor > 0 ? '700' : '600'
+      }}>
+        {`$${Math.round(montoNeto).toLocaleString('es-CL')}`}
       </div>,
       <div key={`metodo-${idx}`} className="tabla-metodo">
         {item.metodoPago?.nombre || 'N/A'}
@@ -738,6 +751,7 @@ export default function Egresos() {
           color: #5D4037;
           font-size: 1.05rem;
         }
+        
 
         .btn-observaciones {
           background: transparent;
@@ -878,7 +892,7 @@ export default function Egresos() {
                     </label>
                     <input 
                       type="text" 
-                      placeholder='Ej: cuero, hilos, hebillas, remaches...' 
+                      placeholder='Ej: Cuero, hilos, hebillas, remaches...' 
                       value={formCompra.descripcion}
                       onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
                     />
@@ -918,7 +932,7 @@ export default function Egresos() {
                     <label className="field-label">Total Compra</label>
                     <input 
                       type="text" 
-                      value={`$ ${calcularTotalCompra().toLocaleString('es-CL', { minimumFractionDigits: 2 })}`} 
+                      value={`$ ${Math.round(calcularTotalCompra()).toLocaleString('es-CL')}`}
                       disabled 
                       style={{ 
                         fontWeight: '600',
@@ -942,7 +956,7 @@ export default function Egresos() {
                           IVA Recuperable
                         </div>
                         <div style={{ fontSize: '1.1rem' }}>
-                          $ {calcularIVARecuperable().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                          $ {Math.round(calcularIVARecuperable()).toLocaleString('es-CL')}
                         </div>
                       </div>
                       
@@ -951,7 +965,7 @@ export default function Egresos() {
                           Costo Real
                         </div>
                         <div style={{ fontSize: '1.1rem' }}>
-                          $ {calcularCostoReal().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                          $ {Math.round(calcularCostoReal()).toLocaleString('es-CL')}
                         </div>
                       </div>
                       
@@ -960,7 +974,7 @@ export default function Egresos() {
                           Total Bruto
                         </div>
                         <div style={{ fontSize: '1.1rem' }}>
-                          $ {calcularTotalCompra().toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+                          $ {Math.round(calcularTotalCompra()).toLocaleString('es-CL')}
                         </div>
                       </div>
                     </div>
@@ -999,8 +1013,8 @@ export default function Egresos() {
                       value={formCompra.tipoDocumento}
                       onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
                     >
-                      <option value="factura">📄 Factura (IVA recuperable)</option>
                       <option value="boleta">🧾 Boleta (IVA no recuperable)</option>
+                      <option value="factura">📄 Factura (IVA recuperable)</option>
                       <option value="sin-documento">📝 Sin documento</option>
                     </select>
                   </div>
@@ -1122,11 +1136,12 @@ export default function Egresos() {
           <div className="tabla-container">
             <table className="tabla">
               <thead>
-                <tr>
+                 <tr>
                   <th>Fecha</th>
                   <th>Tipo</th>
                   <th>Detalle</th>
-                  <th>Monto</th>
+                  <th>Monto Bruto</th>
+                  <th>Monto Neto</th>
                   <th>Medio Pago</th>
                   <th>Observaciones</th>
                 </tr>

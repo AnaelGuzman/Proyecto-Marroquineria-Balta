@@ -461,7 +461,7 @@ export default function EstadisticasVentas() {
                 Desglose de montos
               </Typography>
               <Box sx={{ mt: 2 }}>
-                <GraficoVentasMes datos={datos.ventasMes} />
+                <GraficoVentasMes datos={datos.ventasMes} comisiones={datos.comisiones} />
               </Box>
             </CardContent>
           </Card>
@@ -642,19 +642,26 @@ function GraficoBarrasProductos({ datos }) {
 }
 
 // Componente para gráfico de ventas del mes
-function GraficoVentasMes({ datos }) {
+function GraficoVentasMes({ datos, comisiones }) {
   const { bruto, neto, iva } = datos;
   
+  // Calcular neto después de comisiones
+  const netoFinal = neto - comisiones;
+  
   const datosTorta = [
-    { nombre: 'Neto', valor: neto, color: '#4CAF50' },
+    { nombre: 'Neto', valor: netoFinal, color: '#4CAF50' },
+    { nombre: 'Comision', valor: comisiones, color: '#FF6B6B' },
     { nombre: 'IVA (19%)', valor: iva, color: '#2196F3' }
   ];
 
-  const total = neto + iva;
+  const total = bruto;
+  const porcentajeNetoFinal = (netoFinal / total) * 100;
+  const porcentajeComision = (comisiones / total) * 100;
+  const porcentajeIVA = (iva / total) * 100;
 
   return (
     <Box sx={{ textAlign: 'center' }}>
-      {/* Gráfico de torta para ventas */}
+      {/* Gráfico de torta */}
       <Box sx={{ position: 'relative', height: 200, mb: 3 }}>
         <Box sx={{ 
           position: 'relative', 
@@ -663,8 +670,9 @@ function GraficoVentasMes({ datos }) {
           margin: '0 auto',
           borderRadius: '50%',
           background: `conic-gradient(
-            #4CAF50 0% ${(neto / total) * 100}%,
-            #2196F3 ${(neto / total) * 100}% 100%
+            #4CAF50 0% ${porcentajeNetoFinal}%,
+            #FF6B6B ${porcentajeNetoFinal}% ${porcentajeNetoFinal + porcentajeComision}%,
+            #2196F3 ${porcentajeNetoFinal + porcentajeComision}% 100%
           )`
         }} />
         
@@ -689,7 +697,7 @@ function GraficoVentasMes({ datos }) {
             Total
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#5D4037', fontSize: '0.8rem' }}>
-            ${bruto.toLocaleString('es-CL')}
+            ${Math.round(bruto).toLocaleString('es-CL')}
           </Typography>
         </Box>
       </Box>
@@ -705,7 +713,7 @@ function GraficoVentasMes({ datos }) {
               borderRadius: '4px'
             }} />
             <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-              {item.nombre}: ${item.valor.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+              {item.nombre}: ${Math.round(item.valor).toLocaleString('es-CL')}
             </Typography>
           </Box>
         ))}
@@ -812,7 +820,7 @@ function GraficoMetodosPago({ datos }) {
             </Box>
             <Box sx={{ textAlign: 'right' }}>
               <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#5D4037' }}>
-                {metodo.porcentaje.toFixed(1)}%
+                {metodo.porcentaje.toFixed(0)}%
               </Typography>
             </Box>
           </Box>
@@ -836,7 +844,7 @@ function GraficoComisiones({ comisiones }) {
         fontWeight: 'bold',
         mb: 1
       }}>
-        ${comisiones.toLocaleString('es-CL', { minimumFractionDigits: 2 })}
+        ${comisiones.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
       </Typography>
       <Typography variant="body1" color="text.secondary">
         Total Pago en comisiones acumuladas
