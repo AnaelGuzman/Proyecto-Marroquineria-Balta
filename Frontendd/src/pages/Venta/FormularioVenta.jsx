@@ -72,7 +72,7 @@ export default function FormularioVenta({
             </label>
           </div>
           
-          <div style={{
+          <div className="resumen-financiero-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: '1rem',
@@ -201,7 +201,7 @@ export default function FormularioVenta({
         </div>
       </div>
 
-      <Toolbar>
+      <Toolbar className="venta-acciones">
         <Button onClick={onGuardar}>
           <AttachMoney sx={{ fontSize: 20 }} />
           Registrar Venta

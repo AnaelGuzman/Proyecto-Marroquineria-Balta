@@ -66,7 +66,7 @@ export default function MetodosPagoVenta({
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
           <Button variant="ghost" small onClick={onAgregarMetodoPago}>
             <Add sx={{ fontSize: 20 }} />
-            Agregar
+            <span className="hide-on-mobile">Agregar</span>
           </Button>
           {metodosPagoSeleccionados.length > 1 && (
             <>
@@ -83,7 +83,7 @@ export default function MetodosPagoVenta({
       </div>
 
       {metodosPagoSeleccionados.length === 0 ? (
-        <div style={{
+        <div className="empty-state" style={{
           padding: '3rem',
           textAlign: 'center',
           border: '2px dashed var(--border)',
@@ -112,7 +112,7 @@ export default function MetodosPagoVenta({
             const LABEL_HEIGHT = '20px';
 
             return (
-              <div key={index} style={{
+              <div key={index} className="metodo-pago-item" style={{
                 display: 'grid',
                 gridTemplateColumns: '2fr 1fr auto',
                 gap: '1rem',
@@ -223,6 +223,7 @@ export default function MetodosPagoVenta({
 
                 {/* ELIMINAR */}
                 <Button 
+                  className="delete-method-btn"
                   variant="ghost" 
                   small 
                   onClick={() => onEliminarMetodoPago(index)}

@@ -45,12 +45,12 @@ export default function ProductosVenta({
           disabled={productosDisponibles.length === 0}
         >
           <Add sx={{ fontSize: 20 }} />
-          Agregar Producto
+          <span className="hide-on-mobile">Agregar Producto</span>
         </Button>
       </div>
 
       {productosSeleccionados.length === 0 ? (
-        <div style={{
+        <div className="empty-state" style={{
           padding: '3rem',
           textAlign: 'center',
           border: '2px dashed var(--border)',
@@ -79,7 +79,7 @@ export default function ProductosVenta({
             const LABEL_HEIGHT = '20px';
 
             return (
-              <div key={index} style={{
+              <div key={index} className="producto-venta-item" style={{
                 display: 'grid',
                 gridTemplateColumns: '2fr 0.8fr 1fr 1fr auto',
                 gap: '1rem',
@@ -152,6 +152,7 @@ export default function ProductosVenta({
                   </label>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', height: INPUT_HEIGHT }}>
                     <button 
+                      className="qty-btn"
                       onClick={() => onDecrementarCantidad(index)}
                       style={{ 
                         width: '40px', 
@@ -201,6 +202,7 @@ export default function ProductosVenta({
                       }}
                     />
                     <button 
+                      className="qty-btn"
                       onClick={() => onIncrementarCantidad(index)}
                       style={{ 
                         width: '40px', 
@@ -276,6 +278,7 @@ export default function ProductosVenta({
 
                 {/* ELIMINAR */}
                 <Button 
+                  className="delete-item-btn"
                   variant="ghost" 
                   small 
                   onClick={() => onEliminarProducto(index)}

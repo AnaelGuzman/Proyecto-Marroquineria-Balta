@@ -354,17 +354,20 @@ export default function Dashboard() {
           mov.fecha,
           mov.descripcion,
           `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-          <span style={{ 
-            background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
-            color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
-            padding: '0.25rem 0.75rem', 
-            borderRadius: '20px', 
-            fontSize: '0.85rem',
-            fontWeight: '500',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.25rem'
-          }}>
+          <span
+            className="tipo-tag"
+            style={{ 
+              background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
+              color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
+              padding: '0.25rem 0.75rem', 
+              borderRadius: '20px', 
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.25rem'
+            }}
+          >
             {mov.tipo === 'venta' ? '🛒 Venta' : mov.tipo === 'compra' ? '📦 Compra' : '💰 Gasto'}
           </span>
         ]);
@@ -432,7 +435,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="stack">
-        <Card title="Cargando Dashboard" accent="accent">
+        <Card className="dashboard-card" title="Cargando Dashboard" accent="accent">
           <div className="loading">
             <p>Obteniendo datos de la marroquinería...</p>
           </div>
@@ -444,15 +447,20 @@ export default function Dashboard() {
   return (
     <div className="stack">
       {/* RESUMEN FINANCIERO */}
-      <Card title="Resumen Financiero" subtitle="Vista general del desempeño mensual" accent="accent">
+      <Card 
+        className="dashboard-card dashboard-summary"
+        title="Resumen Financiero" 
+        subtitle="Vista general del desempeño mensual" 
+        accent="accent"
+      >
         <div className="stats">
           {resumen.map((r) => (
             <div key={r.label} className="stat">
+              {/* Contenedor del ícono y tendencia (sin cambios) */}
               <div style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
-                justifyContent: 'space-between',
-                marginBottom: '1rem'
+                justifyContent: 'space-between'
               }}>
                 <div style={{
                   display: 'flex',
@@ -477,25 +485,28 @@ export default function Dashboard() {
                   {r.trend === 'up' ? '↗' : r.trend === 'down' ? '↘' : '→'}
                 </span>
               </div>
-              <span className="stat-label">{r.label}</span>
-              <span className="stat-value">{r.value}</span>
+              {/* NUEVO: Contenedor para el texto */}
+              <div>
+                <span className="stat-label">{r.label}</span>
+                <span className="stat-value">{r.value}</span>
+              </div>
             </div>
           ))}
         </div>
       </Card>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
         {/* MÉTRICAS DEL DÍA */}
-        <div style={{ gridColumn: 'span 8' }}>
-          <Card title="Métricas del Día" subtitle="Actividad comercial del día de hoy">
+        <div className="dashboard-grid-item dashboard-grid-item--wide" style={{ gridColumn: 'span 8' }}>
+          <Card className="dashboard-card dashboard-metrics" title="Métricas del Día" subtitle="Actividad comercial del día de hoy">
             <div className="stats">
               {metricas.map((metrica) => (
                 <div key={metrica.label} className="stat">
+                  {/* Contenedor del ícono (sin cambios) */}
                   <div style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    justifyContent: 'space-between',
-                    marginBottom: '1rem'
+                    justifyContent: 'space-between'
                   }}>
                     <div style={{
                       display: 'flex',
@@ -509,9 +520,16 @@ export default function Dashboard() {
                     }}>
                       {React.cloneElement(metrica.icon, { sx: { fontSize: 24 } })}
                     </div>
+                    <span style={{
+                      width: '40px',
+                      height: '24px'
+                    }}></span>
                   </div>
-                  <span className="stat-label">{metrica.label}</span>
-                  <span className="stat-value" style={{ fontSize: '1.8rem' }}>{metrica.value}</span>
+                  {/* NUEVO: Contenedor para el texto */}
+                  <div>
+                    <span className="stat-label">{metrica.label}</span>
+                    <span className="stat-value" style={{ fontSize: '1.8rem' }}>{metrica.value}</span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -519,8 +537,9 @@ export default function Dashboard() {
         </div>
 
         {/* ALERTAS DE INVENTARIO */}
-        <div style={{ gridColumn: 'span 4' }}>
+        <div className="dashboard-grid-item dashboard-grid-item--narrow" style={{ gridColumn: 'span 4' }}>
           <Card 
+            className="dashboard-card dashboard-alerts"
             title="Alertas de Stock" 
             subtitle={bajoStock.length > 0 ? "Productos con stock bajo" : "Stock en niveles normales"}
             accent={bajoStock.length > 0 ? "accent" : ""}
@@ -529,6 +548,7 @@ export default function Dashboard() {
               <Table 
                 columns={["Producto", "Stock", "Estado"]} 
                 rows={bajoStock}
+                className="dashboard-table"
               />
             ) : (
               <div style={{ 
@@ -545,11 +565,12 @@ export default function Dashboard() {
       </div>
 
       {/* MOVIMIENTOS RECIENTES */}
-      <Card title="Movimientos Recientes" subtitle="Últimas ventas y compras registradas">
+      <Card className="dashboard-card dashboard-recent" title="Movimientos Recientes" subtitle="Últimas ventas y compras registradas">
         {recientes.length > 0 ? (
           <Table 
             columns={["Fecha", "Descripción", "Monto", "Tipo"]} 
             rows={recientes} 
+            className="dashboard-table dashboard-movimientos"
           />
         ) : (
           <div style={{ 

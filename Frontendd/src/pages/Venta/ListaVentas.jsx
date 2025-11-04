@@ -23,22 +23,19 @@ export default function ListaVentas({
       if (venta.detalles.length === 1) {
         const detalle = venta.detalles[0];
         return (
-          <div style={{ fontWeight: '600', color: 'var(--text)' }}>
+          <div style={{ fontWeight: '600', color: 'var(--text)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
             {detalle.producto?.nombre} ({detalle.cantidad})
           </div>
         );
       } else {
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
             <span>{venta.detalles.length} productos</span>
             <Button 
               variant="ghost" 
               small 
               onClick={() => onVerDetalles(venta.detalles)}
-              style={{ 
-                padding: '0.25rem 0.5rem',
-                fontSize: '0.8rem'
-              }}
+              style={{ padding: '0.25rem 0.5rem' }}
             >
               📋 Ver
             </Button>
@@ -53,8 +50,10 @@ export default function ListaVentas({
     <Card 
       title="Ventas Recientes" 
       subtitle="Últimas ventas registradas en el sistema"
+      className="ventas-recientes-card"
     >
       <Table 
+        className="mentas-recientes ventas-recientes"
         columns={[
           "Fecha", 
           "Productos", 
@@ -88,7 +87,9 @@ export default function ListaVentas({
           <div key={venta.idVenta} style={{ 
             color: 'var(--text)',
             fontSize: '0.9rem',
-            lineHeight: '1.4'
+            lineHeight: '1.2',
+            whiteSpace: 'normal',
+            overflowWrap: 'anywhere'
           }}>
             {obtenerMetodosPagoVenta(venta)}
           </div>,
@@ -97,11 +98,11 @@ export default function ListaVentas({
               variant="ghost" 
               small 
               onClick={() => onVerObservaciones(venta.observaciones)}
-              style={{ padding: '0.25rem 0.75rem' }}
+              style={{ padding: '0.25rem 0.75rem', whiteSpace: 'nowrap' }}
             >
               📝 Ver
             </Button>
-          ) : <span style={{ color: 'var(--muted)' }}>—</span>
+          ) : <span style={{ color: 'var(--muted)', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>—</span>
         ])}
       />
     </Card>

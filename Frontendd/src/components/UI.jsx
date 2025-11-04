@@ -13,34 +13,46 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-export function Card({ title, subtitle, children, footer, accent }) {
+export function Card({ title, subtitle, children, footer, accent, className, sx, ...rest }) {
+  const baseSx = {
+    background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
+    border: '1px solid var(--border)',
+    borderRadius: 3,
+    boxShadow: 'var(--shadow)',
+    position: 'relative',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: '100%',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: '0 12px 30px rgba(93, 64, 55, 0.15)'
+    },
+    transition: 'all 0.3s ease',
+    ...(accent ? {
+      '&::before': {
+        content: '""',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: '4px',
+        background: 'linear-gradient(90deg, var(--brand), var(--brand-2))'
+      }
+    } : {})
+  };
+
+  const combinedSx = Array.isArray(sx)
+    ? [baseSx, ...sx]
+    : sx
+    ? [baseSx, sx]
+    : baseSx;
+
   return (
     <MuiCard 
-      sx={{ 
-        background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
-        border: '1px solid var(--border)',
-        borderRadius: 3,
-        boxShadow: 'var(--shadow)',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-        minHeight: '100%',
-        '&:hover': {
-          transform: 'translateY(-4px)',
-          boxShadow: '0 12px 30px rgba(93, 64, 55, 0.15)'
-        },
-        transition: 'all 0.3s ease',
-        '&::before': accent ? {
-          content: '""',
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '4px',
-          background: 'linear-gradient(90deg, var(--brand), var(--brand-2))'
-        } : {}
-      }}
+      className={className}
+      sx={combinedSx}
+      {...rest}
     >
       {(title || subtitle) && (
         <CardHeader
@@ -106,15 +118,16 @@ export function Field({ label, placeholder = '', type = 'text', hint, inline, op
   )
 }
 
-export function Toolbar({ children }) {
+export function Toolbar({ children, className, style }) {
   return (
     <div 
-      className="toolbar"
+      className={`toolbar ${className ?? ''}`}
       style={{
         display: 'flex',
         gap: '1rem',
         marginTop: '1.5rem',
-        flexWrap: 'wrap'
+        flexWrap: 'wrap',
+        ...(style || {})
       }}
     >
       {children}
@@ -166,9 +179,9 @@ export function Button({ children, variant = 'primary', small, disabled = false,
   )
 }
 
-export function Table({ columns = [], rows = [], footer }) {
+export function Table({ columns = [], rows = [], footer, className }) {
   return (
-    <div className="table-wrap">
+    <div className={`table-wrap${className ? ` ${className}` : ''}`}>
       <MuiTable sx={{ 
         background: 'var(--panel)',
         borderRadius: '12px',
@@ -209,7 +222,12 @@ export function Table({ columns = [], rows = [], footer }) {
             rows.map((row, rowIndex) => (
               <TableRow key={rowIndex}>
                 {row.map((cell, cellIndex) => (
-                  <TableCell key={cellIndex}>{cell}</TableCell>
+                  <TableCell
+                    key={cellIndex}
+                    data-label={columns[cellIndex] ?? ''}
+                  >
+                    {cell}
+                  </TableCell>
                 ))}
               </TableRow>
             ))
