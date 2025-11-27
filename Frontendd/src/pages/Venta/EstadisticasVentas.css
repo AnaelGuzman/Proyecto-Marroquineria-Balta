@@ -175,6 +175,14 @@
     width: 150px;
     height: 150px;
   }
+
+  .estadisticas-card {
+    border-radius: 12px;
+  }
+  
+  .estadisticas-title {
+    font-size: 1rem;
+  }
 }
 
 /* Estados de carga */

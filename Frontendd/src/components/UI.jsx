@@ -135,12 +135,12 @@ export function Toolbar({ children, className, style }) {
   )
 }
 
-const StyledButton = styled(MuiButton)(({ variant }) => ({
-  height: '56px',
-  minHeight: '56px',
-  padding: '0 1.5rem',
+const StyledButton = styled(MuiButton)(({ variant, size }) => ({
+  height: size === 'small' ? '36px' : '48px',
+  minHeight: size === 'small' ? '36px' : '48px',
+  padding: size === 'small' ? '0 0.75rem' : '0 1.25rem',
   borderRadius: '8px',
-  fontSize: '1rem',
+  fontSize: size === 'small' ? '0.875rem' : '0.95rem',
   fontWeight: 500,
   textTransform: 'none',
   transition: 'all 0.3s ease',

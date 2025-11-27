@@ -64,7 +64,7 @@
   }
 
   .topbar {
-    padding: 0.75rem 1rem 0.75rem 4.5rem;
+    padding: 0.75rem 1rem;
     gap: 1rem;
   }
 
@@ -89,13 +89,19 @@
     grid-column: span 1;
   }
 
-  .topbar .btn span:not(.avatar) {
+  .topbar .btn-responsive .text {
     display: none;
   }
 
-  .topbar .btn {
-    min-width: 48px;
-    padding: 0 0.75rem;
+  .topbar .btn-responsive {
+    min-width: 36px;
+    padding: 0 0.5rem;
+  }
+
+  .topbar .btn-responsive .icon,
+  .topbar .btn-responsive .avatar {
+    margin-right: 0 !important;
+    font-size: 1.2rem;
   }
 
   .hide-on-mobile {
