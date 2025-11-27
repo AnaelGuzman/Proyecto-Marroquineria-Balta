@@ -234,6 +234,172 @@ export default function Reportes() {
 
   const rangoLabel = `${periodoActivo.desde} - ${periodoActivo.hasta}`
 
+  const cards = [
+    // Fila 1: Balance del período + Indicadores clave (2 columnas)
+    {
+      key: 'balance',
+      element: (
+        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
+          <CardHeader
+            title="Balance del período"
+            subheader={`Resumen financiero ${rangoLabel}`}
+            action={
+              <Chip
+                label={resumen.saldo >= 0 ? 'Saldo positivo' : 'Saldo negativo'}
+                color={resumen.saldo >= 0 ? 'success' : 'error'}
+                variant="outlined"
+              />
+            }
+          />
+          <CardContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={4}>
+                <MetricHighlight
+                  label="Ingresos"
+                  value={`$ ${numberFormatter.format(resumen.ingresos)}`}
+                  icon={<Paid />}
+                  color="#4CAF50"
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <MetricHighlight
+                  label="Egresos"
+                  value={`$ ${numberFormatter.format(resumen.egresos)}`}
+                  icon={<ShoppingCart />}
+                  color="#E57373"
+                />
+              </Grid>
+              <Grid item xs={12} md={4}>
+                <MetricHighlight
+                  label="Saldo"
+                  value={`$ ${numberFormatter.format(resumen.saldo)}`}
+                  icon={<TrendingUp />}
+                  color="#5D4037"
+                />
+              </Grid>
+            </Grid>
+            <Divider sx={{ my: 3 }} />
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+              <Chip label={`Período: ${rangoLabel}`} variant="outlined" />
+              <Chip label={`${resumen.operaciones} operaciones registradas`} variant="outlined" />
+              <Chip label={`${indicadores.diasPeriodo} días analizados`} variant="outlined" />
+            </Stack>
+          </CardContent>
+        </Card>
+      )
+    },
+    {
+      key: 'indicadores',
+      element: (
+        <Card sx={{ borderRadius: 3, width: '100%', height: '100%', background: 'linear-gradient(160deg,#5D4037,#8D6E63)' }}>
+          <CardHeader
+            title={<Typography variant="h6" sx={{ color: 'white' }}>Indicadores clave</Typography>}
+            subheader={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>KPI del período</Typography>}
+          />
+          <CardContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <KpiBadge
+                  titulo="Ticket promedio"
+                  valor={`$ ${numberFormatter.format(indicadores.ticketPromedio)}`}
+                  icono={<Assessment />}
+                  tooltip="Valor medio ingresado por venta en el período seleccionado"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <KpiBadge
+                  titulo="Margen"
+                  valor={`${indicadores.margen.toFixed(1)}%`}
+                  icono={<TrendingUp />}
+                  tooltip="Porcentaje del saldo respecto de los ingresos (utilidad)"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <KpiBadge
+                  titulo="Promedio diario"
+                  valor={`$ ${numberFormatter.format(indicadores.promedioDiario)}`}
+                  icono={<Equalizer />}
+                  tooltip="Ingresos promedios generados por día dentro del período"
+                />
+              </Grid>
+            </Grid>
+          </CardContent>
+        </Card>
+      )
+    },
+
+    // Fila 2: Resumen ejecutivo + Detalle de egresos + Distribución por categoría (3 columnas)
+    {
+      key: 'resumen-ejecutivo',
+      element: (
+        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
+          <CardHeader title="Resumen ejecutivo" subheader="Hallazgos del período" />
+          <CardContent>
+            <Stack spacing={2}>
+              <ResumenItem
+                title="Reinversión"
+                description="Porcentaje de egresos sobre ventas"
+                value={`${indicadores.reinversion.toFixed(1)}%`}
+                info="Proporción de las ventas que se destina a cubrir egresos"
+              />
+              <ResumenItem
+                title="Operaciones"
+                description="Ventas registradas"
+                value={resumen.operaciones}
+                info="Número total de ventas contabilizadas en el período"
+              />
+              <ResumenItem
+                title="Saldo"
+                description="Resultado neto"
+                value={`$ ${numberFormatter.format(resumen.saldo)}`}
+                info="Ingresos menos egresos acumulados del período"
+              />
+            </Stack>
+          </CardContent>
+        </Card>
+      )
+    },
+    {
+      key: 'detalle-egresos',
+      element: (
+        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
+          <CardHeader title="Detalle de egresos" subheader="Compras vs gastos operativos" />
+          <CardContent>
+            <Stack spacing={3}>
+              <EgresoBreakdown
+                label="Compras"
+                value={resumen.compras}
+                total={resumen.egresos}
+                color="#5D4037"
+              />
+              <EgresoBreakdown
+                label="Gastos operativos"
+                value={resumen.gastos}
+                total={resumen.egresos}
+                color="#8D6E63"
+              />
+            </Stack>
+          </CardContent>
+        </Card>
+      )
+    },
+    {
+      key: 'distribucion-categoria',
+      element: (
+        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
+          <CardHeader
+            title="Distribución por categoría"
+            subheader="Top categorías del período"
+            action={<PieChart sx={{ color: '#5D4037' }} />}
+          />
+          <CardContent>
+            <CategoryDistribution data={categoriaDistribucion} />
+          </CardContent>
+        </Card>
+      )
+    }
+  ]
+
   return (
     <Box sx={{ p: 3, backgroundColor: '#EFEBE9', minHeight: '100%' }}>
       <Box sx={{ maxWidth: 1600, mx: 'auto', width: '100%' }}>
@@ -313,8 +479,8 @@ export default function Reportes() {
           </CardContent>
         </Card>
 
-        <Grid container spacing={3}>
-          {loading ? (
+        {loading ? (
+          <Grid container spacing={3}>
             <Grid item xs={12}>
               <Card sx={{ borderRadius: 3 }}>
                 <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -325,158 +491,57 @@ export default function Reportes() {
                 </CardContent>
               </Card>
             </Grid>
-          ) : (
-            <>
-              <Grid item xs={12} md={6}>
-                <Card sx={{ borderRadius: 3, height: '100%', width: '100%' }}>
-                  <CardHeader
-                    title="Balance del período"
-                    subheader={`Resumen financiero ${rangoLabel}`}
-                    action={
-                      <Chip
-                        label={resumen.saldo >= 0 ? 'Saldo positivo' : 'Saldo negativo'}
-                        color={resumen.saldo >= 0 ? 'success' : 'error'}
-                        variant="outlined"
-                      />
-                    }
-                  />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12} md={4}>
-                        <MetricHighlight
-                          label="Ingresos"
-                          value={`$ ${numberFormatter.format(resumen.ingresos)}`}
-                          icon={<Paid />}
-                          color="#4CAF50"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <MetricHighlight
-                          label="Egresos"
-                          value={`$ ${numberFormatter.format(resumen.egresos)}`}
-                          icon={<ShoppingCart />}
-                          color="#E57373"
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <MetricHighlight
-                          label="Saldo"
-                          value={`$ ${numberFormatter.format(resumen.saldo)}`}
-                          icon={<TrendingUp />}
-                          color="#5D4037"
-                        />
-                      </Grid>
-                    </Grid>
-                    <Divider sx={{ my: 3 }} />
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                      <Chip label={`Período: ${rangoLabel}`} variant="outlined" />
-                      <Chip label={`${resumen.operaciones} operaciones registradas`} variant="outlined" />
-                      <Chip label={`${indicadores.diasPeriodo} días analizados`} variant="outlined" />
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Card sx={{ borderRadius: 3, height: '100%', width: '100%', background: 'linear-gradient(160deg,#5D4037,#8D6E63)' }}>
-                  <CardHeader
-                    title={<Typography variant="h6" sx={{ color: 'white' }}>Indicadores clave</Typography>}
-                    subheader={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>KPI del período</Typography>}
-                  />
-                  <CardContent>
-                    <Grid container spacing={2}>
-                      <Grid item xs={12}>
-                        <KpiBadge
-                          titulo="Ticket promedio"
-                          valor={`$ ${numberFormatter.format(indicadores.ticketPromedio)}`}
-                          icono={<Assessment />}
-                          tooltip="Valor medio ingresado por venta en el período seleccionado"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <KpiBadge
-                          titulo="Margen"
-                          valor={`${indicadores.margen.toFixed(1)}%`}
-                          icono={<TrendingUp />}
-                          tooltip="Porcentaje del saldo respecto de los ingresos (utilidad)"
-                        />
-                      </Grid>
-                      <Grid item xs={12}>
-                        <KpiBadge
-                          titulo="Promedio diario"
-                          valor={`$ ${numberFormatter.format(indicadores.promedioDiario)}`}
-                          icono={<Equalizer />}
-                          tooltip="Ingresos promedios generados por día dentro del período"
-                        />
-                      </Grid>
-                    </Grid>
-                  </CardContent>
-                </Card>
-              </Grid>
+          </Grid>
+        ) : (
+          <>
+            {/* Fila 1: 2 columnas, cada card ocupa la mitad del ancho en md+ */}
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 3,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  md: 'repeat(2, minmax(0, 1fr))'
+                },
+                mt: 1,
+                mb: 3
+              }}
+            >
+              {cards
+                .filter((card) => card.key === 'balance' || card.key === 'indicadores')
+                .map(({ key, element }) => (
+                  <Box key={key} sx={{ display: 'flex', width: '100%' }}>
+                    {element}
+                  </Box>
+                ))}
+            </Box>
 
-              <Grid item xs={12} md={6}>
-                <Card sx={{ borderRadius: 3, height: '100%' }}>
-                  <CardHeader
-                    title="Distribución por categoría"
-                    subheader="Top categorías del período"
-                    action={<PieChart sx={{ color: '#5D4037' }} />}
-                  />
-                  <CardContent>
-                    <CategoryDistribution data={categoriaDistribucion} />
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Card sx={{ borderRadius: 3, height: '100%' }}>
-                  <CardHeader title="Detalle de egresos" subheader="Compras vs gastos operativos" />
-                  <CardContent>
-                    <Stack spacing={3}>
-                      <EgresoBreakdown
-                        label="Compras"
-                        value={resumen.compras}
-                        total={resumen.egresos}
-                        color="#5D4037"
-                      />
-                      <EgresoBreakdown
-                        label="Gastos operativos"
-                        value={resumen.gastos}
-                        total={resumen.egresos}
-                        color="#8D6E63"
-                      />
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12}>
-                <Card sx={{ borderRadius: 3, height: '100%' }}>
-                  <CardHeader title="Resumen ejecutivo" subheader="Hallazgos del período" />
-                  <CardContent>
-                    <Stack spacing={2}>
-                      <ResumenItem
-                        title="Reinversión"
-                        description="Porcentaje de egresos sobre ventas"
-                        value={`${indicadores.reinversion.toFixed(1)}%`}
-                        info="Proporción de las ventas que se destina a cubrir egresos"
-                      />
-                      <ResumenItem
-                        title="Operaciones"
-                        description="Ventas registradas"
-                        value={resumen.operaciones}
-                        info="Número total de ventas contabilizadas en el período"
-                      />
-                      <ResumenItem
-                        title="Saldo"
-                        description="Resultado neto"
-                        value={`$ ${numberFormatter.format(resumen.saldo)}`}
-                        info="Ingresos menos egresos acumulados del período"
-                      />
-                    </Stack>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-            </>
-          )}
-        </Grid>
+            {/* Fila 2: 3 columnas iguales en md+ */}
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 3,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  md: 'repeat(3, minmax(0, 1fr))'
+                }
+              }}
+            >
+              {cards
+                .filter(
+                  (card) =>
+                    card.key === 'resumen-ejecutivo' ||
+                    card.key === 'detalle-egresos' ||
+                    card.key === 'distribucion-categoria'
+                )
+                .map(({ key, element }) => (
+                  <Box key={key} sx={{ display: 'flex', width: '100%' }}>
+                    {element}
+                  </Box>
+                ))}
+            </Box>
+          </>
+        )}
         {!loading && (
           <Box sx={{ mt: 3 }}>
             <Card sx={{ borderRadius: 3, width: '100%' }}>
