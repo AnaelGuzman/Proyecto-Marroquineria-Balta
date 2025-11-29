@@ -136,5 +136,46 @@ export const compraService = {
   // Alias para compatibilidad
   delete: function(id) {
     return this.eliminar(id);
+  },
+
+  registrarCompraMaterial: async (compraData, materiales) => {
+    try {
+      const data = {
+        compra: {
+          fecha: compraData.fecha,
+          metodoPago: compraData.metodoPago,
+          observaciones: compraData.observaciones,
+          tipoDocumento: "compra-material"
+        },
+        materiales: materiales.map(m => ({
+          material: { idMaterial: m.material.idMaterial },
+          cantidad: parseInt(m.cantidad),
+          precioUnitario: parseFloat(m.precioUnitario)
+        }))
+      };
+
+      const response = await fetch(`${API_BASE_URL}/compras/materiales`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+      });
+
+      return handleResponse(response);
+    } catch (error) {
+      console.error('❌ Error en registrarCompraMaterial:', error);
+      throw error;
+    }
+  },
+  
+  getMaterialesPorCompra: async (idCompra) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/compras/${idCompra}/materiales`);
+      return handleResponse(response);
+    } catch (error) {
+      console.error('Error en getMaterialesPorCompra:', error);
+      throw error;
+    }
   }
 };

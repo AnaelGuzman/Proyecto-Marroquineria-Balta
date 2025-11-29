@@ -89,15 +89,44 @@ export function useInventario() {
     }
   }
 
+  const consumirMaterialesParaProducto = async (idProducto, cantidad) => {
+    try {
+      // Obtener la receta del producto
+      const receta = await api.recetas.getMaterialesPorProducto(idProducto)
+      
+      // Consumir materiales por cada unidad del producto
+      for (const item of receta) {
+        if (item.material && item.cantidad) {
+          const cantidadTotal = item.cantidad * cantidad
+          await api.inventarioMateriales.registrarSalida(
+            item.material.idMaterial,
+            cantidadTotal,
+            `Producción de ${cantidad} unidades del producto`
+          )
+        }
+      }
+    } catch (error) {
+      console.error('Error al consumir materiales:', error)
+      throw new Error('No se pudieron consumir los materiales: ' + error.message)
+    }
+  }
+
+
   const ajustarStock = async (idProducto, delta) => {
     try {
       const item = inventario.find(i => i.producto?.idProducto === idProducto)
       if (!item) return
       
       const nuevaCantidad = item.cantidadProducto + delta
+      
       if (nuevaCantidad < 0) {
         alert('No se puede tener stock negativo')
         return
+      }
+      
+      // Si es un incremento (producción), consumir materiales
+      if (delta > 0) {
+        await consumirMaterialesParaProducto(idProducto, delta)
       }
       
       await api.inventario.ajustarCantidad(idProducto, delta)
@@ -117,7 +146,7 @@ export function useInventario() {
       setInventario(nuevoInventario)
     } catch (error) {
       console.error('Error al ajustar stock:', error)
-      alert('Error al ajustar el stock')
+      alert('Error al ajustar el stock: ' + error.message)
     }
   }
 

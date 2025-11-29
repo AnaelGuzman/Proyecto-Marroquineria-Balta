@@ -1,8 +1,7 @@
 package com.marroquineriabalta.service;
 
-import com.marroquineriabalta.entity.Compra;
-import com.marroquineriabalta.entity.DetalleCompra;
-import com.marroquineriabalta.entity.MetodoPago;
+import com.marroquineriabalta.entity.*;
+import com.marroquineriabalta.repository.CompraMaterialRepository;
 import com.marroquineriabalta.repository.CompraRepository;
 import com.marroquineriabalta.repository.MetodoPagoRepository;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Service
@@ -21,6 +21,8 @@ public class CompraService {
 
     private final CompraRepository compraRepository;
     private final MetodoPagoRepository metodoPagoRepository;
+    private final CompraMaterialRepository  compraMaterialRepository;
+    private final InventarioMaterialService inventarioMaterialService;
 
     @Transactional
     public Compra registrarCompra(Compra compra) {
@@ -113,4 +115,87 @@ public class CompraService {
         BigDecimal total = compraRepository.sumMontoTotalByFechaBetween(inicio, fin);
         return total != null ? total : BigDecimal.ZERO;
     }
+    @Transactional
+    public Compra registrarCompraMaterial(Compra compra, List<CompraMaterial> materiales) {
+        if (compra.getMetodoPago() == null || compra.getMetodoPago().getIdMetodoPago() == null) {
+            throw new RuntimeException("Debe especificar un método de pago");
+        }
+
+        MetodoPago metodoPago = metodoPagoRepository.findById(compra.getMetodoPago().getIdMetodoPago())
+                .orElseThrow(() -> new RuntimeException("Método de pago no encontrado"));
+
+        compra.setMetodoPago(metodoPago);
+        compra.setFecha(LocalDateTime.now());
+
+        // Calcular monto total
+        BigDecimal montoTotal = materiales.stream()
+                .map(m -> m.getPrecioUnitario().multiply(BigDecimal.valueOf(m.getCantidad())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        compra.setMontoTotal(montoTotal);
+
+        // Para compras de materiales, el IVA no es recuperable generalmente
+        compra.setMontoNeto(montoTotal);
+        compra.setIvaTotal(BigDecimal.ZERO);
+        compra.setTipoDocumento("compra-material");
+
+        Compra compraGuardada = compraRepository.save(compra);
+
+        // Guardar materiales de la compra
+        for (CompraMaterial material : materiales) {
+            material.setCompra(compraGuardada);
+            material.setSubtotal(material.getPrecioUnitario().multiply(BigDecimal.valueOf(material.getCantidad())));
+            compraMaterialRepository.save(material);
+
+            // Registrar entrada en inventario de materiales
+            inventarioMaterialService.registrarEntrada(
+                    material.getMaterial().getIdMaterial(),
+                    material.getCantidad(),
+                    material.getPrecioUnitario(),
+                    "Compra #" + compraGuardada.getIdCompra()
+            );
+        }
+
+        return compraGuardada;
+    }
+
+    public List<CompraMaterial> obtenerMaterialesPorCompra(Long idCompra) {
+        return compraMaterialRepository.findByCompraIdCompra(idCompra);
+    }
+    @Transactional
+    public Compra registrarCompraMaterialDesdeRequest(Map<String, Object> request) {
+        // Extraer compra y materiales del request
+        Map<String, Object> compraMap = (Map<String, Object>) request.get("compra");
+        List<Map<String, Object>> materialesMap = (List<Map<String, Object>>) request.get("materiales");
+
+        // Crear objeto Compra
+        Compra compra = new Compra();
+        compra.setFecha(LocalDateTime.parse((String) compraMap.get("fecha")));
+        compra.setObservaciones((String) compraMap.get("observaciones"));
+        compra.setTipoDocumento("compra-material");
+
+        // Configurar método de pago
+        MetodoPago metodoPago = new MetodoPago();
+        Map<String, Object> metodoPagoMap = (Map<String, Object>) compraMap.get("metodoPago");
+        metodoPago.setIdMetodoPago(Long.valueOf(metodoPagoMap.get("idMetodoPago").toString()));
+        compra.setMetodoPago(metodoPago);
+
+        // Crear lista de CompraMaterial
+        List<CompraMaterial> materiales = new ArrayList<>();
+        for (Map<String, Object> materialMap : materialesMap) {
+            CompraMaterial cm = new CompraMaterial();
+            cm.setCantidad(Integer.valueOf(materialMap.get("cantidad").toString()));
+            cm.setPrecioUnitario(new BigDecimal(materialMap.get("precioUnitario").toString()));
+
+            Material material = new Material();
+            Map<String, Object> materialObj = (Map<String, Object>) materialMap.get("material");
+            material.setIdMaterial(Long.valueOf(materialObj.get("idMaterial").toString()));
+            cm.setMaterial(material);
+
+            materiales.add(cm);
+        }
+
+        return registrarCompraMaterial(compra, materiales);
+    }
+
 }

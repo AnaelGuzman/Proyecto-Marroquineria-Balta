@@ -14,15 +14,18 @@ import {
   Delete, 
   TrendingUp,
   CheckCircle,
-  Cancel
+  Cancel,
+  Straighten
 } from '@mui/icons-material';
 import { categoriaService } from '../services/api/categoriaService.js';
 import { metodoPagoService } from '../services/api/metodoPagoService';
+import { unidadMedidaService } from '../services/api/unidadMedidaService';
 
 export default function Configuracion() {
   const [activeTab, setActiveTab] = useState('categorias');
   const [categorias, setCategorias] = useState([]);
   const [metodosPago, setMetodosPago] = useState([]);
+  const [unidadesMedida, setUnidadesMedida] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -45,10 +48,10 @@ export default function Configuracion() {
       trend: 'neutral'
     },
     { 
-      label: 'Configuraciones Activas', 
-      value: 'Todas',
-      icon: <TrendingUp sx={{ fontSize: 32, color: 'var(--success)' }} />,
-      trend: 'up'
+      label: 'Unidades de Medida', 
+      value: '0',
+      icon: <Straighten sx={{ fontSize: 32, color: 'var(--success)' }} />,
+      trend: 'neutral'
     },
   ]);
 
@@ -68,13 +71,21 @@ export default function Configuracion() {
           prev[1],
           prev[2]
         ]);
-      } else {
+      } else if (activeTab === 'metodos-pago') {
         const data = await metodoPagoService.getAll();
         setMetodosPago(data);
         setResumen(prev => [
           prev[0],
           { ...prev[1], value: data.length.toString() },
           prev[2]
+        ]);
+      } else if (activeTab === 'unidades-medida') {
+        const data = await unidadMedidaService.getAll();
+        setUnidadesMedida(data);
+        setResumen(prev => [
+          prev[0],
+          prev[1],
+          { ...prev[2], value: data.length.toString() }
         ]);
       }
     } catch (err) {
@@ -87,13 +98,23 @@ export default function Configuracion() {
 
   const handleCreate = () => {
     setEditingItem(null);
-    setFormData(activeTab === 'categorias' ? { 
-      nombre: '', 
-      descripcion: '' 
-    } : { 
-      nombre: '', 
-      comisionAsociada: 0 
-    });
+    if (activeTab === 'categorias') {
+      setFormData({ 
+        nombre: '', 
+        descripcion: '' 
+      });
+    } else if (activeTab === 'metodos-pago') {
+      setFormData({ 
+        nombre: '', 
+        comisionAsociada: 0 
+      });
+    } else if (activeTab === 'unidades-medida') {
+      setFormData({ 
+        nombre: '', 
+        abreviatura: '',
+        descripcion: '' 
+      });
+    }
     setShowForm(true);
     setError('');
     setSuccess('');
@@ -122,7 +143,7 @@ export default function Configuracion() {
       if (activeTab === 'categorias') {
         await categoriaService.delete(deleteConfirm.idCategoria);
         setSuccess('Categoría eliminada exitosamente');
-      } else {
+      } else if (activeTab === 'metodos-pago') {
         // Verificar si el método de pago está en uso
         const enUso = await metodoPagoService.verificarEnUso(deleteConfirm.idMetodoPago);
         if (enUso) {
@@ -132,13 +153,16 @@ export default function Configuracion() {
         }
         await metodoPagoService.delete(deleteConfirm.idMetodoPago);
         setSuccess('Método de pago eliminado exitosamente');
+      } else if (activeTab === 'unidades-medida') {
+        await unidadMedidaService.delete(deleteConfirm.idUnidadMedida);
+        setSuccess('Unidad de medida eliminada exitosamente');
       }
       setDeleteConfirm(null);
       cargarDatos();
     } catch (err) {
       const errorMessage = err.message || 'Error al eliminar el elemento';
       if (errorMessage.includes('asociadas') || errorMessage.includes('utilizado')) {
-        setError('No se puede eliminar porque tiene transacciones asociadas');
+        setError('No se puede eliminar porque tiene elementos asociados');
       } else {
         setError('Error al eliminar el elemento: ' + errorMessage);
       }
@@ -155,22 +179,10 @@ export default function Configuracion() {
     setError('');
     setSuccess('');
 
-    // Validaciones
+    // Validaciones comunes
     if (!formData.nombre || formData.nombre.trim() === '') {
       setError('El nombre es obligatorio');
       return;
-    }
-
-    if (activeTab === 'metodos-pago') {
-      const comision = parseFloat(formData.comisionAsociada) || 0;
-      if (comision < 0 || comision > 100) {
-        setError('La comisión debe estar entre 0% y 100%');
-        return;
-      }
-      if (isNaN(comision)) {
-        setError('La comisión debe ser un número válido');
-        return;
-      }
     }
 
     try {
@@ -187,14 +199,12 @@ export default function Configuracion() {
           await categoriaService.create(categoriaData);
           setSuccess('Categoría creada exitosamente');
         }
-      } else {
-        // CORRECCIÓN: Estructura simplificada para métodos de pago
+      } else if (activeTab === 'metodos-pago') {
         const metodoPagoData = {
           nombre: formData.nombre.trim(),
           comisionAsociada: parseFloat(formData.comisionAsociada) || 0
         };
 
-        // Validar que comisionAsociada sea un número
         if (isNaN(metodoPagoData.comisionAsociada)) {
           setError('La comisión debe ser un número válido');
           return;
@@ -209,7 +219,24 @@ export default function Configuracion() {
           await metodoPagoService.create(metodoPagoData);
           setSuccess('Método de pago creado exitosamente');
         }
-      }
+        } else if (activeTab === 'unidades-medida') {
+          const unidadMedidaData = {
+            nombre: formData.nombre.trim(),
+            abreviatura: formData.abreviatura?.trim() || ''
+          };
+          if (!unidadMedidaData.abreviatura || unidadMedidaData.abreviatura.trim() === '') {
+            setError('La abreviatura es obligatoria');
+            return;
+          }
+
+          if (editingItem) {
+            await unidadMedidaService.update(editingItem.idUnidadMedida, unidadMedidaData);
+            setSuccess('Unidad de medida actualizada exitosamente');
+          } else {
+            await unidadMedidaService.create(unidadMedidaData);
+            setSuccess('Unidad de medida creada exitosamente');
+          }
+        }
       setShowForm(false);
       cargarDatos();
     } catch (err) {
@@ -226,123 +253,213 @@ export default function Configuracion() {
     }));
   };
 
-  const currentData = activeTab === 'categorias' ? categorias : metodosPago;
-  const columns = activeTab === 'categorias' 
-    ? ['Nombre', 'Descripción', 'Acciones']
-    : ['Nombre', 'Comisión', 'Estado', 'Acciones'];
-
-  const rows = currentData.map(item => {
-    if (activeTab === 'categorias') {
-      return [
-        <div key={item.idCategoria} style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.75rem',
-          fontWeight: '600', 
-          color: 'var(--text)' 
-        }}>
-          <Category sx={{ color: 'var(--brand)', fontSize: 24 }} />
-          {item.nombre}
-        </div>,
-        <div key={item.idCategoria} style={{ 
-          color: 'var(--muted)',
-          maxWidth: '300px',
-          lineHeight: '1.4'
-        }}>
-          {item.descripcion || <span style={{ fontStyle: 'italic', color: 'var(--muted)' }}>Sin descripción</span>}
-        </div>,
-        <div key={item.idCategoria} style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button 
-            small 
-            variant="ghost" 
-            onClick={() => handleEdit(item)}
-            style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
-          >
-            <Edit sx={{ fontSize: 18 }} />
-          </Button>
-          <Button 
-            small 
-            variant="ghost" 
-            onClick={() => handleDelete(item)}
-            style={{ 
-              minWidth: 'auto', 
-              padding: '0.5rem 1rem',
-              background: 'var(--error)',
-              color: 'white'
-            }}
-          >
-            <Delete sx={{ fontSize: 18 }} />
-          </Button>
-        </div>
-      ];
-    } else {
-      return [
-        <div key={item.idMetodoPago} style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.75rem',
-          fontWeight: '600', 
-          color: 'var(--text)' 
-        }}>
-          <Payment sx={{ 
-            color: item.comisionAsociada > 0 ? 'var(--warning)' : 'var(--success)', 
-            fontSize: 24 
-          }} />
-          {item.nombre}
-        </div>,
-        <div key={item.idMetodoPago} style={{ 
-          color: item.comisionAsociada > 0 ? 'var(--warning)' : 'var(--success)',
-          fontWeight: '600',
-          fontSize: '1.1rem'
-        }}>
-          {item.comisionAsociada ? `${parseFloat(item.comisionAsociada).toFixed(2)}%` : '0%'}
-        </div>,
-        <div key={item.idMetodoPago}>
-          <span style={{
-            padding: '0.35rem 0.75rem',
-            borderRadius: '20px',
-            fontSize: '0.85rem',
-            fontWeight: '500',
-            background: item.comisionAsociada > 0 ? '#FFF3E0' : '#E8F5E8',
-            color: item.comisionAsociada > 0 ? '#EF6C00' : '#2E7D32',
-            border: `1px solid ${item.comisionAsociada > 0 ? '#FFB74D' : '#A5D6A7'}`
-          }}>
-            {item.comisionAsociada > 0 ? 'Con Comisión' : 'Sin Comisión'}
-          </span>
-        </div>,
-        <div key={item.idMetodoPago} style={{ display: 'flex', gap: '0.5rem' }}>
-          <Button 
-            small 
-            variant="ghost" 
-            onClick={() => handleEdit(item)}
-            style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
-          >
-            <Edit sx={{ fontSize: 18 }} />
-          </Button>
-          <Button 
-            small 
-            variant="ghost" 
-            onClick={() => handleDelete(item)}
-            style={{ 
-              minWidth: 'auto', 
-              padding: '0.5rem 1rem',
-              background: 'var(--error)',
-              color: 'white'
-            }}
-          >
-            <Delete sx={{ fontSize: 18 }} />
-          </Button>
-        </div>
-      ];
+  const getCurrentData = () => {
+    switch (activeTab) {
+      case 'categorias': return categorias;
+      case 'metodos-pago': return metodosPago;
+      case 'unidades-medida': return unidadesMedida;
+      default: return [];
     }
-  });
+  };
+
+  const getColumns = () => {
+    switch (activeTab) {
+      case 'categorias':
+        return ['Nombre', 'Descripción', 'Acciones'];
+      case 'metodos-pago':
+        return ['Nombre', 'Comisión', 'Estado', 'Acciones'];
+      case 'unidades-medida':
+        return ['Nombre', 'Abreviatura', 'Acciones']; // ← Quitar "Descripción"
+      default:
+        return [];
+    }
+  };
+
+  const getRows = () => {
+    const currentData = getCurrentData();
+    
+    return currentData.map(item => {
+      if (activeTab === 'categorias') {
+        return [
+          <div key={item.idCategoria} style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.75rem',
+            fontWeight: '600', 
+            color: 'var(--text)' 
+          }}>
+            <Category sx={{ color: 'var(--brand)', fontSize: 24 }} />
+            {item.nombre}
+          </div>,
+          <div key={item.idCategoria} style={{ 
+            color: 'var(--muted)',
+            maxWidth: '300px',
+            lineHeight: '1.4'
+          }}>
+            {item.descripcion || <span style={{ fontStyle: 'italic', color: 'var(--muted)' }}>Sin descripción</span>}
+          </div>,
+          <div key={item.idCategoria} style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleEdit(item)}
+              style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
+            >
+              <Edit sx={{ fontSize: 18 }} />
+            </Button>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleDelete(item)}
+              style={{ 
+                minWidth: 'auto', 
+                padding: '0.5rem 1rem',
+                background: 'var(--error)',
+                color: 'white'
+              }}
+            >
+              <Delete sx={{ fontSize: 18 }} />
+            </Button>
+          </div>
+        ];
+      } else if (activeTab === 'metodos-pago') {
+        return [
+          <div key={item.idMetodoPago} style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.75rem',
+            fontWeight: '600', 
+            color: 'var(--text)' 
+          }}>
+            <Payment sx={{ 
+              color: item.comisionAsociada > 0 ? 'var(--warning)' : 'var(--success)', 
+              fontSize: 24 
+            }} />
+            {item.nombre}
+          </div>,
+          <div key={item.idMetodoPago} style={{ 
+            color: item.comisionAsociada > 0 ? 'var(--warning)' : 'var(--success)',
+            fontWeight: '600',
+            fontSize: '1.1rem'
+          }}>
+            {item.comisionAsociada ? `${parseFloat(item.comisionAsociada).toFixed(2)}%` : '0%'}
+          </div>,
+          <div key={item.idMetodoPago}>
+            <span style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: '20px',
+              fontSize: '0.85rem',
+              fontWeight: '500',
+              background: item.comisionAsociada > 0 ? '#FFF3E0' : '#E8F5E8',
+              color: item.comisionAsociada > 0 ? '#EF6C00' : '#2E7D32',
+              border: `1px solid ${item.comisionAsociada > 0 ? '#FFB74D' : '#A5D6A7'}`
+            }}>
+              {item.comisionAsociada > 0 ? 'Con Comisión' : 'Sin Comisión'}
+            </span>
+          </div>,
+          <div key={item.idMetodoPago} style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleEdit(item)}
+              style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
+            >
+              <Edit sx={{ fontSize: 18 }} />
+            </Button>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleDelete(item)}
+              style={{ 
+                minWidth: 'auto', 
+                padding: '0.5rem 1rem',
+                background: 'var(--error)',
+                color: 'white'
+              }}
+            >
+              <Delete sx={{ fontSize: 18 }} />
+            </Button>
+          </div>
+        ];
+      } else if (activeTab === 'unidades-medida') {
+        return [
+          <div key={item.idUnidadMedida} style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.75rem',
+            fontWeight: '600', 
+            color: 'var(--text)' 
+          }}>
+            <Straighten sx={{ color: 'var(--brand-2)', fontSize: 24 }} />
+            {item.nombre}
+          </div>,
+          <div key={item.idUnidadMedida} style={{ 
+            color: 'var(--brand)',
+            fontWeight: '600',
+            fontSize: '1.1rem',
+            background: 'rgba(119, 80, 65, 0.1)',
+            padding: '0.35rem 0.75rem',
+            borderRadius: '8px',
+            border: '1px solid rgba(119, 80, 65, 0.2)'
+          }}>
+            {item.abreviatura}
+          </div>,
+          <div key={item.idUnidadMedida} style={{ display: 'flex', gap: '0.5rem' }}>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleEdit(item)}
+              style={{ minWidth: 'auto', padding: '0.5rem 1rem' }}
+            >
+              <Edit sx={{ fontSize: 18 }} />
+            </Button>
+            <Button 
+              small 
+              variant="ghost" 
+              onClick={() => handleDelete(item)}
+              style={{ 
+                minWidth: 'auto', 
+                padding: '0.5rem 1rem',
+                background: 'var(--error)',
+                color: 'white'
+              }}
+            >
+              <Delete sx={{ fontSize: 18 }} />
+            </Button>
+          </div>
+        ];
+      }
+    });
+  };
+
+  const getTabLabel = () => {
+    switch (activeTab) {
+      case 'categorias': return 'Categorías de Productos';
+      case 'metodos-pago': return 'Métodos de Pago';
+      case 'unidades-medida': return 'Unidades de Medida';
+      default: return '';
+    }
+  };
+
+  const getTabIcon = () => {
+    switch (activeTab) {
+      case 'categorias': return <Category sx={{ fontSize: 22 }} />;
+      case 'metodos-pago': return <Payment sx={{ fontSize: 22 }} />;
+      case 'unidades-medida': return <Straighten sx={{ fontSize: 22 }} />;
+      default: return null;
+    }
+  };
+
+  const currentData = getCurrentData();
+  const columns = getColumns();
+  const rows = getRows();
 
   return (
     <div className="stack">
       {/* Card de Resumen */}
       <Card 
         title="Resumen de Configuración" 
-        subtitle="Gestión centralizada de categorías y métodos de pago"
+        subtitle="Gestión centralizada de categorías, métodos de pago y unidades de medida"
         accent="accent"
       >
         <div className="stats">
@@ -376,7 +493,7 @@ export default function Configuracion() {
       {/* Card Principal de Gestión */}
       <Card 
         title="Gestión de Configuraciones" 
-        subtitle="Administra las categorías de productos y métodos de pago del sistema"
+        subtitle="Administra las categorías de productos, métodos de pago y unidades de medida del sistema"
       >
         {/* Sistema de Pestañas */}
         <div style={{ marginBottom: '2rem' }}>
@@ -386,48 +503,34 @@ export default function Configuracion() {
             borderBottom: '2px solid var(--border)',
             paddingBottom: '0'
           }}>
-            <button
-              onClick={() => setActiveTab('categorias')}
-              style={{
-                padding: '1.25rem 2rem',
-                background: activeTab === 'categorias' ? 'var(--brand)' : 'transparent',
-                color: activeTab === 'categorias' ? 'white' : 'var(--text)',
-                border: 'none',
-                borderBottom: activeTab === 'categorias' ? '3px solid var(--brand)' : '3px solid transparent',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '12px 12px 0 0',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}
-            >
-              <Category sx={{ fontSize: 22 }} />
-              Categorías de Productos
-            </button>
-            <button
-              onClick={() => setActiveTab('metodos-pago')}
-              style={{
-                padding: '1.25rem 2rem',
-                background: activeTab === 'metodos-pago' ? 'var(--brand)' : 'transparent',
-                color: activeTab === 'metodos-pago' ? 'white' : 'var(--text)',
-                border: 'none',
-                borderBottom: activeTab === 'metodos-pago' ? '3px solid var(--brand)' : '3px solid transparent',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-                borderRadius: '12px 12px 0 0',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}
-            >
-              <Payment sx={{ fontSize: 22 }} />
-              Métodos de Pago
-            </button>
+            {['categorias', 'metodos-pago', 'unidades-medida'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: '1.25rem 2rem',
+                  background: activeTab === tab ? 'var(--brand)' : 'transparent',
+                  color: activeTab === tab ? 'white' : 'var(--text)',
+                  border: 'none',
+                  borderBottom: activeTab === tab ? '3px solid var(--brand)' : '3px solid transparent',
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  borderRadius: '12px 12px 0 0',
+                  transition: 'all 0.3s ease',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}
+              >
+                {tab === 'categorias' && <Category sx={{ fontSize: 22 }} />}
+                {tab === 'metodos-pago' && <Payment sx={{ fontSize: 22 }} />}
+                {tab === 'unidades-medida' && <Straighten sx={{ fontSize: 22 }} />}
+                {tab === 'categorias' && 'Categorías de Productos'}
+                {tab === 'metodos-pago' && 'Métodos de Pago'}
+                {tab === 'unidades-medida' && 'Unidades de Medida'}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -472,7 +575,7 @@ export default function Configuracion() {
         <Toolbar>
           <Button onClick={handleCreate}>
             <Add sx={{ fontSize: 20 }} />
-            Nuevo {activeTab === 'categorias' ? 'Categoría' : 'Método de Pago'}
+            Nuevo {getTabLabel()}
           </Button>
           <Button variant="ghost" onClick={cargarDatos} disabled={loading}>
             {loading ? 'Cargando...' : 'Actualizar Lista'}
@@ -483,7 +586,7 @@ export default function Configuracion() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '4rem' }}>
             <div className="loading">
-              <p>Cargando {activeTab === 'categorias' ? 'categorías' : 'métodos de pago'}...</p>
+              <p>Cargando {getTabLabel().toLowerCase()}...</p>
             </div>
           </div>
         ) : (
@@ -497,7 +600,7 @@ export default function Configuracion() {
                 color: 'var(--muted)',
                 background: 'var(--panel-2)'
               }}>
-                Mostrando {currentData.length} {activeTab === 'categorias' ? 'categorías' : 'métodos de pago'}
+                Mostrando {currentData.length} {getTabLabel().toLowerCase()}
               </div>
             }
           />
@@ -545,11 +648,11 @@ export default function Configuracion() {
                 borderRadius: '14px',
                 color: 'white'
               }}>
-                {activeTab === 'categorias' ? <Category sx={{ fontSize: 28 }} /> : <Payment sx={{ fontSize: 28 }} />}
+                {getTabIcon()}
               </div>
               <div>
                 <h3 style={{ margin: 0, color: 'var(--text)', fontSize: '1.6rem', fontWeight: '600' }}>
-                  {editingItem ? 'Editar' : 'Nuevo'} {activeTab === 'categorias' ? 'Categoría' : 'Método de Pago'}
+                  {editingItem ? 'Editar' : 'Nuevo'} {getTabLabel()}
                 </h3>
                 <p style={{ margin: '0.25rem 0 0 0', color: 'var(--muted)', fontSize: '1rem' }}>
                   {editingItem ? 'Modifique los datos necesarios' : 'Complete los datos del nuevo elemento'}
@@ -575,7 +678,7 @@ export default function Configuracion() {
                   value={formData.nombre || ''}
                   onChange={handleInputChange}
                   required
-                  placeholder={`Ingrese el nombre del ${activeTab === 'categorias' ? 'categoría' : 'método de pago'}`}
+                  placeholder={`Ingrese el nombre del ${getTabLabel().toLowerCase()}`}
                   style={{
                     width: '100%',
                     padding: '1rem',
@@ -590,8 +693,8 @@ export default function Configuracion() {
                 />
               </label>
 
-              {/* Campo Específico según la pestaña */}
-              {activeTab === 'categorias' ? (
+              {/* Campos específicos según la pestaña */}
+              {activeTab === 'categorias' && (
                 <label>
                   <span style={{ 
                     display: 'block', 
@@ -623,7 +726,9 @@ export default function Configuracion() {
                     onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
                   />
                 </label>
-              ) : (
+              )}
+
+              {activeTab === 'metodos-pago' && (
                 <label>
                   <span style={{ 
                     display: 'block', 
@@ -665,6 +770,41 @@ export default function Configuracion() {
                     Ej: 2.5 para 2.5% de comisión. Deje en 0 si no aplica comisión.
                   </small>
                 </label>
+              )}
+
+              {activeTab === 'unidades-medida' && (
+                <>
+                  <label>
+                    <span style={{ 
+                      display: 'block', 
+                      marginBottom: '0.75rem', 
+                      color: 'var(--text)', 
+                      fontWeight: '600',
+                      fontSize: '1.05rem'
+                    }}>
+                      Abreviatura *
+                    </span>
+                    <input
+                      type="text"
+                      name="abreviatura"
+                      value={formData.abreviatura || ''}
+                      onChange={handleInputChange}
+                      required
+                      placeholder="Ej: kg, g, ml, L, etc."
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        border: '2px solid var(--border)',
+                        borderRadius: '10px',
+                        fontSize: '1rem',
+                        background: 'var(--panel)',
+                        transition: 'all 0.3s ease'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = 'var(--brand)'}
+                      onBlur={(e) => e.target.style.borderColor = 'var(--border)'}
+                    />
+                  </label>
+                </>
               )}
 
               {/* Botones de Acción */}
@@ -756,4 +896,4 @@ export default function Configuracion() {
       )}
     </div>
   );
-} 
+}

@@ -1,6 +1,10 @@
 package com.marroquineriabalta.controller;
 
+import com.marroquineriabalta.dto.CompraMaterialRequestDTO;
 import com.marroquineriabalta.entity.Compra;
+import com.marroquineriabalta.entity.CompraMaterial;
+import com.marroquineriabalta.entity.Material;
+import com.marroquineriabalta.entity.MetodoPago;
 import com.marroquineriabalta.service.CompraService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -9,7 +13,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/compras")
@@ -67,4 +73,14 @@ public class CompraController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime fin) {
         return ResponseEntity.ok(compraService.obtenerTotalComprasPorPeriodo(inicio, fin));
     }
+    @PostMapping("/materiales")
+    public ResponseEntity<?> registrarCompraMaterial(@RequestBody CompraMaterialRequestDTO request) {
+        try {
+            Compra nueva = compraService.registrarCompraMaterial(request.getCompra(), request.getMateriales());
+            return ResponseEntity.status(HttpStatus.CREATED).body(nueva);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
 }

@@ -5,6 +5,10 @@ import { ventaService } from './ventaService';
 import { compraService } from './compraService';
 import { gastoService } from './gastoService';
 import { metodoPagoService } from './metodoPagoService';
+import { materialService } from './materialService';
+import { unidadMedidaService } from './unidadMedidaService';
+import { inventarioMaterialService } from './inventarioMaterialService.js';
+import { recetaService } from './recetaService';
 
 // Helper para manejar respuestas
 const handleResponse = async (response) => {
@@ -34,7 +38,11 @@ export const api = {
   ventas: ventaService,
   compras: compraService,
   gastos: gastoService,
-  metodosPago: metodoPagoService
+  metodosPago: metodoPagoService,
+  materiales: materialService,
+  unidadesMedida: unidadMedidaService,
+  inventarioMateriales: inventarioMaterialService,
+  recetas: recetaService
 };
 
 // Mantener compatibilidad con el código anterior

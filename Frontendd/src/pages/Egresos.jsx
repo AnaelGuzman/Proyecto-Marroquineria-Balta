@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { api } from '../services/api/index.js'
-import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete } from '@mui/icons-material';
+import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete, Inventory, LocalShipping } from '@mui/icons-material';
 
 export default function Egresos() {
   const [compras, setCompras] = useState([])
   const [gastos, setGastos] = useState([])
   const [metodosPago, setMetodosPago] = useState([])
+  const [materiales, setMateriales] = useState([])
+  const [unidadesMedida, setUnidadesMedida] = useState([])
   const [loading, setLoading] = useState(true)
   const [tipoEgreso, setTipoEgreso] = useState('compra')
   const [observacionesModal, setObservacionesModal] = useState(null)
@@ -25,6 +27,15 @@ export default function Egresos() {
     monto: 0,
     idMetodoPago: '',
     fecha: new Date().toISOString().split('T')[0]
+  })
+
+  const [formCompraMaterial, setFormCompraMaterial] = useState({
+    idMaterial: '',
+    cantidad: 1,
+    precioUnitario: 0,
+    idMetodoPago: '',
+    fecha: new Date().toISOString().split('T')[0],
+    observaciones: ''
   })
 
   const [resumen, setResumen] = useState([
@@ -62,17 +73,21 @@ export default function Egresos() {
       const inicio = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       const fin = now.toISOString()
 
-      const [comps, gast, metodos, totalCompras, totalGastos] = await Promise.all([
+      const [comps, gast, metodos, totalCompras, totalGastos, materialesData, unidadesData] = await Promise.all([
         api.compras.getAll().catch(() => []),
         api.gastos.getAll().catch(() => []),
         api.metodosPago.getAll().catch(() => []),
         api.compras.getTotalPorPeriodo(inicio, fin).catch(() => 0),
-        api.gastos.getTotalPorPeriodo(inicio, fin).catch(() => 0)
+        api.gastos.getTotalPorPeriodo(inicio, fin).catch(() => 0),
+        api.materiales.getAll().catch(() => []),
+        api.unidadesMedida.getAll().catch(() => [])
       ])
 
       setCompras(comps || [])
       setGastos(gast || [])
       setMetodosPago(metodos || [])
+      setMateriales(materialesData || [])
+      setUnidadesMedida(unidadesData || [])
 
       const comprasMes = parseFloat(totalCompras) || 0
       const gastosMes = parseFloat(totalGastos) || 0
@@ -112,23 +127,24 @@ export default function Egresos() {
     return (formCompra.precioUnitario || 0) * (formCompra.cantidad || 1)
   }
 
-  const calcularIVARecuperable = () => {
-    if (formCompra.tipoDocumento === 'factura') {
-      const total = calcularTotalCompra()
+  const calcularTotalCompraMaterial = () => {
+    return (formCompraMaterial.precioUnitario || 0) * (formCompraMaterial.cantidad || 1)
+  }
+
+  const calcularIVARecuperable = (total, tipoDocumento) => {
+    if (tipoDocumento === 'factura') {
       const iva = total - (total / 1.19)
       return Math.round(iva * 100) / 100
     }
     return 0
   }
 
-  const calcularCostoReal = () => {
-    const total = calcularTotalCompra()
-    const ivaRecuperable = calcularIVARecuperable()
+  const calcularCostoReal = (total, tipoDocumento) => {
+    const ivaRecuperable = calcularIVARecuperable(total, tipoDocumento)
     return Math.round((total - ivaRecuperable) * 100) / 100
   }
 
   const handleGuardarCompra = async () => {
-    // Validaciones
     if (!formCompra.descripcion?.trim()) {
       alert('Por favor ingrese una descripción')
       return
@@ -150,12 +166,10 @@ export default function Egresos() {
     }
 
     try {
-      // Preparar datos con validación
       const cantidad = parseInt(formCompra.cantidad)
       const precioUnitario = parseFloat(formCompra.precioUnitario)
       const subtotal = cantidad * precioUnitario
       
-      // Construir objeto limpio sin propiedades undefined
       const compraData = {
         fecha: new Date(formCompra.fecha).toISOString(),
         metodoPago: { 
@@ -181,7 +195,6 @@ export default function Egresos() {
       
       alert('✅ Compra registrada exitosamente')
 
-      // Limpiar formulario
       setFormCompra({
         descripcion: '',
         cantidad: 1,
@@ -192,13 +205,11 @@ export default function Egresos() {
         observaciones: ''
       })
 
-      // Recargar datos
       await cargarDatos()
       
     } catch (error) {
       console.error('❌ Error completo:', error)
       
-      // Extraer mensaje de error más claro
       let mensaje = 'Error desconocido al registrar la compra'
       
       if (error.message) {
@@ -243,6 +254,69 @@ export default function Egresos() {
     }
   }
 
+  const handleGuardarCompraMaterial = async () => {
+    if (!formCompraMaterial.idMaterial) {
+      alert('Por favor seleccione un material')
+      return
+    }
+    
+    if (!formCompraMaterial.idMetodoPago) {
+      alert('Por favor seleccione un método de pago')
+      return
+    }
+    
+    if (!formCompraMaterial.precioUnitario || formCompraMaterial.precioUnitario <= 0) {
+      alert('El precio unitario debe ser mayor a 0')
+      return
+    }
+
+    if (!formCompraMaterial.cantidad || formCompraMaterial.cantidad <= 0) {
+      alert('La cantidad debe ser mayor a 0')
+      return
+    }
+
+    try {
+      const materialSeleccionado = materiales.find(m => m.idMaterial === parseInt(formCompraMaterial.idMaterial))
+      
+      const compraData = {
+        fecha: new Date(formCompraMaterial.fecha).toISOString(),
+        metodoPago: { 
+          idMetodoPago: parseInt(formCompraMaterial.idMetodoPago)
+        },
+        observaciones: (formCompraMaterial.observaciones || '').trim() || `Compra de material: ${materialSeleccionado?.nombre}`
+      }
+
+      const materialesData = [{
+        material: { idMaterial: parseInt(formCompraMaterial.idMaterial) },
+        cantidad: parseInt(formCompraMaterial.cantidad),
+        precioUnitario: parseFloat(formCompraMaterial.precioUnitario)
+      }]
+
+      console.log('📤 Datos compra material:', { compraData, materialesData })
+
+      const response = await api.compras.registrarCompraMaterial(compraData, materialesData)
+      
+      console.log('✅ Compra material exitosa:', response)
+      
+      alert('✅ Compra de material registrada exitosamente')
+
+      setFormCompraMaterial({
+        idMaterial: '',
+        cantidad: 1,
+        precioUnitario: 0,
+        idMetodoPago: '',
+        fecha: new Date().toISOString().split('T')[0],
+        observaciones: ''
+      })
+
+      await cargarDatos()
+      
+    } catch (error) {
+      console.error('❌ Error compra material:', error)
+      alert('❌ Error al registrar compra de material:\n\n' + (error.message || 'Error desconocido'))
+    }
+  }
+
   const handleCancelar = () => {
     if (tipoEgreso === 'compra') {
       setFormCompra({
@@ -254,23 +328,38 @@ export default function Egresos() {
         fecha: new Date().toISOString().split('T')[0],
         observaciones: ''
       })
-    } else {
+    } else if (tipoEgreso === 'gasto') {
       setFormGasto({
         descripcion: '',
         monto: 0,
         idMetodoPago: '',
         fecha: new Date().toISOString().split('T')[0]
       })
+    } else if (tipoEgreso === 'material') {
+      setFormCompraMaterial({
+        idMaterial: '',
+        cantidad: 1,
+        precioUnitario: 0,
+        idMetodoPago: '',
+        fecha: new Date().toISOString().split('T')[0],
+        observaciones: ''
+      })
     }
   }
 
   const incrementarCantidad = () => {
-    setFormCompra({ ...formCompra, cantidad: formCompra.cantidad + 1 })
+    if (tipoEgreso === 'compra') {
+      setFormCompra({ ...formCompra, cantidad: formCompra.cantidad + 1 })
+    } else if (tipoEgreso === 'material') {
+      setFormCompraMaterial({ ...formCompraMaterial, cantidad: formCompraMaterial.cantidad + 1 })
+    }
   }
 
   const decrementarCantidad = () => {
-    if (formCompra.cantidad > 1) {
+    if (tipoEgreso === 'compra' && formCompra.cantidad > 1) {
       setFormCompra({ ...formCompra, cantidad: formCompra.cantidad - 1 })
+    } else if (tipoEgreso === 'material' && formCompraMaterial.cantidad > 1) {
+      setFormCompraMaterial({ ...formCompraMaterial, cantidad: formCompraMaterial.cantidad - 1 })
     }
   }
   
@@ -300,6 +389,11 @@ export default function Egresos() {
     } catch (e) {
       return 'Fecha inválida';
     }
+  }
+
+  const getMaterialInfo = (idMaterial) => {
+    const material = materiales.find(m => m.idMaterial === parseInt(idMaterial))
+    return material || null
   }
 
   if (loading && compras.length === 0 && gastos.length === 0) {
@@ -342,7 +436,6 @@ export default function Egresos() {
       ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
       : item.descripcion
 
-    // Calcular IVA y monto neto
     const ivaValor = (esCompra && item.tipoDocumento === 'factura') 
       ? montoTotal - (montoTotal / 1.19) 
       : 0
@@ -752,7 +845,6 @@ export default function Egresos() {
           font-size: 1.05rem;
         }
         
-
         .btn-observaciones {
           background: transparent;
           border: 2px solid #D7CCC8;
@@ -795,6 +887,20 @@ export default function Egresos() {
           border: 2px dashed #D7CCC8;
         }
 
+        .material-info {
+          background: #E8F5E8;
+          padding: 1rem;
+          border-radius: 8px;
+          border-left: 4px solid #4CAF50;
+          margin: 0.5rem 0;
+        }
+
+        .material-info p {
+          margin: 0.25rem 0;
+          font-size: 0.9rem;
+          color: #2E7D32;
+        }
+
         @media (max-width: 768px) {
           .egresos-container {
             padding: 1rem;
@@ -826,7 +932,7 @@ export default function Egresos() {
       <div className="egresos-card egresos-header">
         <div className="card-header">
           <h1 className="card-title">Gestión de Egresos</h1>
-          <p className="card-subtitle">Control de compras y gastos de la marroquinería</p>
+          <p className="card-subtitle">Control de compras, gastos y abastecimiento de materiales</p>
         </div>
         <div className="card-body">
           <div className="stats-grid">
@@ -866,7 +972,7 @@ export default function Egresos() {
           <div className="egresos-card">
             <div className="card-header">
               <h2 className="card-title">Registrar Nuevo Egreso</h2>
-              <p className="card-subtitle">Agregue una compra de insumos o gasto operativo</p>
+              <p className="card-subtitle">Agregue una compra, gasto o abastecimiento de materiales</p>
             </div>
             <div className="card-body">
               <div className="form-field">
@@ -878,7 +984,8 @@ export default function Egresos() {
                   value={tipoEgreso} 
                   onChange={(e) => setTipoEgreso(e.target.value)}
                 >
-                  <option value="compra">🛒 Compra de Insumos</option>
+                  <option value="compra">🛒 Compra General</option>
+                  <option value="material">📦 Compra de Materiales</option>
                   <option value="gasto">💸 Gasto Operativo</option>
                 </select>
               </div>
@@ -956,7 +1063,7 @@ export default function Egresos() {
                           IVA Recuperable
                         </div>
                         <div style={{ fontSize: '1.1rem' }}>
-                          $ {Math.round(calcularIVARecuperable()).toLocaleString('es-CL')}
+                          $ {Math.round(calcularIVARecuperable(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
                         </div>
                       </div>
                       
@@ -965,7 +1072,7 @@ export default function Egresos() {
                           Costo Real
                         </div>
                         <div style={{ fontSize: '1.1rem' }}>
-                          $ {Math.round(calcularCostoReal()).toLocaleString('es-CL')}
+                          $ {Math.round(calcularCostoReal(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
                         </div>
                       </div>
                       
@@ -1032,6 +1139,142 @@ export default function Egresos() {
                     />
                   </div>
                 </div>
+              ) : tipoEgreso === 'material' ? (
+                <div className="form-grid">
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <Inventory sx={{ fontSize: 20 }} />
+                      Material a Comprar
+                    </label>
+                    <select 
+                      value={formCompraMaterial.idMaterial}
+                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMaterial: e.target.value })}
+                    >
+                      <option value="">Seleccionar material...</option>
+                      {materiales.map(m => (
+                        <option key={m.idMaterial} value={m.idMaterial}>
+                          {m.nombre} ({m.unidadMedida?.abreviatura || 'N/A'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {formCompraMaterial.idMaterial && (
+                    <div className="form-field col-6">
+                      <label className="field-label">Información del Material</label>
+                      <div className="material-info">
+                        {(() => {
+                          const material = getMaterialInfo(formCompraMaterial.idMaterial)
+                          return material ? (
+                            <>
+                              <p><strong>Stock actual:</strong> {material.stockActual || 0} {material.unidadMedida?.abreviatura || ''}</p>
+                              <p><strong>Stock mínimo:</strong> {material.stockMinimo || 0} {material.unidadMedida?.abreviatura || ''}</p>
+                              <p><strong>Costo promedio:</strong> $ {(material.costoPromedio || 0).toFixed(2)}</p>
+                            </>
+                          ) : null
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <AttachMoney sx={{ fontSize: 20 }} />
+                      Precio Unitario
+                    </label>
+                    <input 
+                      type="number" 
+                      placeholder="0" 
+                      min={0} 
+                      step={0.01} 
+                      value={formCompraMaterial.precioUnitario || ''}
+                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, precioUnitario: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Cantidad</label>
+                    <div className="quantity-control">
+                      <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
+                      <input 
+                        type="number" 
+                        value={formCompraMaterial.cantidad} 
+                        onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, cantidad: parseInt(e.target.value) || 1 })}
+                        min={1} 
+                        step={1}
+                      />
+                      <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
+                    </div>
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Total Compra</label>
+                    <input 
+                      type="text" 
+                      value={`$ ${Math.round(calcularTotalCompraMaterial()).toLocaleString('es-CL')}`}
+                      disabled 
+                      style={{ 
+                        fontWeight: '600',
+                        color: '#5D4037',
+                        background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
+                        fontSize: '1.1rem'
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Unidad de Medida</label>
+                    <input 
+                      type="text" 
+                      value={getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura || 'N/A'}
+                      disabled 
+                      style={{ 
+                        background: '#F5F3F0',
+                        color: '#8D6E63'
+                      }}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">
+                      <CalendarToday sx={{ fontSize: 20 }} />
+                      Fecha
+                    </label>
+                    <input 
+                      type="date" 
+                      value={formCompraMaterial.fecha}
+                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, fecha: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="form-field col-6">
+                    <label className="field-label">Método de Pago</label>
+                    <select 
+                      value={formCompraMaterial.idMetodoPago}
+                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMetodoPago: e.target.value })}
+                    >
+                      <option value="">Seleccionar método...</option>
+                      {metodosPago.map(m => (
+                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="form-field col-12">
+                    <label className="field-label">
+                      <Description sx={{ fontSize: 20 }} />
+                      Observaciones (opcional)
+                    </label>
+                    <textarea 
+                      placeholder="Notas adicionales sobre esta compra de material..." 
+                      rows={3}
+                      value={formCompraMaterial.observaciones}
+                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, observaciones: e.target.value })}
+                    />
+                  </div>
+                </div>
               ) : (
                 <div className="form-grid">
                   <div className="form-field col-6">
@@ -1092,9 +1335,13 @@ export default function Egresos() {
               )}
 
               <div className="toolbar">
-                <button className="btn" onClick={tipoEgreso === 'compra' ? handleGuardarCompra : handleGuardarGasto}>
-                  <AttachMoney sx={{ fontSize: 20 }} />
-                  Registrar {tipoEgreso === 'compra' ? 'Compra' : 'Gasto'}
+                <button className="btn" onClick={
+                  tipoEgreso === 'compra' ? handleGuardarCompra :
+                  tipoEgreso === 'material' ? handleGuardarCompraMaterial :
+                  handleGuardarGasto
+                }>
+                  {tipoEgreso === 'material' ? <LocalShipping sx={{ fontSize: 20 }} /> : <AttachMoney sx={{ fontSize: 20 }} />}
+                  Registrar {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra de Material' : 'Gasto'}
                 </button>
                 <button className="btn ghost" onClick={handleCancelar}>
                   Cancelar
