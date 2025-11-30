@@ -226,16 +226,7 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {/* Botón hamburguesa con clase condicional para ocultarlo */}
-      <button
-        type="button"
-        className={`hamburger-btn ${sidebarOpen ? 'hide' : ''}`}
-        onClick={() => setSidebarOpen(true)}
-        aria-label="Abrir menú"
-      >
-        ☰
-      </button>
-
+      
       <div className={`shell ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <aside ref={sidebarRef} className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
           <div className="brand">
@@ -276,7 +267,7 @@ export default function App() {
             height: '100vh' 
           }}
         >
-          <Header hash={hash} />
+          <Header hash={hash} onOpenSidebar={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
           <div className="page">
             <Active />
           </div>
@@ -286,7 +277,7 @@ export default function App() {
   )
 }
 
-function Header({ hash }) { // Eliminamos onToggleSidebar de las props
+function Header({ hash, onOpenSidebar, sidebarOpen }) { // Eliminamos onToggleSidebar de las props
   const title = useMemo(() => {
     const route = routes.find(r => hash === r.path)
     return route?.label ?? 'Inicio'
@@ -306,17 +297,25 @@ function Header({ hash }) { // Eliminamos onToggleSidebar de las props
           backgroundColor: 'var(--bg-default, #EFEBE9)' /* Evita transparencia */
         }}
       >
-        {/* El botón de hamburguesa ya no está aquí */}
+        <button
+          type="button"
+          className={`hamburger-btn ${sidebarOpen ? 'hide' : ''}`}
+          onClick={onOpenSidebar}
+          aria-label="Abrir menú"
+        >
+          ☰
+        </button>
         <h1>{title}</h1>
         <div className="spacer" />
 
-        <Button variant="ghost" small onClick={() => setShowCalendar(true)}>
-          Agendamientos
+        <Button variant="ghost" small onClick={() => setShowCalendar(true)} className="btn-responsive">
+          <span className="icon">📅</span>
+          <span className="text">Agendamientos</span>
         </Button>
 
-        <Button variant="ghost" small title="Solo demostración">
-          <span className="avatar" style={{ marginRight: '0.5rem' }}>⚙️</span>
-          Marco antonio
+        <Button variant="ghost" small title="Solo demostración" className="btn-responsive">
+          <span className="avatar">⚙️</span>
+          <span className="text">Marco antonio</span>
         </Button>
       </header>
 
