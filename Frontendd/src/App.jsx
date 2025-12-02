@@ -9,10 +9,12 @@ import Reportes from './pages/Reportes.jsx'
 import Inventario from './pages/Inventario/Inventario.jsx'
 import InventarioMateriales from './pages/Inventario/InventarioMateriales.jsx'
 import Configuracion from './pages/Met-Cat.jsx'
+import Login from './pages/auth/Login.jsx'
+import Registro from './pages/auth/Registro.jsx'
 import MenuItem from './components/MenuItem.jsx';
 import Logo from './components/Logo.jsx'
 import { Field, Button } from './components/UI.jsx'
-
+import { Logout, Person } from '@mui/icons-material'
 
 const theme = createTheme({
   palette: {
@@ -63,29 +65,28 @@ const theme = createTheme({
   },
 });
 
-// En App.jsx - actualiza la constante routes
 const routes = [
   { 
     path: '#/', 
     label: 'Inicio', 
     element: Dashboard,
-    icon: ''
+    icon: '🏠'
   },
   { 
     path: '#/ingresos', 
     label: 'Venta', 
     element: Ingresos,
-    icon: '',
+    icon: '💰',
     submenu: [
       { path: '#/ingresos', label: 'Registrar Venta' },
-      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas',element: StatVentas }
+      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas', element: StatVentas }
     ]
   },
   { 
     path: '#/egresos', 
     label: 'Compra', 
     element: Egresos,
-    icon: '',
+    icon: '🛒',
     submenu: [
       { path: '#/egresos', label: 'Registrar Compra' },
     ]
@@ -94,17 +95,17 @@ const routes = [
     path: '#/inventario', 
     label: 'Inventario Productos', 
     element: Inventario,
-    icon: '',
+    icon: '📦',
     submenu: [
       { path: '#/inventario', label: 'Gestión de Inventario' },
-      { path: '#/inventarioMat', label: 'Inventario Materiales',element: InventarioMateriales },
+      { path: '#/inventarioMat', label: 'Inventario Materiales', element: InventarioMateriales },
     ]
   },
   { 
     path: '#/reportes', 
     label: 'Estadísticas', 
     element: Reportes,
-    icon: '',
+    icon: '📊',
     submenu: [
       { path: '#/reportes', label: 'Dashboard General' },
     ]
@@ -113,7 +114,7 @@ const routes = [
     path: '#/configuracion', 
     label: 'Configuración', 
     element: Configuracion,
-    icon: '',
+    icon: '⚙️',
     submenu: [
       { path: '#/configuracion', label: 'Métodos y Categorías' },
       { path: '#/usuarios', label: 'Usuarios' },
@@ -125,12 +126,46 @@ export default function App() {
   const [hash, setHash] = useState(window.location.hash || '#/')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [openMenuPath, setOpenMenuPath] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [usuario, setUsuario] = useState(null);
   const sidebarRef = useRef(null);
   const touchStartX = useRef(0);
   const touchCurrentX = useRef(0);
   const isSwiping = useRef(false);
   const SIDEBAR_WIDTH = 280;
-  
+
+  // Verificar autenticación al cargar
+  useEffect(() => {
+    const usuarioData = localStorage.getItem('usuario');
+    if (usuarioData) {
+      try {
+        const parsed = JSON.parse(usuarioData);
+        setUsuario(parsed);
+        setIsAuthenticated(true);
+      } catch (e) {
+        localStorage.removeItem('usuario');
+        setIsAuthenticated(false);
+      }
+    }
+  }, []);
+
+  // Manejar rutas de autenticación
+  useEffect(() => {
+    const currentHash = window.location.hash || '#/';
+    
+    // Si no está autenticado y no está en login/registro, redirigir a login
+    if (!isAuthenticated && currentHash !== '#/login' && currentHash !== '#/registro') {
+      window.location.hash = '#/login';
+      return;
+    }
+
+    // Si está autenticado y está en login/registro, redirigir a home
+    if (isAuthenticated && (currentHash === '#/login' || currentHash === '#/registro')) {
+      window.location.hash = '#/';
+      return;
+    }
+  }, [isAuthenticated, hash]);
+
   React.useEffect(() => {
     const onHashChange = () => {
       setHash(window.location.hash || '#/')
@@ -155,7 +190,7 @@ export default function App() {
     const handleTouchStart = (e) => {
       if (!sidebarOpen) return;
       touchStartX.current = e.touches[0].clientX;
-      touchCurrentX.current = touchStartX.current; // evita diff negativo en taps
+      touchCurrentX.current = touchStartX.current;
       isSwiping.current = false;
     };
 
@@ -164,11 +199,9 @@ export default function App() {
       touchCurrentX.current = e.touches[0].clientX;
       const dx = touchCurrentX.current - touchStartX.current;
 
-      // Ignora movimientos pequeños (tap)
       if (dx > -10) return;
 
       isSwiping.current = true;
-      // Sigue el dedo hacia la izquierda, limitado al ancho del sidebar
       sidebar.style.transition = 'none';
       sidebar.style.transform = `translateX(${Math.max(dx, -SIDEBAR_WIDTH)}px)`;
     };
@@ -177,12 +210,10 @@ export default function App() {
       if (!sidebarOpen) return;
       const dx = touchCurrentX.current - touchStartX.current;
 
-      // Solo cierra si fue un swipe real hacia la izquierda
       if (isSwiping.current && dx < -80) {
         setSidebarOpen(false);
       }
 
-      // Reset transform/transition
       sidebar.style.transition = '';
       sidebar.style.transform = '';
       isSwiping.current = false;
@@ -203,8 +234,22 @@ export default function App() {
     setOpenMenuPath(prevPath => (prevPath === path ? null : path));
   };
 
-  const Active = useMemo(() => {
-    // Buscar coincidencia directa o dentro de submenús
+  const handleLogout = () => {
+    if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
+      localStorage.removeItem('usuario');
+      setIsAuthenticated(false);
+      setUsuario(null);
+      window.location.hash = '#/login';
+    }
+  };
+
+  const handleLoginSuccess = (userData) => {
+    setUsuario(userData);
+    setIsAuthenticated(true);
+    window.location.hash = '#/';
+  };
+
+    const Active = useMemo(() => {
     let match = routes.find(r => hash === r.path);
     
     if (!match) {
@@ -221,6 +266,35 @@ export default function App() {
 
     return match ? match.element : routes[0].element;
   }, [hash]);
+
+  // Renderizar páginas de autenticación
+  if (hash === '#/login') {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Login onLoginSuccess={handleLoginSuccess} />
+      </ThemeProvider>
+    );
+  }
+
+  if (hash === '#/registro') {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Registro onRegistroSuccess={handleLoginSuccess} />
+      </ThemeProvider>
+    );
+  }
+
+  // Si no está autenticado, mostrar login
+  if (!isAuthenticated) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Login onLoginSuccess={handleLoginSuccess} />
+      </ThemeProvider>
+    );
+  }
 
 
   return (
@@ -252,7 +326,6 @@ export default function App() {
             <small>Conectado al backend</small>
           </div>
         </aside>
-        {/* Overlay con clase show condicional */}
         {sidebarOpen && (
           <div 
             className={`sidebar-overlay ${sidebarOpen ? 'show' : ''}`}
@@ -267,7 +340,13 @@ export default function App() {
             height: '100vh' 
           }}
         >
-          <Header hash={hash} onOpenSidebar={() => setSidebarOpen(true)} sidebarOpen={sidebarOpen} />
+          <Header 
+            hash={hash} 
+            onOpenSidebar={() => setSidebarOpen(true)} 
+            sidebarOpen={sidebarOpen}
+            usuario={usuario}
+            onLogout={handleLogout}
+          />
           <div className="page">
             <Active />
           </div>
@@ -277,7 +356,7 @@ export default function App() {
   )
 }
 
-function Header({ hash, onOpenSidebar, sidebarOpen }) { // Eliminamos onToggleSidebar de las props
+function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
   const title = useMemo(() => {
     const route = routes.find(r => hash === r.path)
     return route?.label ?? 'Inicio'
@@ -291,10 +370,10 @@ function Header({ hash, onOpenSidebar, sidebarOpen }) { // Eliminamos onToggleSi
       <header 
         className="topbar"
         style={{
-          position: 'sticky', /* Fija el header al hacer scroll */
+          position: 'sticky',
           top: 0,
-          zIndex: 1000, /* Se asegura que esté sobre el contenido de la página */
-          backgroundColor: 'var(--bg-default, #EFEBE9)' /* Evita transparencia */
+          zIndex: 1000,
+          backgroundColor: 'var(--bg-default, #EFEBE9)'
         }}
       >
         <button
@@ -313,9 +392,51 @@ function Header({ hash, onOpenSidebar, sidebarOpen }) { // Eliminamos onToggleSi
           <span className="text">Agendamientos</span>
         </Button>
 
-        <Button variant="ghost" small title="Solo demostración" className="btn-responsive">
-          <span className="avatar">⚙️</span>
-          <span className="text">Marco antonio</span>
+        {/* Usuario con dropdown de logout */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          padding: '0.5rem 1rem',
+          background: 'rgba(93, 64, 55, 0.1)',
+          borderRadius: '8px',
+          border: '1px solid var(--border)'
+        }}>
+          <Person sx={{ fontSize: 20, color: 'var(--brand)' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <span style={{ 
+              fontWeight: '600', 
+              fontSize: '0.9rem',
+              color: 'var(--text)',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+              {usuario?.nombre || 'Usuario'}
+            </span>
+            <span style={{ 
+              fontSize: '0.75rem', 
+              color: 'var(--muted)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {usuario?.rol || 'USUARIO'}
+            </span>
+          </div>
+        </div>
+
+        <Button
+          variant="ghost"
+          small
+          onClick={onLogout}
+          style={{
+            background: 'transparent',
+            color: 'var(--error)',
+            border: '2px solid var(--error)'
+          }}
+        >
+          <Logout sx={{ fontSize: 20 }} />
+          <span className="text">Salir</span>
         </Button>
       </header>
 
