@@ -13,4 +13,5 @@ public class LoginResponseDTO {
     private String correoElectronico;
     private String rol;
     private String mensaje;
+    private String token;  // ✅ NUEVO CAMPO
 }
