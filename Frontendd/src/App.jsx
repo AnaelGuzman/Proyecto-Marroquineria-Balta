@@ -13,8 +13,9 @@ import Login from './pages/auth/Login.jsx'
 import Registro from './pages/auth/Registro.jsx'
 import MenuItem from './components/MenuItem.jsx';
 import Logo from './components/Logo.jsx'
-import { Field, Button } from './components/UI.jsx'
+import { Button } from './components/UI.jsx'
 import { Logout, Person } from '@mui/icons-material'
+import AgendamientosModal from './components/AgendamientosModal.jsx'
 
 const theme = createTheme({
   palette: {
@@ -363,7 +364,6 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
   }, [hash])
 
   const [showCalendar, setShowCalendar] = useState(false)
-  const today = new Date().toISOString().split('T')[0]
 
   return (
     <>
@@ -440,37 +440,7 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
         </Button>
       </header>
 
-      {showCalendar && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.5)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            zIndex: 1000,
-          }}
-          onClick={() => setShowCalendar(false)}
-        >
-          <div
-            style={{
-              background: '#fff',
-              padding: '1.5rem',
-              borderRadius: '12px',
-              minWidth: 300,
-              position: 'relative',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <h3 style={{ marginTop: 0 }}>Selecciona fecha</h3>
-            <Field label="Fecha" type="date" defaultValue={today} />
-            <div style={{ marginTop: '1rem', textAlign: 'right' }}>
-              <Button onClick={() => setShowCalendar(false)}>Cerrar</Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AgendamientosModal open={showCalendar} onClose={() => setShowCalendar(false)} />
     </>
   )
 }

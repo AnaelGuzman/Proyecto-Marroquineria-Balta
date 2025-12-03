@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Table } from '../components/UI.jsx';
 import { api } from '../services/api/index.js';
 import { 
@@ -10,7 +10,10 @@ import {
   AttachMoney,
   Inventory,
   Warning,
-  Receipt
+  Receipt,
+  ArrowUpward,
+  ArrowDownward,
+  SwapVert
 } from '@mui/icons-material';
 
 export default function Dashboard() {
@@ -62,6 +65,35 @@ export default function Dashboard() {
   const [recientes, setRecientes] = useState([]);
   const [bajoStock, setBajoStock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [movimientosSort, setMovimientosSort] = useState({ key: 'fecha', direction: 'desc' });
+
+  const movimientosRows = useMemo(() => {
+    if (!recientes || recientes.length === 0) return [];
+    const sorted = [...recientes].sort((a, b) => {
+      let result = 0;
+      switch (movimientosSort.key) {
+        case 'fecha':
+          result = (a.fechaOriginal?.getTime?.() || 0) - (b.fechaOriginal?.getTime?.() || 0);
+          break;
+        case 'monto':
+          result = (a.monto || 0) - (b.monto || 0);
+          break;
+        case 'tipo':
+          result = (a.tipo || '').localeCompare(b.tipo || '');
+          break;
+        default:
+          result = 0;
+      }
+      return movimientosSort.direction === 'asc' ? result : -result;
+    });
+
+    return sorted.map((mov) => [
+      mov.fechaLabel,
+      mov.descripcion,
+      mov.montoLabel,
+      mov.tipoTag
+    ]);
+  }, [recientes, movimientosSort]);
 
   useEffect(() => {
     cargarDatos();
@@ -350,27 +382,36 @@ export default function Dashboard() {
       const movimientosOrdenados = movimientosRecientes
         .sort((a, b) => b.fechaOriginal - a.fechaOriginal)
         .slice(0, 10)
-        .map(mov => [
-          mov.fecha,
-          mov.descripcion,
-          `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-          <span
-            className="tipo-tag"
-            style={{ 
-              background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
-              color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
-              padding: '0.25rem 0.75rem', 
-              borderRadius: '20px', 
-              fontSize: '0.85rem',
-              fontWeight: '500',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem'
-            }}
-          >
-            {mov.tipo === 'venta' ? '🛒 Venta' : mov.tipo === 'compra' ? '📦 Compra' : '💰 Gasto'}
-          </span>
-        ]);
+        .map(mov => {
+          const tipoTag = (
+            <span
+              className="tipo-tag"
+              style={{ 
+                background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
+                color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
+                padding: '0.25rem 0.75rem', 
+                borderRadius: '20px', 
+                fontSize: '0.85rem',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}
+            >
+              {mov.tipo === 'venta' ? '🛒 Venta' : mov.tipo === 'compra' ? '📦 Compra' : '💰 Gasto'}
+            </span>
+          );
+
+          return {
+            fechaLabel: mov.fecha,
+            fechaOriginal: mov.fechaOriginal,
+            descripcion: mov.descripcion,
+            monto: mov.monto,
+            montoLabel: `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            tipo: mov.tipo,
+            tipoTag
+          };
+        });
 
       setRecientes(movimientosOrdenados);
 
@@ -430,6 +471,48 @@ export default function Dashboard() {
       console.error('Error al formatear fecha:', e);
       return 'Fecha inválida';
     }
+  };
+
+  const handleSortMovimientos = (columnKey) => {
+    setMovimientosSort((prev) => {
+      if (prev.key === columnKey) {
+        return {
+          key: columnKey,
+          direction: prev.direction === 'asc' ? 'desc' : 'asc'
+        };
+      }
+      return {
+        key: columnKey,
+        direction: columnKey === 'fecha' ? 'desc' : 'asc'
+      };
+    });
+  };
+
+  const SortHeaderButton = ({ label, columnKey, sortable = true }) => {
+    if (!sortable) return label;
+    const isActive = movimientosSort.key === columnKey;
+    const IconComponent = !isActive ? SwapVert : movimientosSort.direction === 'asc' ? ArrowUpward : ArrowDownward;
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleSortMovimientos(columnKey)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          font: 'inherit',
+          cursor: 'pointer',
+          padding: 0
+        }}
+      >
+        <span>{label}</span>
+        <IconComponent sx={{ fontSize: '1rem' }} />
+      </button>
+    );
   };
 
   if (loading) {
@@ -568,8 +651,13 @@ export default function Dashboard() {
       <Card className="dashboard-card dashboard-recent" title="Movimientos Recientes" subtitle="Últimas ventas y compras registradas">
         {recientes.length > 0 ? (
           <Table 
-            columns={["Fecha", "Descripción", "Monto", "Tipo"]} 
-            rows={recientes} 
+            columns={[
+              <SortHeaderButton key="fecha" label="Fecha" columnKey="fecha" />, 
+              "Descripción",
+              <SortHeaderButton key="monto" label="Monto" columnKey="monto" />, 
+              <SortHeaderButton key="tipo" label="Tipo" columnKey="tipo" />
+            ]} 
+            rows={movimientosRows} 
             className="dashboard-table dashboard-movimientos"
           />
         ) : (

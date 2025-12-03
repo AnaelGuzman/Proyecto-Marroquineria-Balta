@@ -1,5 +1,5 @@
 // src/pages/Inventario/InventarioMateriales.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Card, 
   Table, 
@@ -16,7 +16,10 @@ import {
   Warning,
   CheckCircle,
   Cancel,
-  AttachMoney
+  AttachMoney,
+  SwapVert,
+  ArrowUpward,
+  ArrowDownward
 } from '@mui/icons-material';
 import { materialService } from '../../services/api/materialService.js';
 import { unidadMedidaService } from '../../services/api/unidadMedidaService.js';
@@ -31,6 +34,7 @@ export default function InventarioMateriales() {
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({});
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [sortConfig, setSortConfig] = useState({ key: 'material', direction: 'asc' });
 
   const [resumen, setResumen] = useState([
     { 
@@ -218,90 +222,179 @@ export default function InventarioMateriales() {
     }
   };
 
-  const columns = ['Material', 'Stock', 'Stock Mínimo', 'Estado', 'Costo Promedio', 'Acciones'];
+  const handleSort = (columnKey) => {
+    setSortConfig((prev) => {
+      if (prev.key === columnKey) {
+        return { key: columnKey, direction: prev.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { key: columnKey, direction: columnKey === 'material' ? 'asc' : 'desc' };
+    });
+  };
 
-  const rows = materiales.map(material => {
-    const status = getStockStatus(material);
-    
-    return [
-      <div key={material.idMaterial} style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '0.75rem',
-        fontWeight: '600', 
-        color: 'var(--text)' 
-      }}>
-        <Inventory sx={{ 
-          color: status.color, 
-          fontSize: 24 
-        }} />
-        <div>
-          <div>{material.nombre}</div>
-          {material.descripcion && (
-            <small style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
-              {material.descripcion}
-            </small>
-          )}
-        </div>
-      </div>,
-      <div key={material.idMaterial} style={{ 
-        color: 'var(--text)',
-        fontWeight: '600',
-        fontSize: '1.1rem'
-      }}>
-        {(material.stockActual || 0).toLocaleString()} {material.unidadMedida?.abreviatura || 'N/A'}
-      </div>,
-      <div key={material.idMaterial} style={{ 
-        color: 'var(--muted)',
-        fontSize: '1rem'
-      }}>
-        {material.stockMinimo || 10} {material.unidadMedida?.abreviatura || 'N/A'}
-      </div>,
-      <div key={material.idMaterial}>
-        <span style={{
-          padding: '0.35rem 0.75rem',
-          borderRadius: '20px',
-          fontSize: '0.85rem',
-          fontWeight: '500',
-          background: status.bg,
-          color: status.color,
-          border: `1px solid ${status.color}33`
-        }}>
-          {status.text}
-        </span>
-      </div>,
-      <div key={material.idMaterial} style={{ 
-        color: 'var(--success)',
-        fontWeight: '600',
-        fontSize: '1rem'
-      }}>
-        S/ {(material.costoPromedio || 0).toFixed(2)}
-      </div>,
-      <div key={material.idMaterial} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <Button 
-          small 
-          variant="ghost" 
-          onClick={() => handleEdit(material)}
-          style={{ minWidth: 'auto', padding: '0.5rem 0.75rem' }}
-        >
-          <Edit sx={{ fontSize: 18 }} />
-        </Button>
-        <Button 
-          small 
-          variant="ghost" 
-          onClick={() => handleDelete(material)}
-          style={{ 
-            minWidth: 'auto', 
-            padding: '0.5rem 0.75rem',
-            background: 'var(--error)',
-            color: 'white'
-          }}
-        >
-          <Delete sx={{ fontSize: 18 }} />
-        </Button>
+  const SortHeaderButton = ({ label, columnKey }) => {
+    const isActive = sortConfig.key === columnKey;
+    const IconComponent = !isActive
+      ? SwapVert
+      : sortConfig.direction === 'asc'
+        ? ArrowUpward
+        : ArrowDownward;
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(columnKey)}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          background: 'transparent',
+          border: 'none',
+          color: 'inherit',
+          font: 'inherit',
+          cursor: 'pointer',
+          padding: 0
+        }}
+      >
+        <span>{label}</span>
+        <IconComponent sx={{ fontSize: 16 }} />
+      </button>
+    );
+  };
+
+  const processedRows = useMemo(() => {
+    const statusOrder = {
+      'Sin Stock': 0,
+      'Bajo Stock': 1,
+      'Stock Medio': 2,
+      'Stock OK': 3
+    };
+
+    return materiales.map((material) => {
+      const status = getStockStatus(material);
+      return {
+        material,
+        status,
+        sortValues: {
+          material: (material.nombre || '').toLowerCase(),
+          stock: material.stockActual || 0,
+          stockMinimo: material.stockMinimo || 0,
+          estado: statusOrder[status.text] ?? 99,
+          costo: material.costoPromedio || 0
+        }
+      };
+    });
+  }, [materiales]);
+
+  const sortedData = useMemo(() => {
+    const rows = [...processedRows];
+    rows.sort((a, b) => {
+      const valueA = a.sortValues[sortConfig.key];
+      const valueB = b.sortValues[sortConfig.key];
+
+      if (typeof valueA === 'string' || typeof valueB === 'string') {
+        const textA = (valueA ?? '').toString();
+        const textB = (valueB ?? '').toString();
+        return sortConfig.direction === 'asc'
+          ? textA.localeCompare(textB)
+          : textB.localeCompare(textA);
+      }
+
+      const numberA = Number(valueA ?? 0);
+      const numberB = Number(valueB ?? 0);
+      return sortConfig.direction === 'asc'
+        ? numberA - numberB
+        : numberB - numberA;
+    });
+    return rows;
+  }, [processedRows, sortConfig]);
+
+  const columns = [
+    <SortHeaderButton key="material" label="Material" columnKey="material" />,
+    <SortHeaderButton key="stock" label="Stock" columnKey="stock" />,
+    <SortHeaderButton key="stockMinimo" label="Stock Mínimo" columnKey="stockMinimo" />,
+    <SortHeaderButton key="estado" label="Estado" columnKey="estado" />,
+    <SortHeaderButton key="costo" label="Costo Promedio" columnKey="costo" />,
+    'Acciones'
+  ];
+
+  const rows = sortedData.map(({ material, status }) => ([
+    <div key={`${material.idMaterial}-info`} style={{ 
+      display: 'flex', 
+      alignItems: 'center', 
+      gap: '0.75rem',
+      fontWeight: '600', 
+      color: 'var(--text)' 
+    }}>
+      <Inventory sx={{ 
+        color: status.color, 
+        fontSize: 24 
+      }} />
+      <div>
+        <div>{material.nombre}</div>
+        {material.descripcion && (
+          <small style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
+            {material.descripcion}
+          </small>
+        )}
       </div>
-    ];
-  });
+    </div>,
+    <div key={`${material.idMaterial}-stock`} style={{ 
+      color: 'var(--text)',
+      fontWeight: '600',
+      fontSize: '1.1rem'
+    }}>
+      {(material.stockActual || 0).toLocaleString()} {material.unidadMedida?.abreviatura || 'N/A'}
+    </div>,
+    <div key={`${material.idMaterial}-min`} style={{ 
+      color: 'var(--muted)',
+      fontSize: '1rem'
+    }}>
+      {material.stockMinimo || 10} {material.unidadMedida?.abreviatura || 'N/A'}
+    </div>,
+    <div key={`${material.idMaterial}-estado`}>
+      <span style={{
+        padding: '0.35rem 0.75rem',
+        borderRadius: '20px',
+        fontSize: '0.85rem',
+        fontWeight: '500',
+        background: status.bg,
+        color: status.color,
+        border: `1px solid ${status.color}33`
+      }}>
+        {status.text}
+      </span>
+    </div>,
+    <div key={`${material.idMaterial}-costo`} style={{ 
+      color: 'var(--success)',
+      fontWeight: '600',
+      fontSize: '1rem'
+    }}>
+      S/ {(material.costoPromedio || 0).toFixed(2)}
+    </div>,
+    <div key={`${material.idMaterial}-acciones`} style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+      <Button 
+        small 
+        variant="ghost" 
+        onClick={() => handleEdit(material)}
+        style={{ minWidth: 'auto', padding: '0.5rem 0.75rem' }}
+      >
+        <Edit sx={{ fontSize: 18 }} />
+      </Button>
+      <Button 
+        small 
+        variant="ghost" 
+        onClick={() => handleDelete(material)}
+        style={{ 
+          minWidth: 'auto', 
+          padding: '0.5rem 0.75rem',
+          background: 'var(--error)',
+          color: 'white'
+        }}
+      >
+        <Delete sx={{ fontSize: 18 }} />
+      </Button>
+    </div>
+  ]));
 
   return (
     <div className="stack">

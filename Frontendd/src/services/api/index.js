@@ -11,6 +11,7 @@ import { materialService } from './materialService';
 import { unidadMedidaService } from './unidadMedidaService';
 import { inventarioMaterialService } from './inventarioMaterialService.js';
 import { recetaService } from './recetaService';
+import { agendamientoService } from './agendamientoService';
 import authService from './authService';  // ✅ IMPORTAR SERVICIO DE AUTH
 
 // Helper para manejar respuestas
@@ -47,7 +48,8 @@ export const api = {
   materiales: materialService,
   unidadesMedida: unidadMedidaService,
   inventarioMateriales: inventarioMaterialService,
-  recetas: recetaService
+  recetas: recetaService,
+  agendamientos: agendamientoService
 };
 
 // Mantener compatibilidad con el código anterior

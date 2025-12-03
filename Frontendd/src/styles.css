@@ -805,3 +805,308 @@ table.table tbody tr:nth-child(even){
   appearance: textfield;
 }
 
+/* Agendamientos modal */
+.agendamientos-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  z-index: 2000;
+}
+
+.agendamientos-modal {
+  background: var(--panel);
+  border-radius: 16px;
+  width: min(980px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 18px 55px rgba(62, 39, 35, 0.3);
+  border: 1px solid var(--border);
+}
+
+.agendamientos-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, var(--panel), var(--panel-2));
+}
+
+.agendamientos-header h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  color: var(--text);
+}
+
+.agendamientos-header p {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.agendamientos-alert {
+  margin: 1rem 1.5rem 0;
+  background: rgba(244, 67, 54, 0.08);
+  border: 1px solid rgba(244, 67, 54, 0.25);
+  color: var(--error);
+  padding: 0.65rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.agendamientos-alert.success {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.45);
+  color: var(--success);
+}
+
+.agendamientos-body {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+@media (max-width: 1000px) {
+  .agendamientos-body {
+    grid-template-columns: 1fr;
+    padding: 1.5rem;
+  }
+}
+
+.agendamientos-calendar {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 1.25rem;
+  background: var(--panel-2);
+}
+
+.calendar-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.calendar-day-header {
+  text-align: center;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+
+.calendar-cell {
+  border: none;
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  min-height: 64px;
+  cursor: pointer;
+  text-align: left;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  position: relative;
+}
+
+.calendar-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.calendar-cell.faded {
+  opacity: 0.45;
+}
+
+.calendar-cell.active {
+  border: 2px solid var(--brand);
+  box-shadow: 0 8px 20px rgba(93, 64, 55, 0.2);
+}
+
+.calendar-cell.has-events {
+  border: 1px solid rgba(93, 64, 55, 0.3);
+  background: linear-gradient(180deg, rgba(93, 64, 55, 0.08), transparent 55%) var(--panel);
+}
+
+.calendar-cell.has-events::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--brand);
+  box-shadow: 0 0 8px rgba(93, 64, 55, 0.4);
+}
+
+.calendar-cell span {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.calendar-cell small {
+  font-size: 0.7rem;
+  color: var(--brand);
+  font-weight: 600;
+}
+
+.agendamientos-loading {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.agendamientos-details {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.85rem;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.agendamientos-form-card {
+  padding: 0.75rem;
+}
+
+.agendamientos-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.65rem;
+  background: var(--panel-2);
+}
+
+.agendamientos-events .event-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.35rem;
+}
+
+.details-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.details-header span {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.event-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.agendamientos-empty {
+  margin: 0;
+  color: var(--muted);
+}
+
+.event-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.4rem 0.2rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.event-card:last-child {
+  border-bottom: none;
+}
+
+.event-card strong {
+  display: block;
+  margin-bottom: 0.05rem;
+  font-size: 0.85rem;
+}
+
+.event-card p {
+  margin: 0.1rem 0 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.event-card small {
+  font-size: 0.7rem;
+  color: var(--text);
+}
+
+.agendamientos-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.agendamientos-form h4 {
+  margin: 0 0 0.15rem;
+  font-size: 0.9rem;
+}
+
+.agendamientos-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.agendamientos-form input,
+.agendamientos-form select,
+.agendamientos-form textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.45rem;
+  font-family: inherit;
+  font-size: 0.8rem;
+  background: var(--panel);
+}
+
+.agendamientos-form textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.agendamientos-form button {
+  align-self: flex-start;
+  margin-top: 0.1rem;
+}
+
+.agendamientos-date-preview {
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--panel);
+}
+

@@ -1,6 +1,68 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { api } from '../services/api/index.js'
-import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete, Inventory, LocalShipping } from '@mui/icons-material';
+import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete, Inventory, LocalShipping, ArrowUpward, ArrowDownward, SwapVert } from '@mui/icons-material';
+
+const esRegistroCompra = (registro) => typeof registro?.montoTotal !== 'undefined' && registro?.montoTotal !== null
+
+const obtenerValorNumerico = (valor) => {
+  if (typeof valor === 'number' && Number.isFinite(valor)) {
+    return valor
+  }
+
+  if (typeof valor === 'string') {
+    const normalizado = valor.replace(/[^0-9.-]/g, '')
+    const numero = parseFloat(normalizado)
+    return Number.isFinite(numero) ? numero : 0
+  }
+
+  return 0
+}
+
+const obtenerFechaValor = (registro) => {
+  if (!registro?.fecha) return 0
+
+  try {
+    if (Array.isArray(registro.fecha)) {
+      const [year, month, day] = registro.fecha
+      return new Date(year || 0, (month || 1) - 1, day || 1).getTime()
+    }
+
+    const fecha = new Date(registro.fecha)
+    return Number.isNaN(fecha.getTime()) ? 0 : fecha.getTime()
+  } catch (error) {
+    console.error('Error obteniendo fecha para ordenamiento:', error)
+    return 0
+  }
+}
+
+const obtenerDetalleTexto = (registro) => {
+  if (esRegistroCompra(registro)) {
+    const detalle = registro?.detalles?.[0]?.descripcion
+    return detalle?.trim() || 'Compra'
+  }
+  return registro?.descripcion?.trim() || 'Gasto'
+}
+
+const obtenerMontoBruto = (registro) => {
+  const valor = esRegistroCompra(registro) ? registro?.montoTotal : registro?.monto
+  return obtenerValorNumerico(valor)
+}
+
+const obtenerMontoNeto = (registro) => {
+  const bruto = obtenerMontoBruto(registro)
+  if (esRegistroCompra(registro) && registro?.tipoDocumento === 'factura') {
+    const iva = bruto - bruto / 1.19
+    return bruto - iva
+  }
+  return bruto
+}
+
+const obtenerMetodoNombre = (registro) => {
+  const nombre = registro?.metodoPago?.nombre
+  return nombre ? String(nombre) : 'N/A'
+}
+
+const obtenerTipoEtiqueta = (registro) => (esRegistroCompra(registro) ? 'Compra' : 'Gasto')
 
 export default function Egresos() {
   const [compras, setCompras] = useState([])
@@ -11,6 +73,7 @@ export default function Egresos() {
   const [loading, setLoading] = useState(true)
   const [tipoEgreso, setTipoEgreso] = useState('compra')
   const [observacionesModal, setObservacionesModal] = useState(null)
+  const [movimientosSort, setMovimientosSort] = useState({ key: 'fecha', direction: 'desc' })
   
   const [formCompra, setFormCompra] = useState({
     descripcion: '',
@@ -396,6 +459,88 @@ export default function Egresos() {
     return material || null
   }
 
+  const egresosCombinados = useMemo(() => {
+    const registros = [...compras, ...gastos]
+
+    const sorted = registros.sort((a, b) => {
+      let result = 0
+
+      switch (movimientosSort.key) {
+        case 'tipo':
+          result = obtenerTipoEtiqueta(a).localeCompare(
+            obtenerTipoEtiqueta(b),
+            'es',
+            { sensitivity: 'base' }
+          )
+          break
+        case 'detalle':
+          result = obtenerDetalleTexto(a).localeCompare(
+            obtenerDetalleTexto(b),
+            'es',
+            { sensitivity: 'base' }
+          )
+          break
+        case 'bruto':
+          result = obtenerMontoBruto(a) - obtenerMontoBruto(b)
+          break
+        case 'neto':
+          result = obtenerMontoNeto(a) - obtenerMontoNeto(b)
+          break
+        case 'metodo':
+          result = obtenerMetodoNombre(a).localeCompare(
+            obtenerMetodoNombre(b),
+            'es',
+            { sensitivity: 'base' }
+          )
+          break
+        case 'fecha':
+        default:
+          result = obtenerFechaValor(a) - obtenerFechaValor(b)
+          break
+      }
+
+      return movimientosSort.direction === 'asc' ? result : -result
+    })
+
+    return sorted.slice(0, 10)
+  }, [compras, gastos, movimientosSort])
+
+  const handleSortMovimientos = (columnKey) => {
+    setMovimientosSort((prev) => {
+      if (prev.key === columnKey) {
+        return {
+          key: columnKey,
+          direction: prev.direction === 'asc' ? 'desc' : 'asc'
+        }
+      }
+
+      return {
+        key: columnKey,
+        direction: columnKey === 'fecha' ? 'desc' : 'asc'
+      }
+    })
+  }
+
+  const SortHeaderButton = ({ label, columnKey }) => {
+    const isActive = movimientosSort.key === columnKey
+    const IconComponent = !isActive
+      ? SwapVert
+      : movimientosSort.direction === 'asc'
+        ? ArrowUpward
+        : ArrowDownward
+
+    return (
+      <button
+        type="button"
+        className="tabla-sort-button"
+        onClick={() => handleSortMovimientos(columnKey)}
+      >
+        <span>{label}</span>
+        <IconComponent sx={{ fontSize: '1rem' }} />
+      </button>
+    )
+  }
+
   if (loading && compras.length === 0 && gastos.length === 0) {
     return (
       <div className="egresos-container">
@@ -408,16 +553,15 @@ export default function Egresos() {
     )
   }
 
-  const egresosCombinados = [...compras, ...gastos]
-    .sort((a, b) => {
-      const fechaA = Array.isArray(a.fecha) ? new Date(a.fecha[0], a.fecha[1] - 1, a.fecha[2]) : new Date(a.fecha)
-      const fechaB = Array.isArray(b.fecha) ? new Date(b.fecha[0], b.fecha[1] - 1, b.fecha[2]) : new Date(b.fecha)
-      return fechaB - fechaA
-    })
-    .slice(0, 10)
-
   const tablaEgresos = egresosCombinados.map((item, idx) => {
-    const esCompra = item.montoTotal !== undefined
+    const esCompra = esRegistroCompra(item)
+    const detalle = obtenerDetalleTexto(item)
+    const montoTotal = obtenerMontoBruto(item)
+    const montoNeto = obtenerMontoNeto(item)
+    const ivaValor = esCompra && item.tipoDocumento === 'factura'
+      ? montoTotal - montoNeto
+      : 0
+    const metodoPagoNombre = obtenerMetodoNombre(item)
     
     let fechaFormateada = 'N/A'
     if (item.fecha) {
@@ -427,20 +571,6 @@ export default function Egresos() {
         console.error('Error formateando fecha:', e)
       }
     }
-
-    const montoTotal = esCompra 
-      ? (item.montoTotal || 0)
-      : (item.monto || 0)
-
-    const detalle = esCompra 
-      ? (item.detalles && item.detalles.length > 0 ? item.detalles[0].descripcion : 'Compra')
-      : item.descripcion
-
-    const ivaValor = (esCompra && item.tipoDocumento === 'factura') 
-      ? montoTotal - (montoTotal / 1.19) 
-      : 0
-    
-    const montoNeto = montoTotal - ivaValor
 
     return [
       <div key={`fecha-${idx}`} className="tabla-fecha">{fechaFormateada}</div>,
@@ -461,7 +591,7 @@ export default function Egresos() {
         {`$${Math.round(montoNeto).toLocaleString('es-CL')}`}
       </div>,
       <div key={`metodo-${idx}`} className="tabla-metodo">
-        {item.metodoPago?.nombre || 'N/A'}
+        {metodoPagoNombre}
       </div>,
       esCompra && item.observaciones && item.observaciones.trim() !== '' ? (
         <button 
@@ -793,6 +923,23 @@ export default function Egresos() {
           border-bottom: 1px solid #D7CCC8;
           font-weight: 600;
           color: #FFF;
+        }
+
+        .tabla-sort-button {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.35rem;
+          background: transparent;
+          border: none;
+          color: inherit;
+          font: inherit;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .tabla-sort-button:focus-visible {
+          outline: 2px solid rgba(255, 255, 255, 0.8);
+          outline-offset: 2px;
         }
 
         .tabla td {
@@ -1384,12 +1531,12 @@ export default function Egresos() {
             <table className="tabla">
               <thead>
                  <tr>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Detalle</th>
-                  <th>Monto Bruto</th>
-                  <th>Monto Neto</th>
-                  <th>Medio Pago</th>
+                  <th><SortHeaderButton label="Fecha" columnKey="fecha" /></th>
+                  <th><SortHeaderButton label="Tipo" columnKey="tipo" /></th>
+                  <th><SortHeaderButton label="Detalle" columnKey="detalle" /></th>
+                  <th><SortHeaderButton label="Monto Bruto" columnKey="bruto" /></th>
+                  <th><SortHeaderButton label="Monto Neto" columnKey="neto" /></th>
+                  <th><SortHeaderButton label="Medio Pago" columnKey="metodo" /></th>
                   <th>Observaciones</th>
                 </tr>
               </thead>
