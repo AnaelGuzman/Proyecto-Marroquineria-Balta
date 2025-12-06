@@ -73,7 +73,16 @@ public class UsuarioService {
     }
 
     public List<Usuario> listarUsuarios() {
-        return usuarioRepository.findAll();
+        List<Usuario> usuarios = usuarioRepository.findAll();
+        usuarios.forEach(u -> {
+            u.setUserPassword(null);  // Ya tienes esto
+
+            // Si fechaCreacion es null, ponle la fecha actual
+            if (u.getFechaCreacion() == null) {
+                u.setFechaCreacion(LocalDateTime.now());
+            }
+        });
+        return usuarios;
     }
 
     public Optional<Usuario> obtenerUsuarioPorRut(String rut) {

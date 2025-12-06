@@ -105,9 +105,7 @@ export default function Login({ onLoginSuccess }) {
     }
   };
 
-  const handleGoToRegistro = () => {
-    window.location.hash = '#/registro';
-  };
+  
 
   return (
     <div className="auth-container">
@@ -193,16 +191,7 @@ export default function Login({ onLoginSuccess }) {
             </Button>
           </form>
 
-          <div className="auth-footer">
-            <p>¿No tienes cuenta?</p>
-            <button
-              className="auth-link"
-              onClick={handleGoToRegistro}
-              disabled={loading}
-            >
-              Regístrate aquí
-            </button>
-          </div>
+          
         </div>
 
         

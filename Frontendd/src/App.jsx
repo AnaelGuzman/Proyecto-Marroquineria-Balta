@@ -16,6 +16,7 @@ import Logo from './components/Logo.jsx'
 import { Button } from './components/UI.jsx'
 import { Logout, Person } from '@mui/icons-material'
 import AgendamientosModal from './components/AgendamientosModal.jsx'
+import GestionUsuarios from './pages/GestionUsuarios.jsx'
 
 const theme = createTheme({
   palette: {
@@ -118,7 +119,7 @@ const routes = [
     icon: '⚙️',
     submenu: [
       { path: '#/configuracion', label: 'Métodos y Categorías' },
-      { path: '#/usuarios', label: 'Usuarios' },
+      { path: '#/usuarios', label: 'Gestión de Usuarios', element: GestionUsuarios },  // ✅ AGREGAR
     ]
   },
 ]
@@ -278,14 +279,7 @@ export default function App() {
     );
   }
 
-  if (hash === '#/registro') {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Registro onRegistroSuccess={handleLoginSuccess} />
-      </ThemeProvider>
-    );
-  }
+
 
   // Si no está autenticado, mostrar login
   if (!isAuthenticated) {
