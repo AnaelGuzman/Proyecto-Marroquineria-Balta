@@ -3,15 +3,18 @@ import React from 'react';
 import { KeyboardArrowDown, KeyboardArrowUp } from '@mui/icons-material';
 
 export default function MenuItem({ route, hash, onNavigate, isOpen, onToggle }) {
-  const hasSubmenu = route.submenu && route.submenu.length > 0;
-  const isActive = hash === route.path || (hasSubmenu && route.submenu.some(item => hash === item.path));
+  const submenuItems = route.submenu || [];
+  const hasDropdown = submenuItems.length > 1;
+  const activeSub = submenuItems.find(item => hash === item.path);
+  const isActive = hash === route.path || !!activeSub;
 
   const handleClick = (e) => {
-    if (hasSubmenu) {
+    if (hasDropdown) {
       e.preventDefault();
       onToggle();
     } else {
-      window.location.hash = route.path;
+      const targetPath = submenuItems.length === 1 ? submenuItems[0].path : route.path;
+      window.location.hash = targetPath;
       onNavigate();
     }
   };
@@ -25,25 +28,25 @@ export default function MenuItem({ route, hash, onNavigate, isOpen, onToggle }) 
     <div className="menu-item">
       <a
         href={route.path}
-        className={`nav-link ${isActive ? 'active' : ''} ${hasSubmenu ? 'has-submenu' : ''}`}
+        className={`nav-link ${isActive ? 'active' : ''} ${hasDropdown ? 'has-submenu' : ''}`}
         onClick={handleClick}
       >
-        <span className="nav-icon" style={{ marginRight: '0.75rem', fontSize: '1.2rem' }}>
+        <span className="nav-icon" style={{ marginRight: '0.5rem', fontSize: '1.3rem' }}>
           {route.icon}
         </span>
         <span className="nav-label" style={{ flex: 1 }}>
           {route.label}
         </span>
-        {hasSubmenu && (
+        {hasDropdown && (
           <span className="nav-arrow">
             {isOpen ? <KeyboardArrowUp /> : <KeyboardArrowDown />}
           </span>
         )}
       </a>
       
-      {hasSubmenu && isOpen && (
+      {hasDropdown && isOpen && (
         <div className="submenu">
-          {route.submenu.map((subItem, index) => (
+          {submenuItems.map((subItem, index) => (
             <a
               key={index}
               href={subItem.path}

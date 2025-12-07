@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard.jsx'
 import Ingresos from './pages/Venta/Ingresos.jsx'
 import StatVentas from './pages/Venta/EstadisticasVentas.jsx'
 import Egresos from './pages/Egresos.jsx'
+import StatCompras from './pages/Compra/EstadisticasCompras.jsx'
 import Reportes from './pages/Reportes.jsx'
 import Inventario from './pages/Inventario/Inventario.jsx'
 import InventarioMateriales from './pages/Inventario/InventarioMateriales.jsx'
@@ -78,24 +79,17 @@ const routes = [
     path: '#/ingresos', 
     label: 'Venta', 
     element: Ingresos,
-    icon: '💰',
-    submenu: [
-      { path: '#/ingresos', label: 'Registrar Venta' },
-      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas', element: StatVentas }
-    ]
+    icon: '💰'
   },
   { 
     path: '#/egresos', 
     label: 'Compra', 
     element: Egresos,
-    icon: '🛒',
-    submenu: [
-      { path: '#/egresos', label: 'Registrar Compra' },
-    ]
+    icon: '🛒'
   },
   { 
     path: '#/inventario', 
-    label: 'Inventario Productos', 
+    label: 'Inventario', 
     element: Inventario,
     icon: '📦',
     submenu: [
@@ -110,6 +104,8 @@ const routes = [
     icon: '📊',
     submenu: [
       { path: '#/reportes', label: 'Dashboard General' },
+      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas', element: StatVentas },
+      { path: '#/compras-estadisticas', label: 'Estadísticas de Compras', element: StatCompras },
     ]
   },
   { 
@@ -353,11 +349,43 @@ export default function App() {
 
 function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
   const title = useMemo(() => {
-    const route = routes.find(r => hash === r.path)
-    return route?.label ?? 'Inicio'
+    const directRoute = routes.find(r => hash === r.path)
+    if (directRoute) return directRoute.label
+
+    for (const route of routes) {
+      const sub = route.submenu?.find(s => s.path === hash)
+      if (sub) return sub.label || route.label
+    }
+
+    return 'Inicio'
   }, [hash])
 
   const [showCalendar, setShowCalendar] = useState(false)
+
+  const chipBaseStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.5rem',
+    padding: '0.45rem 0.9rem',
+    borderRadius: '10px',
+    height: '50px',
+    minHeight: '50px'
+  };
+
+  const profileChipStyle = {
+    ...chipBaseStyle,
+    background: 'rgba(93, 64, 55, 0.08)',
+    border: '1px solid var(--border)',
+    color: 'var(--text)'
+  };
+
+  const agendamientoButtonStyle = {
+    ...chipBaseStyle,
+    background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
+    border: '1px solid var(--brand)',
+    color: '#fff',
+    boxShadow: '0 4px 12px rgba(93, 64, 55, 0.25)'
+  };
 
   return (
     <>
@@ -381,21 +409,13 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
         <h1>{title}</h1>
         <div className="spacer" />
 
-        <Button variant="ghost" small onClick={() => setShowCalendar(true)} className="btn-responsive">
+        <Button variant="ghost" small onClick={() => setShowCalendar(true)} className="btn-responsive" style={agendamientoButtonStyle}>
           <span className="icon">📅</span>
           <span className="text">Agendamientos</span>
         </Button>
 
         {/* Usuario con dropdown de logout */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          padding: '0.5rem 1rem',
-          background: 'rgba(93, 64, 55, 0.1)',
-          borderRadius: '8px',
-          border: '1px solid var(--border)'
-        }}>
+        <div style={profileChipStyle}>
           <Person sx={{ fontSize: 20, color: 'var(--brand)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ 
@@ -426,7 +446,9 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
           style={{
             background: 'transparent',
             color: 'var(--error)',
-            border: '2px solid var(--error)'
+            border: '2px solid var(--error)',
+            height: '50px',
+            minHeight: '50px'
           }}
         >
           <Logout sx={{ fontSize: 20 }} />

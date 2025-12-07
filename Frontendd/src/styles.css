@@ -32,7 +32,7 @@ body{
 
 .shell{
   display:grid;
-  grid-template-columns:300px 1fr;
+  grid-template-columns:280px 1fr;
   min-height:100%;
   background: var(--bg);
 }
@@ -46,42 +46,47 @@ body{
   box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
+
 .brand{
   display:flex;
-  gap:1rem;
+  gap:0.75rem;
   align-items:center;
-  padding:1.5rem 1.5rem;
+  padding:1.1rem 1.25rem;
   border-bottom:1px solid rgba(255,255,255,0.1);
   background: rgba(62, 39, 35, 0.1);
 }
 
+
 .brand-text strong{
   display:block;
   letter-spacing:.3px;
-  font-size:1.3rem;
+  font-size:1.2rem;
   color: #FFF;
   font-weight: 600;
 }
 
+
 .brand-text .muted{
-  font-size:0.9rem;
+  font-size:0.8rem;
   color: rgba(255,255,255,0.8);
 }
+
 
 .nav{
   display:flex;
   flex-direction:column;
-  padding:1rem 0.75rem;
+  padding:0.9rem 0.7rem;
   flex: 1;
 }
 
+
 .nav a{
-  font-size:1rem;
-  padding:1rem 1.25rem;
-  border-radius:8px;
+  font-size:0.95rem;
+  padding:0.8rem 1rem;
+  border-radius:7px;
   color: rgba(255,255,255,0.9);
   text-decoration:none;
-  margin: 0.25rem 0;
+  margin: 0.15rem 0;
   transition: all 0.3s ease;
   border: 1px solid transparent;
   font-weight: 500;
@@ -93,16 +98,17 @@ body{
   transform: translateX(4px);
 }
 
+
 .nav a.active{
   background: rgba(255,255,255,0.15);
   color:#fff;
-  border-left: 4px solid #FFF;
+  border-left: 3px solid #FFF;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .sidebar-footer{
   margin-top:auto;
-  padding:1.5rem;
+  padding:1.1rem;
   border-top:1px solid rgba(255,255,255,0.1);
   opacity:.9;
   color: rgba(255,255,255,0.7);
@@ -631,14 +637,15 @@ table.table tbody tr:nth-child(even){
 .nav-link {
   display: flex !important;
   align-items: center;
-  padding: 1rem 1.25rem !important;
-  border-radius: 8px;
+  padding: 0.8rem 1.05rem !important;
+  border-radius: 7px;
   color: rgba(255,255,255,0.9) !important;
   text-decoration: none;
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
   transition: all 0.3s ease;
   border: 1px solid transparent;
   font-weight: 500;
+  font-size: 0.95rem;
   position: relative;
 }
 
@@ -651,7 +658,7 @@ table.table tbody tr:nth-child(even){
 .nav-link.active {
   background: rgba(255,255,255,0.15) !important;
   color: #fff !important;
-  border-left: 4px solid #FFF;
+  border-left: 3px solid #FFF;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
@@ -669,8 +676,8 @@ table.table tbody tr:nth-child(even){
 
 .submenu {
   background: rgba(62, 39, 35, 0.3);
-  border-radius: 8px;
-  margin: 0.25rem 0.75rem 0.25rem 1.25rem;
+  border-radius: 7px;
+  margin: 0.2rem 0.65rem 0.2rem 1.1rem;
   overflow: hidden;
   animation: slideDown 0.3s ease;
 }
@@ -688,20 +695,20 @@ table.table tbody tr:nth-child(even){
 
 .submenu-link {
   display: block;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 0.9rem;
   color: rgba(255,255,255,0.8);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   border-left: 2px solid transparent;
   transition: all 0.2s ease;
-  margin: 0.125rem 0;
+  margin: 0.1rem 0;
 }
 
 .submenu-link:hover {
   background: rgba(255,255,255,0.05);
   color: #FFF;
   border-left-color: rgba(255,255,255,0.3);
-  padding-left: 1.25rem;
+  padding-left: 1.05rem;
 }
 
 .submenu-link.active {
@@ -714,12 +721,12 @@ table.table tbody tr:nth-child(even){
 /* Mejora responsive */
 @media (max-width: 899px) {
   .submenu {
-    margin: 0.25rem 0.5rem 0.25rem 1rem;
+    margin: 0.2rem 0.45rem 0.2rem 0.9rem;
   }
   
   .submenu-link {
-    padding: 0.6rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.55rem 0.7rem;
+    font-size: 0.82rem;
   }
 }
 
