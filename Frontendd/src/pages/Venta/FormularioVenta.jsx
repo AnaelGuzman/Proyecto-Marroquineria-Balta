@@ -75,8 +75,8 @@ export default function FormularioVenta({
           <div className="resumen-financiero-grid" style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
-            gap: '1rem',
-            marginBottom: '1.5rem'
+            gap: '0.75rem',
+            marginBottom: '1rem'
           }}>
             <div style={{
               padding: '1.25rem',

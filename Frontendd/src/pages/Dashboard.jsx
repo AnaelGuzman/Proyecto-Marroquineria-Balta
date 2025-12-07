@@ -517,7 +517,7 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="stack">
+      <div className="stack" style={{ padding: '1rem' }}>
         <Card className="dashboard-card" title="Cargando Dashboard" accent="accent">
           <div className="loading">
             <p>Obteniendo datos de la marroquinería...</p>
@@ -528,7 +528,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ padding: '1rem' }}>
       {/* RESUMEN FINANCIERO */}
       <Card 
         className="dashboard-card dashboard-summary"
@@ -549,13 +549,13 @@ export default function Dashboard() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '60px',
-                  height: '60px',
+                  width: '48px',
+                  height: '48px',
                   borderRadius: '50%',
                   backgroundColor: `${r.color}20`,
                   color: r.color
                 }}>
-                  {React.cloneElement(r.icon, { sx: { fontSize: 28 } })}
+                  {React.cloneElement(r.icon, { sx: { fontSize: 24 } })}
                 </div>
                 <span style={{
                   fontSize: '0.85rem',
@@ -578,7 +578,7 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
+      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1rem' }}>
         {/* MÉTRICAS DEL DÍA */}
         <div className="dashboard-grid-item dashboard-grid-item--wide" style={{ gridColumn: 'span 8' }}>
           <Card className="dashboard-card dashboard-metrics" title="Métricas del Día" subtitle="Actividad comercial del día de hoy">
@@ -595,13 +595,13 @@ export default function Dashboard() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      width: '50px',
-                      height: '50px',
+                      width: '40px',
+                      height: '40px',
                       borderRadius: '50%',
                       backgroundColor: `${metrica.color}20`,
                       color: metrica.color
                     }}>
-                      {React.cloneElement(metrica.icon, { sx: { fontSize: 24 } })}
+                      {React.cloneElement(metrica.icon, { sx: { fontSize: 20 } })}
                     </div>
                     <span style={{
                       width: '40px',
@@ -639,7 +639,7 @@ export default function Dashboard() {
                 padding: '2rem',
                 color: 'var(--muted)'
               }}>
-                <Inventory sx={{ fontSize: 48, marginBottom: '1rem', opacity: 0.5 }} />
+                <Inventory sx={{ fontSize: 36, marginBottom: '0.5rem', opacity: 0.5 }} />
                 <p style={{ margin: 0 }}>Todo el stock en niveles normales</p>
               </div>
             )}
@@ -666,7 +666,7 @@ export default function Dashboard() {
             padding: '3rem',
             color: 'var(--muted)'
           }}>
-            <Receipt sx={{ fontSize: 48, marginBottom: '1rem', opacity: 0.5 }} />
+            <Receipt sx={{ fontSize: 36, marginBottom: '0.5rem', opacity: 0.5 }} />
             <p style={{ margin: 0 }}>No hay movimientos recientes</p>
             <small>Las ventas y compras aparecerán aquí</small>
           </div>

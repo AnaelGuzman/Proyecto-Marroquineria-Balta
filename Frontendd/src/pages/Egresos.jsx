@@ -1,6 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { api } from '../services/api/index.js'
-import { TrendingDown, ShoppingCart, Receipt, Analytics, AttachMoney, CalendarToday, Description, Add, Delete, Inventory, LocalShipping, ArrowUpward, ArrowDownward, SwapVert } from '@mui/icons-material';
+import { 
+  TrendingDown, 
+  ShoppingCart, 
+  Receipt, 
+  Analytics, 
+  AttachMoney, 
+  CalendarToday, 
+  Description, 
+  Add, 
+  Delete, 
+  Inventory, 
+  LocalShipping, 
+  ArrowUpward, 
+  ArrowDownward, 
+  SwapVert,
+  CheckCircle,
+  ArrowForward,
+  ArrowBack,
+  Payment
+} from '@mui/icons-material';
 
 const esRegistroCompra = (registro) => typeof registro?.montoTotal !== 'undefined' && registro?.montoTotal !== null
 
@@ -65,6 +84,7 @@ const obtenerMetodoNombre = (registro) => {
 const obtenerTipoEtiqueta = (registro) => (esRegistroCompra(registro) ? 'Compra' : 'Gasto')
 
 export default function Egresos() {
+  const [pasoActual, setPasoActual] = useState(1);
   const [compras, setCompras] = useState([])
   const [gastos, setGastos] = useState([])
   const [metodosPago, setMetodosPago] = useState([])
@@ -124,6 +144,12 @@ export default function Egresos() {
       trend: 'down'
     },
   ])
+
+  const pasos = [
+    { numero: 1, titulo: 'Tipo de Egreso', icono: <Analytics /> },
+    { numero: 2, titulo: 'Detalles', icono: <Description /> },
+    { numero: 3, titulo: 'Confirmar', icono: <CheckCircle /> }
+  ];
 
   useEffect(() => {
     cargarDatos()
@@ -207,27 +233,89 @@ export default function Egresos() {
     return Math.round((total - ivaRecuperable) * 100) / 100
   }
 
+  // Validaciones por paso
+  const validarPaso1 = () => {
+    if (!tipoEgreso) {
+      alert('⚠️ Seleccione un tipo de egreso');
+      return false;
+    }
+    return true;
+  };
+
+  const validarPaso2 = () => {
+    if (tipoEgreso === 'compra') {
+      if (!formCompra.descripcion?.trim()) {
+        alert('⚠️ Ingrese una descripción');
+        return false;
+      }
+      if (!formCompra.idMetodoPago) {
+        alert('⚠️ Seleccione un método de pago');
+        return false;
+      }
+      if (!formCompra.precioUnitario || formCompra.precioUnitario <= 0) {
+        alert('⚠️ El precio unitario debe ser mayor a 0');
+        return false;
+      }
+      if (!formCompra.cantidad || formCompra.cantidad <= 0) {
+        alert('⚠️ La cantidad debe ser mayor a 0');
+        return false;
+      }
+    } else if (tipoEgreso === 'material') {
+      if (!formCompraMaterial.idMaterial) {
+        alert('⚠️ Seleccione un material');
+        return false;
+      }
+      if (!formCompraMaterial.idMetodoPago) {
+        alert('⚠️ Seleccione un método de pago');
+        return false;
+      }
+      if (!formCompraMaterial.precioUnitario || formCompraMaterial.precioUnitario <= 0) {
+        alert('⚠️ El precio unitario debe ser mayor a 0');
+        return false;
+      }
+      if (!formCompraMaterial.cantidad || formCompraMaterial.cantidad <= 0) {
+        alert('⚠️ La cantidad debe ser mayor a 0');
+        return false;
+      }
+    } else if (tipoEgreso === 'gasto') {
+      if (!formGasto.descripcion?.trim()) {
+        alert('⚠️ Ingrese una descripción');
+        return false;
+      }
+      if (!formGasto.idMetodoPago) {
+        alert('⚠️ Seleccione un método de pago');
+        return false;
+      }
+      if (!formGasto.monto || formGasto.monto <= 0) {
+        alert('⚠️ El monto debe ser mayor a 0');
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const siguientePaso = () => {
+    if (pasoActual === 1 && !validarPaso1()) return;
+    if (pasoActual === 2 && !validarPaso2()) return;
+    
+    if (pasoActual === 3) {
+      if (tipoEgreso === 'compra') {
+        handleGuardarCompra();
+      } else if (tipoEgreso === 'material') {
+        handleGuardarCompraMaterial();
+      } else {
+        handleGuardarGasto();
+      }
+    } else {
+      setPasoActual(prev => Math.min(prev + 1, 3));
+    }
+  };
+
+  const pasoAnterior = () => {
+    setPasoActual(prev => Math.max(prev - 1, 1));
+  };
+
   const handleGuardarCompra = async () => {
-    if (!formCompra.descripcion?.trim()) {
-      alert('Por favor ingrese una descripción')
-      return
-    }
-    
-    if (!formCompra.idMetodoPago) {
-      alert('Por favor seleccione un método de pago')
-      return
-    }
-    
-    if (!formCompra.precioUnitario || formCompra.precioUnitario <= 0) {
-      alert('El precio unitario debe ser mayor a 0')
-      return
-    }
-
-    if (!formCompra.cantidad || formCompra.cantidad <= 0) {
-      alert('La cantidad debe ser mayor a 0')
-      return
-    }
-
     try {
       const cantidad = parseInt(formCompra.cantidad)
       const precioUnitario = parseFloat(formCompra.precioUnitario)
@@ -250,11 +338,7 @@ export default function Egresos() {
         ]
       }
 
-      console.log('📤 Datos a enviar:', JSON.stringify(compraData, null, 2))
-
-      const response = await api.compras.registrar(compraData)
-      
-      console.log('✅ Respuesta exitosa:', response)
+      await api.compras.registrar(compraData)
       
       alert('✅ Compra registrada exitosamente')
 
@@ -268,6 +352,7 @@ export default function Egresos() {
         observaciones: ''
       })
 
+      setPasoActual(1);
       await cargarDatos()
       
     } catch (error) {
@@ -288,11 +373,6 @@ export default function Egresos() {
   }
 
   const handleGuardarGasto = async () => {
-    if (!formGasto.descripcion || !formGasto.idMetodoPago || formGasto.monto <= 0) {
-      alert('Por favor complete todos los campos requeridos')
-      return
-    }
-
     try {
       const gastoData = {
         fecha: new Date(formGasto.fecha).toISOString(),
@@ -302,7 +382,7 @@ export default function Egresos() {
       }
       
       await api.gastos.registrar(gastoData)
-      alert('Gasto registrado exitosamente')
+      alert('✅ Gasto registrado exitosamente')
       
       setFormGasto({
         descripcion: '',
@@ -310,34 +390,16 @@ export default function Egresos() {
         idMetodoPago: '',
         fecha: new Date().toISOString().split('T')[0]
       })
+
+      setPasoActual(1);
       await cargarDatos()
     } catch (error) {
       console.error('Error al registrar gasto:', error)
-      alert('Error al registrar el gasto: ' + (error.message || 'Error desconocido'))
+      alert('❌ Error al registrar el gasto: ' + (error.message || 'Error desconocido'))
     }
   }
 
   const handleGuardarCompraMaterial = async () => {
-    if (!formCompraMaterial.idMaterial) {
-      alert('Por favor seleccione un material')
-      return
-    }
-    
-    if (!formCompraMaterial.idMetodoPago) {
-      alert('Por favor seleccione un método de pago')
-      return
-    }
-    
-    if (!formCompraMaterial.precioUnitario || formCompraMaterial.precioUnitario <= 0) {
-      alert('El precio unitario debe ser mayor a 0')
-      return
-    }
-
-    if (!formCompraMaterial.cantidad || formCompraMaterial.cantidad <= 0) {
-      alert('La cantidad debe ser mayor a 0')
-      return
-    }
-
     try {
       const materialSeleccionado = materiales.find(m => m.idMaterial === parseInt(formCompraMaterial.idMaterial))
       
@@ -355,11 +417,7 @@ export default function Egresos() {
         precioUnitario: parseFloat(formCompraMaterial.precioUnitario)
       }]
 
-      console.log('📤 Datos compra material:', { compraData, materialesData })
-
-      const response = await api.compras.registrarCompraMaterial(compraData, materialesData)
-      
-      console.log('✅ Compra material exitosa:', response)
+      await api.compras.registrarCompraMaterial(compraData, materialesData)
       
       alert('✅ Compra de material registrada exitosamente')
 
@@ -372,6 +430,7 @@ export default function Egresos() {
         observaciones: ''
       })
 
+      setPasoActual(1);
       await cargarDatos()
       
     } catch (error) {
@@ -381,32 +440,35 @@ export default function Egresos() {
   }
 
   const handleCancelar = () => {
-    if (tipoEgreso === 'compra') {
-      setFormCompra({
-        descripcion: '',
-        cantidad: 1,
-        precioUnitario: 0,
-        idMetodoPago: '',
-        tipoDocumento: 'boleta',
-        fecha: new Date().toISOString().split('T')[0],
-        observaciones: ''
-      })
-    } else if (tipoEgreso === 'gasto') {
-      setFormGasto({
-        descripcion: '',
-        monto: 0,
-        idMetodoPago: '',
-        fecha: new Date().toISOString().split('T')[0]
-      })
-    } else if (tipoEgreso === 'material') {
-      setFormCompraMaterial({
-        idMaterial: '',
-        cantidad: 1,
-        precioUnitario: 0,
-        idMetodoPago: '',
-        fecha: new Date().toISOString().split('T')[0],
-        observaciones: ''
-      })
+    if (window.confirm('¿Desea cancelar? Se perderán todos los datos')) {
+      if (tipoEgreso === 'compra') {
+        setFormCompra({
+          descripcion: '',
+          cantidad: 1,
+          precioUnitario: 0,
+          idMetodoPago: '',
+          tipoDocumento: 'boleta',
+          fecha: new Date().toISOString().split('T')[0],
+          observaciones: ''
+        })
+      } else if (tipoEgreso === 'gasto') {
+        setFormGasto({
+          descripcion: '',
+          monto: 0,
+          idMetodoPago: '',
+          fecha: new Date().toISOString().split('T')[0]
+        })
+      } else if (tipoEgreso === 'material') {
+        setFormCompraMaterial({
+          idMaterial: '',
+          cantidad: 1,
+          precioUnitario: 0,
+          idMetodoPago: '',
+          fecha: new Date().toISOString().split('T')[0],
+          observaciones: ''
+        })
+      }
+      setPasoActual(1);
     }
   }
 
@@ -552,6 +614,534 @@ export default function Egresos() {
       </div>
     )
   }
+  const getContenidoPaso = () => {
+    switch (pasoActual) {
+      case 1:
+        return (
+          <div className="form-field">
+            <label className="field-label">
+              <Analytics sx={{ fontSize: 24 }} />
+              Tipo de Egreso
+            </label>
+            <select 
+              value={tipoEgreso} 
+              onChange={(e) => setTipoEgreso(e.target.value)}
+            >
+              <option value="compra">🛒 Compra General</option>
+              <option value="material">📦 Compra de Materiales</option>
+              <option value="gasto">💸 Gasto Operativo</option>
+            </select>
+            
+            <div style={{
+              marginTop: '1.5rem',
+              padding: '1.5rem',
+              background: tipoEgreso === 'compra' ? '#E8F5E8' : tipoEgreso === 'material' ? '#E3F2FD' : '#FFF3E0',
+              border: `2px solid ${tipoEgreso === 'compra' ? '#4CAF50' : tipoEgreso === 'material' ? '#2196F3' : '#FF9800'}`,
+              borderRadius: '12px'
+            }}>
+              <h4 style={{ 
+                margin: '0 0 0.5rem 0',
+                color: tipoEgreso === 'compra' ? '#2E7D32' : tipoEgreso === 'material' ? '#1565C0' : '#EF6C00'
+              }}>
+                {tipoEgreso === 'compra' ? '🛒 Compra General' : tipoEgreso === 'material' ? '📦 Compra de Materiales' : '💸 Gasto Operativo'}
+              </h4>
+              <p style={{ 
+                margin: 0, 
+                fontSize: '0.9rem',
+                color: tipoEgreso === 'compra' ? '#388E3C' : tipoEgreso === 'material' ? '#1976D2' : '#F57C00'
+              }}>
+                {tipoEgreso === 'compra' 
+                  ? 'Registro de compras de insumos, materiales y productos para el negocio'
+                  : tipoEgreso === 'material'
+                  ? 'Registro de compra de materiales para inventario con control de stock'
+                  : 'Registro de gastos operativos como arriendo, servicios, publicidad, etc.'
+                }
+              </p>
+            </div>
+          </div>
+        );
+      
+      case 2:
+        if (tipoEgreso === 'compra') {
+          return (
+            <div className="form-grid">
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Description sx={{ fontSize: 20 }} />
+                  Descripción del Producto
+                </label>
+                <input 
+                  type="text" 
+                  placeholder='Ej: Cuero, hilos, hebillas, remaches...' 
+                  value={formCompra.descripcion}
+                  onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <AttachMoney sx={{ fontSize: 20 }} />
+                  Precio Unitario
+                </label>
+                <input 
+                  type="number" 
+                  placeholder="0" 
+                  min={0} 
+                  step={100} 
+                  value={formCompra.precioUnitario || ''}
+                  onChange={(e) => setFormCompra({ ...formCompra, precioUnitario: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">Cantidad</label>
+                <div className="quantity-control">
+                  <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
+                  <input 
+                    type="number" 
+                    value={formCompra.cantidad} 
+                    onChange={(e) => setFormCompra({ ...formCompra, cantidad: parseInt(e.target.value) || 1 })}
+                    min={1} 
+                    step={1}
+                  />
+                  <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
+                </div>
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">Total Compra</label>
+                <input 
+                  type="text" 
+                  value={`$ ${Math.round(calcularTotalCompra()).toLocaleString('es-CL')}`}
+                  disabled 
+                  style={{ 
+                    fontWeight: '600',
+                    color: '#5D4037',
+                    background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
+                    fontSize: '1.1rem'
+                  }}
+                />
+              </div>
+
+              <div className="form-field col-12">
+                <label className="field-label">
+                  <Receipt sx={{ fontSize: 24 }} />
+                  Resumen Financiero
+                </label>
+                
+                <div className="resumen-financiero">
+                  <div className="resumen-item resumen-iva">
+                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                      IVA Recuperable
+                    </div>
+                    <div style={{ fontSize: '1.1rem' }}>
+                      $ {Math.round(calcularIVARecuperable(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                  
+                  <div className="resumen-item resumen-costo">
+                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                      Costo Real
+                    </div>
+                    <div style={{ fontSize: '1.1rem' }}>
+                      $ {Math.round(calcularCostoReal(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                  
+                  <div className="resumen-item resumen-total">
+                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
+                      Total Bruto
+                    </div>
+                    <div style={{ fontSize: '1.1rem' }}>
+                      $ {Math.round(calcularTotalCompra()).toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <CalendarToday sx={{ fontSize: 20 }} />
+                  Fecha
+                </label>
+                <input 
+                  type="date" 
+                  value={formCompra.fecha}
+                  onChange={(e) => setFormCompra({ ...formCompra, fecha: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Payment sx={{ fontSize: 20 }} />
+                  Método de Pago
+                </label>
+                <select 
+                  value={formCompra.idMetodoPago}
+                  onChange={(e) => setFormCompra({ ...formCompra, idMetodoPago: e.target.value })}
+                >
+                  <option value="">Seleccionar método...</option>
+                  {metodosPago.map(m => (
+                    <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">Tipo de Documento</label>
+                <select 
+                  value={formCompra.tipoDocumento}
+                  onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
+                >
+                  <option value="boleta">🧾 Boleta (IVA no recuperable)</option>
+                  <option value="factura">📄 Factura (IVA recuperable)</option>
+                  <option value="sin-documento">📝 Sin documento</option>
+                </select>
+              </div>
+
+              <div className="form-field col-12">
+                <label className="field-label">
+                  <Description sx={{ fontSize: 20 }} />
+                  Observaciones (opcional)
+                </label>
+                <textarea 
+                  placeholder="Notas adicionales sobre esta compra..." 
+                  rows={3}
+                  value={formCompra.observaciones}
+                  onChange={(e) => setFormCompra({ ...formCompra, observaciones: e.target.value })}
+                />
+              </div>
+            </div>
+          );
+        } else if (tipoEgreso === 'material') {
+          return (
+            <div className="form-grid">
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Inventory sx={{ fontSize: 20 }} />
+                  Material a Comprar
+                </label>
+                <select 
+                  value={formCompraMaterial.idMaterial}
+                  onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMaterial: e.target.value })}
+                >
+                  <option value="">Seleccionar material...</option>
+                  {materiales.map(m => (
+                    <option key={m.idMaterial} value={m.idMaterial}>
+                      {m.nombre} ({m.unidadMedida?.abreviatura || 'N/A'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formCompraMaterial.idMaterial && (
+                <div className="form-field col-6">
+                  <label className="field-label">Información del Material</label>
+                  <div className="material-info">
+                    {(() => {
+                      const material = getMaterialInfo(formCompraMaterial.idMaterial)
+                      return material ? (
+                        <>
+                          <p><strong>Stock actual:</strong> {material.stockActual || 0} {material.unidadMedida?.abreviatura || ''}</p>
+                          <p><strong>Stock mínimo:</strong> {material.stockMinimo || 0} {material.unidadMedida?.abreviatura || ''}</p>
+                          <p><strong>Costo promedio:</strong> $ {(material.costoPromedio || 0).toFixed(2)}</p>
+                        </>
+                      ) : null
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <AttachMoney sx={{ fontSize: 20 }} />
+                  Precio Unitario
+                </label>
+                <input 
+                  type="number" 
+                  placeholder="0" 
+                  min={0} 
+                  step={0.01} 
+                  value={formCompraMaterial.precioUnitario || ''}
+                  onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, precioUnitario: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">Cantidad</label>
+                <div className="quantity-control">
+                  <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
+                  <input 
+                    type="number" 
+                    value={formCompraMaterial.cantidad} 
+                    onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, cantidad: parseInt(e.target.value) || 1 })}
+                    min={1} 
+                    step={1}
+                  />
+                  <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
+                </div>
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">Total Compra</label>
+                <input 
+                  type="text" 
+                  value={`$ ${Math.round(calcularTotalCompraMaterial()).toLocaleString('es-CL')}`}
+                  disabled 
+                  style={{ 
+                    fontWeight: '600',
+                    color: '#5D4037',
+                    background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
+                    fontSize: '1.1rem'
+                  }}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <CalendarToday sx={{ fontSize: 20 }} />
+                  Fecha
+                </label>
+                <input 
+                  type="date" 
+                  value={formCompraMaterial.fecha}
+                  onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, fecha: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Payment sx={{ fontSize: 20 }} />
+                  Método de Pago
+                </label>
+                <select 
+                  value={formCompraMaterial.idMetodoPago}
+                  onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMetodoPago: e.target.value })}
+                >
+                  <option value="">Seleccionar método...</option>
+                  {metodosPago.map(m => (
+                    <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-field col-12">
+                <label className="field-label">
+                  <Description sx={{ fontSize: 20 }} />
+                  Observaciones (opcional)
+                </label>
+                <textarea 
+                  placeholder="Notas adicionales sobre esta compra de material..." 
+                  rows={3}
+                  value={formCompraMaterial.observaciones}
+                  onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, observaciones: e.target.value })}
+                />
+              </div>
+            </div>
+          );
+        } else {
+          return (
+            <div className="form-grid">
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Description sx={{ fontSize: 20 }} />
+                  Descripción del Gasto
+                </label>
+                <input 
+                  type="text" 
+                  placeholder='Ej: Arriendo, servicios, publicidad, envíos...' 
+                  value={formGasto.descripcion}
+                  onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <AttachMoney sx={{ fontSize: 20 }} />
+                  Monto del Gasto
+                </label>
+                <input 
+                  type="number" 
+                  placeholder="$ 0" 
+                  min={0} 
+                  step={100} 
+                  value={formGasto.monto}
+                  onChange={(e) => setFormGasto({ ...formGasto, monto: parseFloat(e.target.value) || 0 })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <CalendarToday sx={{ fontSize: 20 }} />
+                  Fecha
+                </label>
+                <input 
+                  type="date" 
+                  value={formGasto.fecha}
+                  onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
+                />
+              </div>
+
+              <div className="form-field col-6">
+                <label className="field-label">
+                  <Payment sx={{ fontSize: 20 }} />
+                  Método de Pago
+                </label>
+                <select 
+                  value={formGasto.idMetodoPago}
+                  onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
+                >
+                  <option value="">Seleccionar método...</option>
+                  {metodosPago.map(m => (
+                    <option key={m.idMetodoPago} value={m.idMetodoPago}>
+                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          );
+        }
+      
+      case 3:
+        return (
+          <div style={{ padding: '1rem' }}>
+            <div style={{
+              background: 'linear-gradient(135deg, #E8F5E8, #C8E6C9)',
+              border: '3px solid #4CAF50',
+              borderRadius: '16px',
+              padding: '2rem',
+              marginBottom: '2rem',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: '0.9rem', color: '#2E7D32', marginBottom: '0.5rem' }}>
+                Total del {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra Material' : 'Gasto'}
+              </div>
+              <div style={{ 
+                fontSize: '3rem', 
+                fontWeight: '700', 
+                color: '#2E7D32',
+                marginBottom: '0.5rem'
+              }}>
+                ${Math.round(
+                  tipoEgreso === 'compra' ? calcularTotalCompra() :
+                  tipoEgreso === 'material' ? calcularTotalCompraMaterial() :
+                  formGasto.monto
+                ).toLocaleString('es-CL')}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: '#66BB6A' }}>
+                {tipoEgreso === 'compra' ? `${formCompra.cantidad} unidad(es)` :
+                 tipoEgreso === 'material' ? `${formCompraMaterial.cantidad} ${getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura || ''}` :
+                 'Gasto operativo'}
+              </div>
+            </div>
+
+            <div style={{
+              background: 'var(--panel)',
+              border: '2px solid var(--border)',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              marginBottom: '1.5rem'
+            }}>
+              <h3 style={{ 
+                margin: '0 0 1rem 0',
+                fontSize: '1.1rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                color: 'var(--brand)'
+              }}>
+                <Description sx={{ fontSize: 20 }} />
+                Detalles del {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Material' : 'Gasto'}
+              </h3>
+              
+              {tipoEgreso === 'compra' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
+                    <div><strong>Descripción:</strong> {formCompra.descripcion}</div>
+                    <div><strong>Cantidad:</strong> {formCompra.cantidad}</div>
+                    <div><strong>Precio Unitario:</strong> ${formCompra.precioUnitario.toLocaleString('es-CL')}</div>
+                    <div><strong>Fecha:</strong> {formatearFecha(formCompra.fecha)}</div>
+                    <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompra.idMetodoPago))?.nombre}</div>
+                    <div><strong>Documento:</strong> {formCompra.tipoDocumento === 'boleta' ? '🧾 Boleta' : formCompra.tipoDocumento === 'factura' ? '📄 Factura' : '📝 Sin documento'}</div>
+                  </div>
+                  {formCompra.observaciones && (
+                    <div style={{ 
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      background: '#FFF3E0',
+                      borderRadius: '8px',
+                      borderLeft: '4px solid #FF9800'
+                    }}>
+                      <strong>Observaciones:</strong> {formCompra.observaciones}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tipoEgreso === 'material' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
+                    <div><strong>Material:</strong> {getMaterialInfo(formCompraMaterial.idMaterial)?.nombre}</div>
+                    <div><strong>Cantidad:</strong> {formCompraMaterial.cantidad} {getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura}</div>
+                    <div><strong>Precio Unitario:</strong> ${formCompraMaterial.precioUnitario.toLocaleString('es-CL')}</div>
+                    <div><strong>Fecha:</strong> {formatearFecha(formCompraMaterial.fecha)}</div>
+                    <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompraMaterial.idMetodoPago))?.nombre}</div>
+                  </div>
+                  {formCompraMaterial.observaciones && (
+                    <div style={{ 
+                      marginTop: '1rem',
+                      padding: '1rem',
+                      background: '#FFF3E0',
+                      borderRadius: '8px',
+                      borderLeft: '4px solid #FF9800'
+                    }}>
+                      <strong>Observaciones:</strong> {formCompraMaterial.observaciones}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {tipoEgreso === 'gasto' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div><strong>Descripción:</strong> {formGasto.descripcion}</div>
+                  <div><strong>Monto:</strong> ${formGasto.monto.toLocaleString('es-CL')}</div>
+                  <div><strong>Fecha:</strong> {formatearFecha(formGasto.fecha)}</div>
+                  <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formGasto.idMetodoPago))?.nombre}</div>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              background: 'linear-gradient(135deg, #E3F2FD, #BBDEFB)',
+              border: '2px solid #2196F3',
+              borderRadius: '12px',
+              padding: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <CheckCircle sx={{ fontSize: 32, color: '#1565C0' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: '600', color: '#1565C0', marginBottom: '0.25rem' }}>
+                  Todo listo para registrar
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#1976D2' }}>
+                  Revisa los datos y presiona "Registrar" para confirmar
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      
+      default:
+        return null;
+    }
+  };
 
   const tablaEgresos = egresosCombinados.map((item, idx) => {
     const esCompra = esRegistroCompra(item)
@@ -606,12 +1196,11 @@ export default function Egresos() {
       )
     ]
   })
-
   return (
     <div className="egresos-container">
       <style>{`
         .egresos-container {
-          padding: 2rem;
+          padding: 1rem;
           background: #EFEBE9;
           min-height: 100vh;
           max-width: 1400px;
@@ -635,6 +1224,7 @@ export default function Egresos() {
           transition: all 0.3s ease;
           overflow: hidden;
           margin-bottom: 2rem;
+          position: relative;
         }
 
         .egresos-card:hover {
@@ -1113,407 +1703,132 @@ export default function Egresos() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
-        {/* Formulario de Registro */}
-        <div style={{ gridColumn: 'span 12' }}>
-          <div className="egresos-card">
-            <div className="card-header">
-              <h2 className="card-title">Registrar Nuevo Egreso</h2>
-              <p className="card-subtitle">Agregue una compra, gasto o abastecimiento de materiales</p>
+      {/* Formulario con Pasos */}
+      <div className="egresos-card">
+        <div className="card-header">
+          <h2 className="card-title">Registrar Nuevo Egreso</h2>
+          <p className="card-subtitle">Complete los pasos para registrar un egreso</p>
+        </div>
+        <div className="card-body">
+          {/* INDICADOR DE PASOS */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginBottom: '2rem',
+            position: 'relative'
+          }}>
+            {/* Línea de progreso */}
+            <div style={{
+              position: 'absolute',
+              top: '20px',
+              left: '10%',
+              right: '10%',
+              height: '3px',
+              background: 'var(--border)',
+              zIndex: 0
+            }}>
+              <div style={{
+                height: '100%',
+                background: 'linear-gradient(90deg, #5D4037, #8D6E63)',
+                width: `${((pasoActual - 1) / 2) * 100}%`,
+                transition: 'width 0.3s ease'
+              }} />
             </div>
-            <div className="card-body">
-              <div className="form-field">
-                <label className="field-label">
-                  <Analytics sx={{ fontSize: 24 }} />
-                  Tipo de Egreso
-                </label>
-                <select 
-                  value={tipoEgreso} 
-                  onChange={(e) => setTipoEgreso(e.target.value)}
-                >
-                  <option value="compra">🛒 Compra General</option>
-                  <option value="material">📦 Compra de Materiales</option>
-                  <option value="gasto">💸 Gasto Operativo</option>
-                </select>
+
+            {pasos.map((paso) => (
+              <div key={paso.numero} style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                position: 'relative',
+                zIndex: 1
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  background: pasoActual >= paso.numero 
+                    ? 'linear-gradient(135deg, #5D4037, #8D6E63)' 
+                    : '#FAF9F7',
+                  border: `3px solid ${pasoActual >= paso.numero ? '#5D4037' : '#D7CCC8'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: pasoActual >= paso.numero ? 'white' : '#8D6E63',
+                  fontWeight: '600',
+                  transition: 'all 0.3s ease',
+                  marginBottom: '0.5rem'
+                }}>
+                  {React.cloneElement(paso.icono, { sx: { fontSize: 20 } })}
+                </div>
+                <span style={{
+                  fontSize: '0.85rem',
+                  fontWeight: pasoActual === paso.numero ? '600' : '400',
+                  color: pasoActual >= paso.numero ? '#5D4037' : '#8D6E63',
+                  textAlign: 'center'
+                }}>
+                  {paso.titulo}
+                </span>
               </div>
+            ))}
+          </div>
 
-              {tipoEgreso === 'compra' ? (
-                <div className="form-grid">
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <Description sx={{ fontSize: 20 }} />
-                      Descripción del Producto
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder='Ej: Cuero, hilos, hebillas, remaches...' 
-                      value={formCompra.descripcion}
-                      onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
-                    />
-                  </div>
+          {/* CONTENIDO DEL PASO */}
+          <div style={{ minHeight: '400px' }}>
+            {getContenidoPaso()}
+          </div>
 
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <AttachMoney sx={{ fontSize: 20 }} />
-                      Precio Unitario
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="0" 
-                      min={0} 
-                      step={100} 
-                      value={formCompra.precioUnitario || ''}
-                      onChange={(e) => setFormCompra({ ...formCompra, precioUnitario: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Cantidad</label>
-                    <div className="quantity-control">
-                      <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
-                      <input 
-                        type="number" 
-                        value={formCompra.cantidad} 
-                        onChange={(e) => setFormCompra({ ...formCompra, cantidad: parseInt(e.target.value) || 1 })}
-                        min={1} 
-                        step={1}
-                      />
-                      <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
-                    </div>
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Total Compra</label>
-                    <input 
-                      type="text" 
-                      value={`$ ${Math.round(calcularTotalCompra()).toLocaleString('es-CL')}`}
-                      disabled 
-                      style={{ 
-                        fontWeight: '600',
-                        color: '#5D4037',
-                        background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
-                        fontSize: '1.1rem'
-                      }}
-                    />
-                  </div>
-
-                  {/* Resumen Financiero Compra */}
-                  <div className="form-field col-12">
-                    <label className="field-label">
-                      <Receipt sx={{ fontSize: 24 }} />
-                      Resumen Financiero
-                    </label>
-                    
-                    <div className="resumen-financiero">
-                      <div className="resumen-item resumen-iva">
-                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                          IVA Recuperable
-                        </div>
-                        <div style={{ fontSize: '1.1rem' }}>
-                          $ {Math.round(calcularIVARecuperable(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
-                        </div>
-                      </div>
-                      
-                      <div className="resumen-item resumen-costo">
-                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                          Costo Real
-                        </div>
-                        <div style={{ fontSize: '1.1rem' }}>
-                          $ {Math.round(calcularCostoReal(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
-                        </div>
-                      </div>
-                      
-                      <div className="resumen-item resumen-total">
-                        <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                          Total Bruto
-                        </div>
-                        <div style={{ fontSize: '1.1rem' }}>
-                          $ {Math.round(calcularTotalCompra()).toLocaleString('es-CL')}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <CalendarToday sx={{ fontSize: 20 }} />
-                      Fecha
-                    </label>
-                    <input 
-                      type="date" 
-                      value={formCompra.fecha}
-                      onChange={(e) => setFormCompra({ ...formCompra, fecha: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Método de Pago</label>
-                    <select 
-                      value={formCompra.idMetodoPago}
-                      onChange={(e) => setFormCompra({ ...formCompra, idMetodoPago: e.target.value })}
-                    >
-                      <option value="">Seleccionar método...</option>
-                      {metodosPago.map(m => (
-                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Tipo de Documento</label>
-                    <select 
-                      value={formCompra.tipoDocumento}
-                      onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
-                    >
-                      <option value="boleta">🧾 Boleta (IVA no recuperable)</option>
-                      <option value="factura">📄 Factura (IVA recuperable)</option>
-                      <option value="sin-documento">📝 Sin documento</option>
-                    </select>
-                  </div>
-
-                  <div className="form-field col-12">
-                    <label className="field-label">
-                      <Description sx={{ fontSize: 20 }} />
-                      Observaciones (opcional)
-                    </label>
-                    <textarea 
-                      placeholder="Notas adicionales sobre esta compra..." 
-                      rows={3}
-                      value={formCompra.observaciones}
-                      onChange={(e) => setFormCompra({ ...formCompra, observaciones: e.target.value })}
-                    />
-                  </div>
-                </div>
-              ) : tipoEgreso === 'material' ? (
-                <div className="form-grid">
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <Inventory sx={{ fontSize: 20 }} />
-                      Material a Comprar
-                    </label>
-                    <select 
-                      value={formCompraMaterial.idMaterial}
-                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMaterial: e.target.value })}
-                    >
-                      <option value="">Seleccionar material...</option>
-                      {materiales.map(m => (
-                        <option key={m.idMaterial} value={m.idMaterial}>
-                          {m.nombre} ({m.unidadMedida?.abreviatura || 'N/A'})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {formCompraMaterial.idMaterial && (
-                    <div className="form-field col-6">
-                      <label className="field-label">Información del Material</label>
-                      <div className="material-info">
-                        {(() => {
-                          const material = getMaterialInfo(formCompraMaterial.idMaterial)
-                          return material ? (
-                            <>
-                              <p><strong>Stock actual:</strong> {material.stockActual || 0} {material.unidadMedida?.abreviatura || ''}</p>
-                              <p><strong>Stock mínimo:</strong> {material.stockMinimo || 0} {material.unidadMedida?.abreviatura || ''}</p>
-                              <p><strong>Costo promedio:</strong> $ {(material.costoPromedio || 0).toFixed(2)}</p>
-                            </>
-                          ) : null
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <AttachMoney sx={{ fontSize: 20 }} />
-                      Precio Unitario
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="0" 
-                      min={0} 
-                      step={0.01} 
-                      value={formCompraMaterial.precioUnitario || ''}
-                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, precioUnitario: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Cantidad</label>
-                    <div className="quantity-control">
-                      <button className="btn ghost small" onClick={decrementarCantidad}>−</button>
-                      <input 
-                        type="number" 
-                        value={formCompraMaterial.cantidad} 
-                        onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, cantidad: parseInt(e.target.value) || 1 })}
-                        min={1} 
-                        step={1}
-                      />
-                      <button className="btn ghost small" onClick={incrementarCantidad}>+</button>
-                    </div>
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Total Compra</label>
-                    <input 
-                      type="text" 
-                      value={`$ ${Math.round(calcularTotalCompraMaterial()).toLocaleString('es-CL')}`}
-                      disabled 
-                      style={{ 
-                        fontWeight: '600',
-                        color: '#5D4037',
-                        background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
-                        fontSize: '1.1rem'
-                      }}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Unidad de Medida</label>
-                    <input 
-                      type="text" 
-                      value={getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura || 'N/A'}
-                      disabled 
-                      style={{ 
-                        background: '#F5F3F0',
-                        color: '#8D6E63'
-                      }}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <CalendarToday sx={{ fontSize: 20 }} />
-                      Fecha
-                    </label>
-                    <input 
-                      type="date" 
-                      value={formCompraMaterial.fecha}
-                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, fecha: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Método de Pago</label>
-                    <select 
-                      value={formCompraMaterial.idMetodoPago}
-                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMetodoPago: e.target.value })}
-                    >
-                      <option value="">Seleccionar método...</option>
-                      {metodosPago.map(m => (
-                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="form-field col-12">
-                    <label className="field-label">
-                      <Description sx={{ fontSize: 20 }} />
-                      Observaciones (opcional)
-                    </label>
-                    <textarea 
-                      placeholder="Notas adicionales sobre esta compra de material..." 
-                      rows={3}
-                      value={formCompraMaterial.observaciones}
-                      onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, observaciones: e.target.value })}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="form-grid">
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <Description sx={{ fontSize: 20 }} />
-                      Descripción del Gasto
-                    </label>
-                    <input 
-                      type="text" 
-                      placeholder='Ej: Arriendo, servicios, publicidad, envíos...' 
-                      value={formGasto.descripcion}
-                      onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <AttachMoney sx={{ fontSize: 20 }} />
-                      Monto del Gasto
-                    </label>
-                    <input 
-                      type="number" 
-                      placeholder="$ 0" 
-                      min={0} 
-                      step={100} 
-                      value={formGasto.monto}
-                      onChange={(e) => setFormGasto({ ...formGasto, monto: parseFloat(e.target.value) || 0 })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">
-                      <CalendarToday sx={{ fontSize: 20 }} />
-                      Fecha
-                    </label>
-                    <input 
-                      type="date" 
-                      value={formGasto.fecha}
-                      onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
-                    />
-                  </div>
-
-                  <div className="form-field col-6">
-                    <label className="field-label">Método de Pago</label>
-                    <select 
-                      value={formGasto.idMetodoPago}
-                      onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
-                    >
-                      <option value="">Seleccionar método...</option>
-                      {metodosPago.map(m => (
-                        <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                          {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+          {/* BOTONES DE NAVEGACIÓN */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            marginTop: '2rem',
+            paddingTop: '1rem',
+            borderTop: '2px solid #D7CCC8'
+          }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {pasoActual > 1 && (
+                <button className="btn ghost" onClick={pasoAnterior}>
+                  <ArrowBack sx={{ fontSize: 20 }} />
+                  Anterior
+                </button>
               )}
+              <button className="btn ghost" onClick={handleCancelar}>
+                Cancelar
+              </button>
+            </div>
 
-              <div className="toolbar">
-                <button className="btn" onClick={
-                  tipoEgreso === 'compra' ? handleGuardarCompra :
-                  tipoEgreso === 'material' ? handleGuardarCompraMaterial :
-                  handleGuardarGasto
-                }>
-                  {tipoEgreso === 'material' ? <LocalShipping sx={{ fontSize: 20 }} /> : <AttachMoney sx={{ fontSize: 20 }} />}
-                  Registrar {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra de Material' : 'Gasto'}
+            <div>
+              {pasoActual < 3 ? (
+                <button className="btn" onClick={siguientePaso}>
+                  Siguiente
+                  <ArrowForward sx={{ fontSize: 20 }} />
                 </button>
-                <button className="btn ghost" onClick={handleCancelar}>
-                  Cancelar
+              ) : (
+                <button className="btn" onClick={siguientePaso}>
+                  <CheckCircle sx={{ fontSize: 20 }} />
+                  Registrar {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra Material' : 'Gasto'}
                 </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Panel de Análisis */}
-        <div style={{ gridColumn: 'span 12' }}>
-          <div className="egresos-card">
-            <div className="card-header">
-              <h2 className="card-title">Análisis de Egresos</h2>
-              <p className="card-subtitle">Distribución y tendencias de compras vs gastos</p>
-            </div>
-            <div className="card-body">
-              <div className="chart-placeholder">
-                <div style={{ textAlign: 'center', color: '#8D6E63' }}>
-                  <Analytics sx={{ fontSize: 64, color: '#8D6E63', marginBottom: '1rem', opacity: 0.5 }} />
-                  <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Dashboard de Egresos</div>
-                  <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                    Visualización de compras vs gastos mensuales
-                  </div>
-                </div>
+      {/* Panel de Análisis */}
+      <div className="egresos-card">
+        <div className="card-header">
+          <h2 className="card-title">Análisis de Egresos</h2>
+          <p className="card-subtitle">Distribución y tendencias de compras vs gastos</p>
+        </div>
+        <div className="card-body">
+          <div className="chart-placeholder">
+            <div style={{ textAlign: 'center', color: '#8D6E63' }}>
+              <Analytics sx={{ fontSize: 64, color: '#8D6E63', marginBottom: '1rem', opacity: 0.5 }} />
+              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Dashboard de Egresos</div>
+              <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
+                Visualización de compras vs gastos mensuales
               </div>
             </div>
           </div>
@@ -1530,7 +1845,7 @@ export default function Egresos() {
           <div className="tabla-container">
             <table className="tabla">
               <thead>
-                 <tr>
+                <tr>
                   <th><SortHeaderButton label="Fecha" columnKey="fecha" /></th>
                   <th><SortHeaderButton label="Tipo" columnKey="tipo" /></th>
                   <th><SortHeaderButton label="Detalle" columnKey="detalle" /></th>
