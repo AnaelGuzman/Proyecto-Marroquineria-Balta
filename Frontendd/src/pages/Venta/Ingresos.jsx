@@ -6,9 +6,7 @@ import {
   Payment, 
   CheckCircle, 
   ArrowForward, 
-  ArrowBack,
-  CalendarToday,
-  Description
+  ArrowBack
 } from '@mui/icons-material';
 import ProductosVenta from '../Venta/ProductosVenta.jsx';
 import MetodosPagoVenta from '../Venta/MetodosPagoVenta.jsx';
@@ -19,7 +17,6 @@ import DetallesProductosModal from '../Venta/ventanas-modales/DetallesProductosM
 export default function Ingresos() {
   const [pasoActual, setPasoActual] = useState(1);
   const [productos, setProductos] = useState([]);
-  const [categorias, setCategorias] = useState([]);
   const [metodosPago, setMetodosPago] = useState([]);
   const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,8 +29,7 @@ export default function Ingresos() {
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
-    observaciones: '',
-    categoriaId: ''
+    observaciones: ''
   });
 
   useEffect(() => {
@@ -51,25 +47,22 @@ export default function Ingresos() {
   const cargarDatos = async () => {
     try {
       setLoading(true);
-      const [prods, cats, metodos, vents] = await Promise.all([
+      const [prods, metodos, vents] = await Promise.all([
         api.productos.getAll().catch(() => []),
-        api.categorias.getAll().catch(() => []),
         api.metodosPago.getAll().catch(() => []),
         api.ventas.getAll().catch(() => [])
       ]);
       
       setProductos(prods);
-      setCategorias(cats);
       setMetodosPago(metodos);
       setVentas(vents);
     } catch (error) {
-      console.error('Error general:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // Funciones de productos
   const agregarProducto = () => {
     setProductosSeleccionados(prev => [
       ...prev,
@@ -116,7 +109,6 @@ export default function Ingresos() {
     );
   };
 
-  // Funciones de métodos de pago
   const agregarMetodoPago = () => {
     setMetodosPagoSeleccionados(prev => [
       ...prev,
@@ -170,20 +162,17 @@ export default function Ingresos() {
     }
   };
 
-  // Validaciones por paso
   const validarPaso1 = () => {
     if (productosSeleccionados.length === 0) {
-      alert('Debe agregar al menos un producto');
+      alert('⚠️ Agregue al menos un producto');
       return false;
     }
-    const productoSinSeleccionar = productosSeleccionados.find(p => !p.idProducto);
-    if (productoSinSeleccionar) {
-      alert('Todos los productos deben estar seleccionados');
+    if (productosSeleccionados.find(p => !p.idProducto)) {
+      alert('⚠️ Seleccione todos los productos');
       return false;
     }
-    const productoSinCantidad = productosSeleccionados.find(p => !p.cantidad || p.cantidad <= 0);
-    if (productoSinCantidad) {
-      alert('Todos los productos deben tener una cantidad mayor a 0');
+    if (productosSeleccionados.find(p => !p.cantidad || p.cantidad <= 0)) {
+      alert('⚠️ Cantidad debe ser mayor a 0');
       return false;
     }
     return true;
@@ -191,12 +180,11 @@ export default function Ingresos() {
 
   const validarPaso2 = () => {
     if (metodosPagoSeleccionados.length === 0) {
-      alert('Debe agregar al menos un método de pago');
+      alert('⚠️ Agregue al menos un método de pago');
       return false;
     }
-    const metodoSinSeleccionar = metodosPagoSeleccionados.find(m => !m.idMetodoPago);
-    if (metodoSinSeleccionar) {
-      alert('Todos los métodos de pago deben estar seleccionados');
+    if (metodosPagoSeleccionados.find(m => !m.idMetodoPago)) {
+      alert('⚠️ Seleccione todos los métodos');
       return false;
     }
     const totalAsignado = metodosPagoSeleccionados.reduce((sum, metodo) => 
@@ -204,7 +192,7 @@ export default function Ingresos() {
     );
     const total = calcularTotal();
     if (Math.abs(totalAsignado - total) > 0.01) {
-      alert(`La suma de los montos asignados debe ser igual al total de la venta`);
+      alert('⚠️ La suma debe ser igual al total');
       return false;
     }
     return true;
@@ -214,13 +202,12 @@ export default function Ingresos() {
     if (pasoActual === 1 && !validarPaso1()) return;
     if (pasoActual === 2 && !validarPaso2()) return;
     
-    // Validar stock antes de pasar al paso 2
     if (pasoActual === 1) {
       for (const item of productosSeleccionados) {
         const stockValido = await validarStock(item.idProducto, item.cantidad);
         if (!stockValido) {
           const producto = productos.find(p => p.idProducto === parseInt(item.idProducto));
-          alert(`Stock insuficiente para: ${producto?.nombre}`);
+          alert(`❌ Stock insuficiente: ${producto?.nombre}`);
           return;
         }
       }
@@ -251,13 +238,11 @@ export default function Ingresos() {
       };
 
       await api.ventas.registrar(ventaData);
-      alert('Venta registrada exitosamente');
+      alert('✅ Venta registrada');
       
-      // Resetear
       setFormData({
         fecha: new Date().toISOString().split('T')[0],
-        observaciones: '',
-        categoriaId: ''
+        observaciones: ''
       });
       setProductosSeleccionados([]);
       setMetodosPagoSeleccionados([]);
@@ -265,17 +250,16 @@ export default function Ingresos() {
       
       await cargarDatos();
     } catch (error) {
-      console.error('Error al registrar venta:', error);
-      alert('Error al registrar la venta');
+      console.error('Error:', error);
+      alert('❌ Error al registrar');
     }
   };
 
   const handleCancelar = () => {
-    if (window.confirm('¿Desea cancelar la venta? Se perderán todos los datos')) {
+    if (window.confirm('¿Cancelar? Se perderán los datos')) {
       setFormData({
         fecha: new Date().toISOString().split('T')[0],
-        observaciones: '',
-        categoriaId: ''
+        observaciones: ''
       });
       setProductosSeleccionados([]);
       setMetodosPagoSeleccionados([]);
@@ -304,18 +288,12 @@ export default function Ingresos() {
     }
   };
 
-  const pasos = [
-    { numero: 1, titulo: 'Productos', icono: <ShoppingCart /> },
-    { numero: 2, titulo: 'Métodos de Pago', icono: <Payment /> },
-    { numero: 3, titulo: 'Confirmar', icono: <CheckCircle /> }
-  ];
-
   if (loading && ventas.length === 0) {
     return (
-      <div className="stack" style={{ padding: '1rem' }}>
-        <Card title="Cargando Ventas">
-          <div className="loading">
-            <p>Cargando datos de ventas...</p>
+      <div className="stack" style={{ padding: '0.75rem' }}>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+            Cargando...
           </div>
         </Card>
       </div>
@@ -323,78 +301,88 @@ export default function Ingresos() {
   }
 
   return (
-    <div className="stack" style={{ padding: '1rem', gap: '1rem' }}>
-      <Card 
-        title="Registrar Nueva Venta" 
-        subtitle="Complete los pasos para registrar una venta"
-        accent="accent"
-      >
-        {/* INDICADOR DE PASOS */}
+    <div className="stack" style={{ padding: '0.75rem', gap: '0.75rem' }}>
+      <Card>
+        {/* INDICADOR DE PASOS SIMPLE */}
         <div style={{
           display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '2rem',
-          position: 'relative'
+          gap: '0.5rem',
+          marginBottom: '1.5rem',
+          borderBottom: '2px solid var(--border)',
+          paddingBottom: '0'
         }}>
-          {/* Línea de progreso */}
-          <div style={{
-            position: 'absolute',
-            top: '20px',
-            left: '10%',
-            right: '10%',
-            height: '3px',
-            background: 'var(--border)',
-            zIndex: 0
-          }}>
-            <div style={{
-              height: '100%',
-              background: 'linear-gradient(90deg, var(--brand), var(--brand-2))',
-              width: `${((pasoActual - 1) / 2) * 100}%`,
-              transition: 'width 0.3s ease'
-            }} />
-          </div>
-
-          {pasos.map((paso) => (
-            <div key={paso.numero} style={{
+          <button
+            onClick={() => pasoActual > 1 && setPasoActual(1)}
+            disabled={pasoActual === 1}
+            style={{
               flex: 1,
+              padding: '0.75rem',
+              background: pasoActual === 1 ? 'var(--brand)' : 'transparent',
+              color: pasoActual === 1 ? 'white' : 'var(--text)',
+              border: 'none',
+              cursor: pasoActual === 1 ? 'default' : 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              borderRadius: '8px 8px 0 0',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              position: 'relative',
-              zIndex: 1
-            }}>
-              <div style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '50%',
-                background: pasoActual >= paso.numero 
-                  ? 'linear-gradient(135deg, var(--brand), var(--brand-2))' 
-                  : 'var(--panel)',
-                border: `3px solid ${pasoActual >= paso.numero ? 'var(--brand)' : 'var(--border)'}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: pasoActual >= paso.numero ? 'white' : 'var(--muted)',
-                fontWeight: '600',
-                transition: 'all 0.3s ease',
-                marginBottom: '0.5rem'
-              }}>
-                {React.cloneElement(paso.icono, { sx: { fontSize: 20 } })}
-              </div>
-              <span style={{
-                fontSize: '0.85rem',
-                fontWeight: pasoActual === paso.numero ? '600' : '400',
-                color: pasoActual >= paso.numero ? 'var(--brand)' : 'var(--muted)',
-                textAlign: 'center'
-              }}>
-                {paso.titulo}
-              </span>
-            </div>
-          ))}
+              justifyContent: 'center',
+              gap: '0.5rem',
+              opacity: pasoActual < 1 ? 0.5 : 1
+            }}
+          >
+            <ShoppingCart sx={{ fontSize: 18 }} />
+            Productos
+          </button>
+          <button
+            onClick={() => pasoActual > 2 && setPasoActual(2)}
+            disabled={pasoActual <= 1}
+            style={{
+              flex: 1,
+              padding: '0.75rem',
+              background: pasoActual === 2 ? 'var(--brand)' : 'transparent',
+              color: pasoActual === 2 ? 'white' : 'var(--text)',
+              border: 'none',
+              cursor: pasoActual === 2 ? 'default' : pasoActual > 2 ? 'pointer' : 'not-allowed',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              borderRadius: '8px 8px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              opacity: pasoActual < 2 ? 0.5 : 1
+            }}
+          >
+            <Payment sx={{ fontSize: 18 }} />
+            Pago
+          </button>
+          <button
+            disabled
+            style={{
+              flex: 1,
+              padding: '0.75rem',
+              background: pasoActual === 3 ? 'var(--brand)' : 'transparent',
+              color: pasoActual === 3 ? 'white' : 'var(--text)',
+              border: 'none',
+              cursor: 'default',
+              fontSize: '0.9rem',
+              fontWeight: '600',
+              borderRadius: '8px 8px 0 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              opacity: pasoActual < 3 ? 0.5 : 1
+            }}
+          >
+            <CheckCircle sx={{ fontSize: 18 }} />
+            Confirmar
+          </button>
         </div>
 
-        {/* CONTENIDO DEL PASO */}
-        <div style={{ minHeight: '400px' }}>
+        {/* CONTENIDO */}
+        <div style={{ minHeight: '250px' }}>
           {pasoActual === 1 && (
             <ProductosVenta
               productos={productos}
@@ -423,19 +411,9 @@ export default function Ingresos() {
           )}
 
           {pasoActual === 3 && (
-            <div style={{ padding: '1rem' }}>
-              <h3 style={{ marginTop: 0 }}>Resumen de la Venta</h3>
-              
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.9rem',
-                  fontWeight: '600'
-                }}>
-                  <CalendarToday sx={{ fontSize: 18 }} />
+            <div style={{ padding: '0.5rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.85rem' }}>
                   Fecha
                 </label>
                 <input 
@@ -444,54 +422,50 @@ export default function Ingresos() {
                   onChange={(e) => setFormData(prev => ({ ...prev, fecha: e.target.value }))}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.5rem',
                     border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem'
+                    borderRadius: '6px',
+                    fontSize: '0.9rem'
                   }}
                 />
               </div>
 
-              <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.9rem',
-                  fontWeight: '600'
-                }}>
-                  <Description sx={{ fontSize: 18 }} />
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.85rem' }}>
                   Observaciones
                 </label>
                 <textarea 
                   value={formData.observaciones}
                   onChange={(e) => setFormData(prev => ({ ...prev, observaciones: e.target.value }))}
-                  placeholder="Notas adicionales..."
-                  rows={3}
+                  placeholder="Notas opcionales..."
+                  rows={2}
                   style={{
                     width: '100%',
-                    padding: '0.6rem',
+                    padding: '0.5rem',
                     border: '2px solid var(--border)',
-                    borderRadius: '8px',
+                    borderRadius: '6px',
                     fontSize: '0.9rem',
-                    resize: 'vertical'
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
                   }}
                 />
               </div>
 
               <div style={{
-                background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
+                background: 'var(--panel-2)',
                 border: '2px solid var(--border)',
-                borderRadius: '12px',
-                padding: '1.5rem'
+                borderRadius: '8px',
+                padding: '1rem'
               }}>
-                <h4 style={{ marginTop: 0 }}>Productos ({productosSeleccionados.length})</h4>
+                <div style={{ fontWeight: '600', marginBottom: '0.75rem', fontSize: '0.9rem' }}>
+                  Productos ({productosSeleccionados.length})
+                </div>
                 {productosSeleccionados.map((item, i) => (
                   <div key={i} style={{
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: '0.5rem 0',
+                    fontSize: '0.85rem',
                     borderBottom: i < productosSeleccionados.length - 1 ? '1px solid var(--border)' : 'none'
                   }}>
                     <span>{item.producto?.nombre} x{item.cantidad}</span>
@@ -502,12 +476,12 @@ export default function Ingresos() {
                 ))}
                 
                 <div style={{
-                  marginTop: '1rem',
-                  paddingTop: '1rem',
+                  marginTop: '0.75rem',
+                  paddingTop: '0.75rem',
                   borderTop: '2px solid var(--brand)',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  fontSize: '1.2rem',
+                  fontSize: '1.1rem',
                   fontWeight: '600',
                   color: 'var(--brand)'
                 }}>
@@ -519,18 +493,18 @@ export default function Ingresos() {
           )}
         </div>
 
-        {/* BOTONES DE NAVEGACIÓN */}
+        {/* BOTONES */}
         <div style={{
           display: 'flex',
           justifyContent: 'space-between',
-          marginTop: '2rem',
+          marginTop: '1rem',
           paddingTop: '1rem',
           borderTop: '2px solid var(--border)'
         }}>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             {pasoActual > 1 && (
               <Button variant="ghost" onClick={pasoAnterior}>
-                <ArrowBack sx={{ fontSize: 20 }} />
+                <ArrowBack sx={{ fontSize: 16 }} />
                 Anterior
               </Button>
             )}
@@ -543,12 +517,12 @@ export default function Ingresos() {
             {pasoActual < 3 ? (
               <Button onClick={siguientePaso}>
                 Siguiente
-                <ArrowForward sx={{ fontSize: 20 }} />
+                <ArrowForward sx={{ fontSize: 16 }} />
               </Button>
             ) : (
               <Button onClick={handleGuardar}>
-                <CheckCircle sx={{ fontSize: 20 }} />
-                Registrar Venta
+                <CheckCircle sx={{ fontSize: 16 }} />
+                Guardar
               </Button>
             )}
           </div>

@@ -8,9 +8,7 @@ import {
   AccountBalance, 
   ShoppingCart,
   AttachMoney,
-  Inventory,
   Warning,
-  Receipt,
   ArrowUpward,
   ArrowDownward,
   SwapVert
@@ -18,48 +16,15 @@ import {
 
 export default function Dashboard() {
   const [resumen, setResumen] = useState([
-    { 
-      label: 'Ingresos (mes)', 
-      value: '$ 0',
-      icon: <TrendingUp />,
-      color: '#4CAF50',
-      trend: 'up'
-    },
-    { 
-      label: 'Egresos (mes)', 
-      value: '$ 0',
-      icon: <TrendingDown />,
-      color: '#F44336',
-      trend: 'down'
-    },
-    { 
-      label: 'Saldo estimado', 
-      value: '$ 0',
-      icon: <AccountBalance />,
-      color: '#5D4037',
-      trend: 'neutral'
-    }
+    { label: 'Ingresos', value: '$ 0', color: '#4CAF50' },
+    { label: 'Egresos', value: '$ 0', color: '#F44336' },
+    { label: 'Saldo', value: '$ 0', color: '#5D4037' }
   ]);
   
   const [metricas, setMetricas] = useState([
-    {
-      label: 'Ventas del Día',
-      value: '0',
-      icon: <ShoppingCart />,
-      color: '#2196F3'
-    },
-    {
-      label: 'Productos Vendidos',
-      value: '0',
-      icon: <AttachMoney />,
-      color: '#FF9800'
-    },
-    {
-      label: 'Productos Bajo Stock',
-      value: '0',
-      icon: <Warning />,
-      color: '#F44336'
-    }
+    { label: 'Ventas del Día', value: '0' },
+    { label: 'Productos Vendidos', value: '0' },
+    { label: 'Bajo Stock', value: '0' }
   ]);
 
   const [recientes, setRecientes] = useState([]);
@@ -104,15 +69,12 @@ export default function Dashboard() {
       setLoading(true);
       const now = new Date();
       
-      // Fechas del mes
       const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1);
       const finMes = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
       
-      // CORREGIDO: Fechas del día en formato local (sin convertir a UTC)
       const inicioDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
       const finDia = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
 
-      // Crear fechas en formato ISO pero ajustadas a la zona horaria local
       const formatearFechaLocal = (fecha) => {
         const year = fecha.getFullYear();
         const month = String(fecha.getMonth() + 1).padStart(2, '0');
@@ -126,79 +88,20 @@ export default function Dashboard() {
       const inicioDiaStr = formatearFechaLocal(inicioDia);
       const finDiaStr = formatearFechaLocal(finDia);
 
-      console.log('🔍 DEBUG - Rango de búsqueda del día:', {
-        inicio: inicioDiaStr,
-        fin: finDiaStr,
-        fechaActual: now
-      });
-
       const [
-        totalVentasMes, 
-        totalComprasMes, 
-        totalGastosMes, 
         ventasDelDia,
         todasLasVentas,
         todasLasCompras,
         todosLosGastos,
         productosBajoStock
       ] = await Promise.all([
-        // Totales del mes
-        api.ventas.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
-          .catch(err => {
-            console.error('Error en totalVentasMes:', err);
-            return 0;
-          }),
-        api.compras.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
-          .catch(err => {
-            console.error('Error en totalComprasMes:', err);
-            return 0;
-          }),
-        api.gastos.getTotalPorPeriodo(inicioMes.toISOString(), finMes.toISOString())
-          .catch(err => {
-            console.error('Error en totalGastosMes:', err);
-            return 0;
-          }),
-        
-        // CORREGIDO: Ventas del día con fechas locales
-        api.ventas.getPorPeriodo(inicioDiaStr, finDiaStr)
-          .catch(err => {
-            console.error('❌ Error al obtener ventas del día:', err);
-            return [];
-          }),
-        
-        // Todas las ventas para movimientos recientes
-        api.ventas.getAll()
-          .catch(err => {
-            console.error('Error en todas las ventas:', err);
-            return [];
-          }),
-        
-        // Todas las compras para movimientos recientes
-        api.compras.getAll()
-          .catch(err => {
-            console.error('Error en todas las compras:', err);
-            return [];
-          }),
-
-        // Todos los gastos para movimientos recientes
-        api.gastos.getAll()
-          .catch(err => {
-            console.error('Error en todos los gastos:', err);
-            return [];
-          }),
-
-        // Productos bajo stock
-        api.inventario.getBajoStock(10)
-          .catch(err => {
-            console.error('Error en productos bajo stock:', err);
-            return [];
-          })
+        api.ventas.getPorPeriodo(inicioDiaStr, finDiaStr).catch(() => []),
+        api.ventas.getAll().catch(() => []),
+        api.compras.getAll().catch(() => []),
+        api.gastos.getAll().catch(() => []),
+        api.inventario.getBajoStock(10).catch(() => [])
       ]);
 
-      console.log('📊 Ventas del día obtenidas:', ventasDelDia);
-      console.log('📊 Total de ventas del día:', ventasDelDia?.length || 0);
-
-      // Calcular ingresos netos desde todas las ventas del mes
       const ventasMesArray = Array.isArray(todasLasVentas) ? todasLasVentas : [];
       const ingresos = ventasMesArray
         .filter(v => {
@@ -207,7 +110,6 @@ export default function Dashboard() {
         })
         .reduce((sum, v) => sum + (parseFloat(v?.montoNeto) || 0), 0);
 
-      // Calcular egresos netos desde todas las compras del mes
       const comprasMesArray = Array.isArray(todasLasCompras) ? todasLasCompras : [];
       const comprasNeto = comprasMesArray
         .filter(c => {
@@ -216,39 +118,37 @@ export default function Dashboard() {
         })
         .reduce((sum, c) => sum + (parseFloat(c?.montoNeto) || 0), 0);
 
-      const egresos = comprasNeto + (parseFloat(totalGastosMes) || 0);
+      const gastosMes = (Array.isArray(todosLosGastos) ? todosLosGastos : [])
+        .filter(g => {
+          const fechaGasto = obtenerFechaDesdeDato(g.fecha);
+          return fechaGasto >= inicioMes && fechaGasto <= finMes;
+        })
+        .reduce((sum, g) => sum + (parseFloat(g?.monto) || 0), 0);
 
+      const egresos = comprasNeto + gastosMes;
       const saldo = ingresos - egresos;
 
       setResumen([
         { 
-          label: 'Ingresos Netos (mes)', 
-          value: `$ ${ingresos.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-          icon: <TrendingUp />,
-          color: '#4CAF50',
-          trend: 'up'
+          label: 'Ingresos', 
+          value: `$ ${Math.round(ingresos).toLocaleString('es-CL')}`,
+          color: '#4CAF50'
         },
         { 
-          label: 'Egresos Netos (mes)', 
-          value: `$ ${egresos.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-          icon: <TrendingDown />,
-          color: '#F44336',
-          trend: 'down'
+          label: 'Egresos', 
+          value: `$ ${Math.round(egresos).toLocaleString('es-CL')}`,
+          color: '#F44336'
         },
         { 
-          label: 'Saldo estimado', 
-          value: `$ ${saldo.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
-          icon: <AccountBalance />,
-          color: saldo >= 0 ? '#4CAF50' : '#F44336',
-          trend: saldo >= 0 ? 'up' : 'down'
+          label: 'Saldo', 
+          value: `$ ${Math.round(saldo).toLocaleString('es-CL')}`,
+          color: saldo >= 0 ? '#4CAF50' : '#F44336'
         }
       ]);
 
-      // CÁLCULO DE MÉTRICAS DEL DÍA - CORREGIDO
       const ventasDelDiaArray = Array.isArray(ventasDelDia) ? ventasDelDia : [];
       const cantidadVentasDia = ventasDelDiaArray.length;
       
-      // Calcular productos vendidos correctamente con validación
       const productosVendidosDia = ventasDelDiaArray.reduce((total, venta) => {
         if (venta && venta.detalles && Array.isArray(venta.detalles)) {
           return total + venta.detalles.reduce((sum, detalle) => {
@@ -258,62 +158,25 @@ export default function Dashboard() {
         return total;
       }, 0);
 
-      console.log('✅ Métricas calculadas:', {
-        cantidadVentas: cantidadVentasDia,
-        productosVendidos: productosVendidosDia
-      });
-
       const productosBajoStockCount = Array.isArray(productosBajoStock) ? productosBajoStock.length : 0;
 
       setMetricas([
-        {
-          label: 'Ventas del Día',
-          value: cantidadVentasDia.toString(),
-          icon: <ShoppingCart />,
-          color: '#2196F3'
-        },
-        {
-          label: 'Productos Vendidos',
-          value: productosVendidosDia.toString(),
-          icon: <AttachMoney />,
-          color: '#FF9800'
-        },
-        {
-          label: 'Productos Bajo Stock',
-          value: productosBajoStockCount.toString(),
-          icon: <Warning />,
-          color: productosBajoStockCount > 0 ? '#F44336' : '#4CAF50'
-        }
+        { label: 'Ventas del Día', value: cantidadVentasDia.toString() },
+        { label: 'Productos Vendidos', value: productosVendidosDia.toString() },
+        { label: 'Bajo Stock', value: productosBajoStockCount.toString() }
       ]);
 
-      // PRODUCTOS BAJO STOCK - CORREGIDO
       const productosBajoStockArray = Array.isArray(productosBajoStock) ? productosBajoStock : [];
       setBajoStock(productosBajoStockArray.slice(0, 5).map(producto => [
         producto?.producto?.nombre || 'Producto',
-        <span style={{ 
-          color: (producto?.cantidadProducto || 0) < 5 ? '#F44336' : '#FF9800',
-          fontWeight: '600'
-        }}>
-          {producto?.cantidadProducto || 0} unidades
-        </span>,
-        <span style={{ 
-          background: (producto?.cantidadProducto || 0) < 5 ? '#FFEBEE' : '#FFF3E0',
-          color: (producto?.cantidadProducto || 0) < 5 ? '#C62828' : '#EF6C00',
-          padding: '0.25rem 0.75rem',
-          borderRadius: '20px',
-          fontSize: '0.85rem',
-          fontWeight: '500'
-        }}>
-          {(producto?.cantidadProducto || 0) < 5 ? 'Crítico' : 'Bajo'}
-        </span>
+        producto?.cantidadProducto || 0,
+        (producto?.cantidadProducto || 0) < 5 ? 'Crítico' : 'Bajo'
       ]));
 
-      // MOVIMIENTOS RECIENTES
       const movimientosRecientes = [];
       const todasLasVentasArray = Array.isArray(todasLasVentas) ? todasLasVentas : [];
       const todasLasComprasArray = Array.isArray(todasLasCompras) ? todasLasCompras : [];
 
-      // Procesar ventas recientes (últimas 2 semanas)
       const ventasRecientes = todasLasVentasArray.filter(venta => {
         const fechaVenta = obtenerFechaDesdeDato(venta?.fecha);
         const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -323,7 +186,7 @@ export default function Dashboard() {
       ventasRecientes.reverse().forEach(venta => {
         const primerProducto = venta?.detalles && Array.isArray(venta.detalles) && venta.detalles.length > 0
           ? (venta.detalles[0]?.producto?.nombre || 'Producto')
-          : 'Venta sin productos';
+          : 'Venta';
         
         const fechaFormateada = formatearFecha(venta?.fecha);
         const monto = venta?.montoNeto || venta?.montoTotal || 0;
@@ -332,12 +195,11 @@ export default function Dashboard() {
           fecha: fechaFormateada,
           descripcion: primerProducto,
           monto: monto,
-          tipo: 'venta',
+          tipo: 'Venta',
           fechaOriginal: obtenerFechaDesdeDato(venta?.fecha)
         });
       });
 
-      // Procesar compras recientes
       const comprasRecientes = todasLasComprasArray.filter(compra => {
         const fechaCompra = obtenerFechaDesdeDato(compra?.fecha);
         const dosSemanasAtras = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -347,7 +209,7 @@ export default function Dashboard() {
       comprasRecientes.reverse().forEach(compra => {
         const primerProducto = compra?.detalles && Array.isArray(compra.detalles) && compra.detalles.length > 0
           ? (compra.detalles[0]?.descripcion || 'Insumo')
-          : 'Compra sin detalles';
+          : 'Compra';
         
         const fechaFormateada = formatearFecha(compra?.fecha);
         const monto = compra?.montoNeto || 0;
@@ -356,12 +218,11 @@ export default function Dashboard() {
           fecha: fechaFormateada,
           descripcion: primerProducto,
           monto: monto,
-          tipo: 'compra',
+          tipo: 'Compra',
           fechaOriginal: obtenerFechaDesdeDato(compra?.fecha)
         });
       });
 
-      // GASTOS - Agregar a movimientos recientes
       const todosLosGastosArray = Array.isArray(todosLosGastos) ? todosLosGastos : [];
       todosLosGastosArray.forEach(gasto => {
         if (gasto) {
@@ -370,59 +231,38 @@ export default function Dashboard() {
           
           movimientosRecientes.push({
             fecha: fechaFormateada,
-            descripcion: gasto?.descripcion || 'Gasto general',
+            descripcion: gasto?.descripcion || 'Gasto',
             monto: monto,
-            tipo: 'gasto',
+            tipo: 'Gasto',
             fechaOriginal: obtenerFechaDesdeDato(gasto?.fecha)
           });
         }
       });
 
-      // Ordenar por fecha y tomar los 10 más recientes
       const movimientosOrdenados = movimientosRecientes
         .sort((a, b) => b.fechaOriginal - a.fechaOriginal)
         .slice(0, 10)
         .map(mov => {
-          const tipoTag = (
-            <span
-              className="tipo-tag"
-              style={{ 
-                background: mov.tipo === 'venta' ? '#E8F5E8' : mov.tipo === 'compra' ? '#E3F2FD' : '#FFF3E0', 
-                color: mov.tipo === 'venta' ? '#2E7D32' : mov.tipo === 'compra' ? '#1565C0' : '#F57C00',
-                padding: '0.25rem 0.75rem', 
-                borderRadius: '20px', 
-                fontSize: '0.85rem',
-                fontWeight: '500',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
-            >
-              {mov.tipo === 'venta' ? '🛒 Venta' : mov.tipo === 'compra' ? '📦 Compra' : '💰 Gasto'}
-            </span>
-          );
-
           return {
             fechaLabel: mov.fecha,
             fechaOriginal: mov.fechaOriginal,
             descripcion: mov.descripcion,
             monto: mov.monto,
-            montoLabel: `$ ${mov.monto.toLocaleString('es-CL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`,
+            montoLabel: `$ ${Math.round(mov.monto).toLocaleString('es-CL')}`,
             tipo: mov.tipo,
-            tipoTag
+            tipoTag: mov.tipo
           };
         });
 
       setRecientes(movimientosOrdenados);
 
     } catch (error) {
-      console.error('❌ Error al cargar dashboard:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  // FUNCIÓN AUXILIAR PARA OBTENER FECHA DESDE DIFERENTES FORMATOS
   const obtenerFechaDesdeDato = (fechaData) => {
     try {
       if (!fechaData) return new Date();
@@ -445,7 +285,6 @@ export default function Dashboard() {
 
       return fecha;
     } catch (e) {
-      console.error('Error al obtener fecha:', e);
       return new Date();
     }
   };
@@ -468,7 +307,6 @@ export default function Dashboard() {
         });
       }
     } catch (e) {
-      console.error('Error al formatear fecha:', e);
       return 'Fecha inválida';
     }
   };
@@ -488,8 +326,7 @@ export default function Dashboard() {
     });
   };
 
-  const SortHeaderButton = ({ label, columnKey, sortable = true }) => {
-    if (!sortable) return label;
+  const SortHeaderButton = ({ label, columnKey }) => {
     const isActive = movimientosSort.key === columnKey;
     const IconComponent = !isActive ? SwapVert : movimientosSort.direction === 'asc' ? ArrowUpward : ArrowDownward;
 
@@ -500,7 +337,7 @@ export default function Dashboard() {
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '0.35rem',
+          gap: '0.25rem',
           background: 'transparent',
           border: 'none',
           color: 'inherit',
@@ -510,17 +347,17 @@ export default function Dashboard() {
         }}
       >
         <span>{label}</span>
-        <IconComponent sx={{ fontSize: '1rem' }} />
+        <IconComponent sx={{ fontSize: '0.9rem' }} />
       </button>
     );
   };
 
   if (loading) {
     return (
-      <div className="stack" style={{ padding: '1rem' }}>
-        <Card className="dashboard-card" title="Cargando Dashboard" accent="accent">
-          <div className="loading">
-            <p>Obteniendo datos de la marroquinería...</p>
+      <div className="stack" style={{ padding: '0.75rem' }}>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+            Cargando...
           </div>
         </Card>
       </div>
@@ -528,150 +365,116 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="stack" style={{ padding: '1rem' }}>
-      {/* RESUMEN FINANCIERO */}
-      <Card 
-        className="dashboard-card dashboard-summary"
-        title="Resumen Financiero" 
-        subtitle="Vista general del desempeño mensual" 
-        accent="accent"
-      >
-        <div className="stats">
+    <div className="stack" style={{ padding: '0.75rem', gap: '0.75rem' }}>
+      {/* RESUMEN */}
+      <Card>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gap: '1rem',
+          marginBottom: '1rem'
+        }}>
           {resumen.map((r) => (
-            <div key={r.label} className="stat">
-              {/* Contenedor del ícono y tendencia (sin cambios) */}
+            <div key={r.label} style={{
+              textAlign: 'center',
+              padding: '1rem',
+              background: 'var(--panel-2)',
+              borderRadius: '8px',
+              border: '2px solid var(--border)'
+            }}>
               <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                justifyContent: 'space-between'
+                fontSize: '0.85rem', 
+                color: 'var(--muted)', 
+                marginBottom: '0.5rem',
+                fontWeight: '600'
               }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '50%',
-                  backgroundColor: `${r.color}20`,
-                  color: r.color
-                }}>
-                  {React.cloneElement(r.icon, { sx: { fontSize: 24 } })}
-                </div>
-                <span style={{
-                  fontSize: '0.85rem',
-                  fontWeight: '600',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '20px',
-                  background: r.trend === 'up' ? '#E8F5E8' : r.trend === 'down' ? '#FFEBEE' : '#F3E5F5',
-                  color: r.trend === 'up' ? '#2E7D32' : r.trend === 'down' ? '#C62828' : '#7B1FA2'
-                }}>
-                  {r.trend === 'up' ? '↗' : r.trend === 'down' ? '↘' : '→'}
-                </span>
+                {r.label}
               </div>
-              {/* NUEVO: Contenedor para el texto */}
-              <div>
-                <span className="stat-label">{r.label}</span>
-                <span className="stat-value">{r.value}</span>
+              <div style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '600',
+                color: r.color
+              }}>
+                {r.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(3, 1fr)', 
+          gap: '1rem'
+        }}>
+          {metricas.map((m) => (
+            <div key={m.label} style={{
+              textAlign: 'center',
+              padding: '0.75rem',
+              background: 'var(--panel)',
+              borderRadius: '8px',
+              border: '1px solid var(--border)'
+            }}>
+              <div style={{ 
+                fontSize: '0.8rem', 
+                color: 'var(--muted)', 
+                marginBottom: '0.35rem'
+              }}>
+                {m.label}
+              </div>
+              <div style={{ 
+                fontSize: '1.2rem', 
+                fontWeight: '600'
+              }}>
+                {m.value}
               </div>
             </div>
           ))}
         </div>
       </Card>
 
-      <div className="dashboard-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1rem' }}>
-        {/* MÉTRICAS DEL DÍA */}
-        <div className="dashboard-grid-item dashboard-grid-item--wide" style={{ gridColumn: 'span 8' }}>
-          <Card className="dashboard-card dashboard-metrics" title="Métricas del Día" subtitle="Actividad comercial del día de hoy">
-            <div className="stats">
-              {metricas.map((metrica) => (
-                <div key={metrica.label} className="stat">
-                  {/* Contenedor del ícono (sin cambios) */}
-                  <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'space-between'
-                  }}>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      backgroundColor: `${metrica.color}20`,
-                      color: metrica.color
-                    }}>
-                      {React.cloneElement(metrica.icon, { sx: { fontSize: 20 } })}
-                    </div>
-                    <span style={{
-                      width: '40px',
-                      height: '24px'
-                    }}></span>
-                  </div>
-                  {/* NUEVO: Contenedor para el texto */}
-                  <div>
-                    <span className="stat-label">{metrica.label}</span>
-                    <span className="stat-value" style={{ fontSize: '1.8rem' }}>{metrica.value}</span>
-                  </div>
-                </div>
-              ))}
+      {/* ALERTAS Y MOVIMIENTOS */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
+        {/* BAJO STOCK */}
+        <Card title="Bajo Stock">
+          {bajoStock.length > 0 ? (
+            <Table 
+              columns={["Producto", "Stock", "Estado"]} 
+              rows={bajoStock}
+            />
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '2rem',
+              color: 'var(--muted)'
+            }}>
+              Stock OK
             </div>
-          </Card>
-        </div>
+          )}
+        </Card>
 
-        {/* ALERTAS DE INVENTARIO */}
-        <div className="dashboard-grid-item dashboard-grid-item--narrow" style={{ gridColumn: 'span 4' }}>
-          <Card 
-            className="dashboard-card dashboard-alerts"
-            title="Alertas de Stock" 
-            subtitle={bajoStock.length > 0 ? "Productos con stock bajo" : "Stock en niveles normales"}
-            accent={bajoStock.length > 0 ? "accent" : ""}
-          >
-            {bajoStock.length > 0 ? (
-              <Table 
-                columns={["Producto", "Stock", "Estado"]} 
-                rows={bajoStock}
-                className="dashboard-table"
-              />
-            ) : (
-              <div style={{ 
-                textAlign: 'center', 
-                padding: '2rem',
-                color: 'var(--muted)'
-              }}>
-                <Inventory sx={{ fontSize: 36, marginBottom: '0.5rem', opacity: 0.5 }} />
-                <p style={{ margin: 0 }}>Todo el stock en niveles normales</p>
-              </div>
-            )}
-          </Card>
-        </div>
+        {/* MOVIMIENTOS */}
+        <Card title="Movimientos Recientes">
+          {recientes.length > 0 ? (
+            <Table 
+              columns={[
+                <SortHeaderButton key="fecha" label="Fecha" columnKey="fecha" />, 
+                "Descripción",
+                <SortHeaderButton key="monto" label="Monto" columnKey="monto" />, 
+                <SortHeaderButton key="tipo" label="Tipo" columnKey="tipo" />
+              ]} 
+              rows={movimientosRows}
+            />
+          ) : (
+            <div style={{ 
+              textAlign: 'center', 
+              padding: '2rem',
+              color: 'var(--muted)'
+            }}>
+              Sin movimientos
+            </div>
+          )}
+        </Card>
       </div>
-
-      {/* MOVIMIENTOS RECIENTES */}
-      <Card className="dashboard-card dashboard-recent" title="Movimientos Recientes" subtitle="Últimas ventas y compras registradas">
-        {recientes.length > 0 ? (
-          <Table 
-            columns={[
-              <SortHeaderButton key="fecha" label="Fecha" columnKey="fecha" />, 
-              "Descripción",
-              <SortHeaderButton key="monto" label="Monto" columnKey="monto" />, 
-              <SortHeaderButton key="tipo" label="Tipo" columnKey="tipo" />
-            ]} 
-            rows={movimientosRows} 
-            className="dashboard-table dashboard-movimientos"
-          />
-        ) : (
-          <div style={{ 
-            textAlign: 'center', 
-            padding: '3rem',
-            color: 'var(--muted)'
-          }}>
-            <Receipt sx={{ fontSize: 36, marginBottom: '0.5rem', opacity: 0.5 }} />
-            <p style={{ margin: 0 }}>No hay movimientos recientes</p>
-            <small>Las ventas y compras aparecerán aquí</small>
-          </div>
-        )}
-      </Card>
     </div>
   );
 }

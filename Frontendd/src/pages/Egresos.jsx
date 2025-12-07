@@ -8,10 +8,7 @@ import {
   AttachMoney, 
   CalendarToday, 
   Description, 
-  Add, 
-  Delete, 
   Inventory, 
-  LocalShipping, 
   ArrowUpward, 
   ArrowDownward, 
   SwapVert,
@@ -123,30 +120,27 @@ export default function Egresos() {
 
   const [resumen, setResumen] = useState([
     { 
-      label: 'Compras del Mes', 
+      label: 'Compras', 
       value: '$ 0',
       icon: <ShoppingCart />,
       color: '#5D4037',
-      trend: 'down'
     },
     { 
-      label: 'Gastos del Mes', 
+      label: 'Gastos', 
       value: '$ 0',
       icon: <Receipt />,
       color: '#8D6E63',
-      trend: 'down'
     },
     { 
-      label: 'Total Egresos', 
+      label: 'Total', 
       value: '$ 0',
       icon: <TrendingDown />,
       color: '#F44336',
-      trend: 'down'
     },
   ])
 
   const pasos = [
-    { numero: 1, titulo: 'Tipo de Egreso', icono: <Analytics /> },
+    { numero: 1, titulo: 'Tipo', icono: <Analytics /> },
     { numero: 2, titulo: 'Detalles', icono: <Description /> },
     { numero: 3, titulo: 'Confirmar', icono: <CheckCircle /> }
   ];
@@ -184,25 +178,22 @@ export default function Egresos() {
 
       setResumen([
         { 
-          label: 'Compras del Mes', 
+          label: 'Compras', 
           value: `$ ${Math.round(comprasMes).toLocaleString('es-CL')}`,
           icon: <ShoppingCart />,
           color: '#5D4037',
-          trend: 'down'
         },
         { 
-          label: 'Gastos del Mes', 
+          label: 'Gastos', 
           value: `$ ${Math.round(gastosMes).toLocaleString('es-CL')}`,
           icon: <Receipt />,
           color: '#8D6E63',
-          trend: 'down'
         },
         { 
-          label: 'Total Egresos', 
+          label: 'Total', 
           value: `$ ${Math.round(totalEgresos).toLocaleString('es-CL')}`,
           icon: <TrendingDown />,
           color: '#F44336',
-          trend: 'down'
         },
       ])
     } catch (error) {
@@ -233,7 +224,6 @@ export default function Egresos() {
     return Math.round((total - ivaRecuperable) * 100) / 100
   }
 
-  // Validaciones por paso
   const validarPaso1 = () => {
     if (!tipoEgreso) {
       alert('⚠️ Seleccione un tipo de egreso');
@@ -598,7 +588,7 @@ export default function Egresos() {
         onClick={() => handleSortMovimientos(columnKey)}
       >
         <span>{label}</span>
-        <IconComponent sx={{ fontSize: '1rem' }} />
+        <IconComponent sx={{ fontSize: '0.9rem' }} />
       </button>
     )
   }
@@ -608,19 +598,20 @@ export default function Egresos() {
       <div className="egresos-container">
         <div className="egresos-card">
           <div className="egresos-loading">
-            <p>Cargando datos de compras y gastos...</p>
+            <p>Cargando datos...</p>
           </div>
         </div>
       </div>
     )
   }
+
   const getContenidoPaso = () => {
     switch (pasoActual) {
       case 1:
         return (
           <div className="form-field">
             <label className="field-label">
-              <Analytics sx={{ fontSize: 24 }} />
+              <Analytics sx={{ fontSize: 18 }} />
               Tipo de Egreso
             </label>
             <select 
@@ -633,28 +624,29 @@ export default function Egresos() {
             </select>
             
             <div style={{
-              marginTop: '1.5rem',
-              padding: '1.5rem',
+              marginTop: '1rem',
+              padding: '1rem',
               background: tipoEgreso === 'compra' ? '#E8F5E8' : tipoEgreso === 'material' ? '#E3F2FD' : '#FFF3E0',
               border: `2px solid ${tipoEgreso === 'compra' ? '#4CAF50' : tipoEgreso === 'material' ? '#2196F3' : '#FF9800'}`,
-              borderRadius: '12px'
+              borderRadius: '8px'
             }}>
               <h4 style={{ 
-                margin: '0 0 0.5rem 0',
+                margin: '0 0 0.25rem 0',
+                fontSize: '0.95rem',
                 color: tipoEgreso === 'compra' ? '#2E7D32' : tipoEgreso === 'material' ? '#1565C0' : '#EF6C00'
               }}>
                 {tipoEgreso === 'compra' ? '🛒 Compra General' : tipoEgreso === 'material' ? '📦 Compra de Materiales' : '💸 Gasto Operativo'}
               </h4>
               <p style={{ 
                 margin: 0, 
-                fontSize: '0.9rem',
+                fontSize: '0.85rem',
                 color: tipoEgreso === 'compra' ? '#388E3C' : tipoEgreso === 'material' ? '#1976D2' : '#F57C00'
               }}>
                 {tipoEgreso === 'compra' 
-                  ? 'Registro de compras de insumos, materiales y productos para el negocio'
+                  ? 'Registro de compras de insumos y materiales'
                   : tipoEgreso === 'material'
-                  ? 'Registro de compra de materiales para inventario con control de stock'
-                  : 'Registro de gastos operativos como arriendo, servicios, publicidad, etc.'
+                  ? 'Registro de materiales para inventario'
+                  : 'Registro de gastos operativos'
                 }
               </p>
             </div>
@@ -667,12 +659,12 @@ export default function Egresos() {
             <div className="form-grid">
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Description sx={{ fontSize: 20 }} />
-                  Descripción del Producto
+                  <Description sx={{ fontSize: 16 }} />
+                  Descripción
                 </label>
                 <input 
                   type="text" 
-                  placeholder='Ej: Cuero, hilos, hebillas, remaches...' 
+                  placeholder='Ej: Cuero, hilos, hebillas...' 
                   value={formCompra.descripcion}
                   onChange={(e) => setFormCompra({ ...formCompra, descripcion: e.target.value })}
                 />
@@ -680,7 +672,7 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <AttachMoney sx={{ fontSize: 20 }} />
+                  <AttachMoney sx={{ fontSize: 16 }} />
                   Precio Unitario
                 </label>
                 <input 
@@ -709,7 +701,7 @@ export default function Egresos() {
               </div>
 
               <div className="form-field col-6">
-                <label className="field-label">Total Compra</label>
+                <label className="field-label">Total</label>
                 <input 
                   type="text" 
                   value={`$ ${Math.round(calcularTotalCompra()).toLocaleString('es-CL')}`}
@@ -717,42 +709,30 @@ export default function Egresos() {
                   style={{ 
                     fontWeight: '600',
                     color: '#5D4037',
-                    background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
-                    fontSize: '1.1rem'
+                    background: '#F5F3F0'
                   }}
                 />
               </div>
 
               <div className="form-field col-12">
-                <label className="field-label">
-                  <Receipt sx={{ fontSize: 24 }} />
-                  Resumen Financiero
-                </label>
-                
                 <div className="resumen-financiero">
                   <div className="resumen-item resumen-iva">
-                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                      IVA Recuperable
-                    </div>
-                    <div style={{ fontSize: '1.1rem' }}>
+                    <div style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>IVA Recuperable</div>
+                    <div style={{ fontSize: '0.95rem' }}>
                       $ {Math.round(calcularIVARecuperable(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
                     </div>
                   </div>
                   
                   <div className="resumen-item resumen-costo">
-                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                      Costo Real
-                    </div>
-                    <div style={{ fontSize: '1.1rem' }}>
+                    <div style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Costo Real</div>
+                    <div style={{ fontSize: '0.95rem' }}>
                       $ {Math.round(calcularCostoReal(calcularTotalCompra(), formCompra.tipoDocumento)).toLocaleString('es-CL')}
                     </div>
                   </div>
                   
                   <div className="resumen-item resumen-total">
-                    <div style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>
-                      Total Bruto
-                    </div>
-                    <div style={{ fontSize: '1.1rem' }}>
+                    <div style={{ fontSize: '0.75rem', marginBottom: '0.25rem' }}>Total Bruto</div>
+                    <div style={{ fontSize: '0.95rem' }}>
                       $ {Math.round(calcularTotalCompra()).toLocaleString('es-CL')}
                     </div>
                   </div>
@@ -761,7 +741,7 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <CalendarToday sx={{ fontSize: 20 }} />
+                  <CalendarToday sx={{ fontSize: 16 }} />
                   Fecha
                 </label>
                 <input 
@@ -773,17 +753,17 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Payment sx={{ fontSize: 20 }} />
+                  <Payment sx={{ fontSize: 16 }} />
                   Método de Pago
                 </label>
                 <select 
                   value={formCompra.idMetodoPago}
                   onChange={(e) => setFormCompra({ ...formCompra, idMetodoPago: e.target.value })}
                 >
-                  <option value="">Seleccionar método...</option>
+                  <option value="">Seleccionar...</option>
                   {metodosPago.map(m => (
                     <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                      {m.nombre}
                     </option>
                   ))}
                 </select>
@@ -795,20 +775,20 @@ export default function Egresos() {
                   value={formCompra.tipoDocumento}
                   onChange={(e) => setFormCompra({ ...formCompra, tipoDocumento: e.target.value })}
                 >
-                  <option value="boleta">🧾 Boleta (IVA no recuperable)</option>
-                  <option value="factura">📄 Factura (IVA recuperable)</option>
+                  <option value="boleta">🧾 Boleta</option>
+                  <option value="factura">📄 Factura</option>
                   <option value="sin-documento">📝 Sin documento</option>
                 </select>
               </div>
 
               <div className="form-field col-12">
                 <label className="field-label">
-                  <Description sx={{ fontSize: 20 }} />
+                  <Description sx={{ fontSize: 16 }} />
                   Observaciones (opcional)
                 </label>
                 <textarea 
-                  placeholder="Notas adicionales sobre esta compra..." 
-                  rows={3}
+                  placeholder="Notas..." 
+                  rows={2}
                   value={formCompra.observaciones}
                   onChange={(e) => setFormCompra({ ...formCompra, observaciones: e.target.value })}
                 />
@@ -820,14 +800,14 @@ export default function Egresos() {
             <div className="form-grid">
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Inventory sx={{ fontSize: 20 }} />
-                  Material a Comprar
+                  <Inventory sx={{ fontSize: 16 }} />
+                  Material
                 </label>
                 <select 
                   value={formCompraMaterial.idMaterial}
                   onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMaterial: e.target.value })}
                 >
-                  <option value="">Seleccionar material...</option>
+                  <option value="">Seleccionar...</option>
                   {materiales.map(m => (
                     <option key={m.idMaterial} value={m.idMaterial}>
                       {m.nombre} ({m.unidadMedida?.abreviatura || 'N/A'})
@@ -838,15 +818,14 @@ export default function Egresos() {
 
               {formCompraMaterial.idMaterial && (
                 <div className="form-field col-6">
-                  <label className="field-label">Información del Material</label>
+                  <label className="field-label">Información</label>
                   <div className="material-info">
                     {(() => {
                       const material = getMaterialInfo(formCompraMaterial.idMaterial)
                       return material ? (
                         <>
-                          <p><strong>Stock actual:</strong> {material.stockActual || 0} {material.unidadMedida?.abreviatura || ''}</p>
-                          <p><strong>Stock mínimo:</strong> {material.stockMinimo || 0} {material.unidadMedida?.abreviatura || ''}</p>
-                          <p><strong>Costo promedio:</strong> $ {(material.costoPromedio || 0).toFixed(2)}</p>
+                          <p><strong>Stock:</strong> {material.stockActual || 0} {material.unidadMedida?.abreviatura}</p>
+                          <p><strong>Mínimo:</strong> {material.stockMinimo || 0}</p>
                         </>
                       ) : null
                     })()}
@@ -856,7 +835,7 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <AttachMoney sx={{ fontSize: 20 }} />
+                  <AttachMoney sx={{ fontSize: 16 }} />
                   Precio Unitario
                 </label>
                 <input 
@@ -885,23 +864,8 @@ export default function Egresos() {
               </div>
 
               <div className="form-field col-6">
-                <label className="field-label">Total Compra</label>
-                <input 
-                  type="text" 
-                  value={`$ ${Math.round(calcularTotalCompraMaterial()).toLocaleString('es-CL')}`}
-                  disabled 
-                  style={{ 
-                    fontWeight: '600',
-                    color: '#5D4037',
-                    background: 'linear-gradient(135deg, #FAF9F7, #F5F3F0)',
-                    fontSize: '1.1rem'
-                  }}
-                />
-              </div>
-
-              <div className="form-field col-6">
                 <label className="field-label">
-                  <CalendarToday sx={{ fontSize: 20 }} />
+                  <CalendarToday sx={{ fontSize: 16 }} />
                   Fecha
                 </label>
                 <input 
@@ -913,17 +877,17 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Payment sx={{ fontSize: 20 }} />
+                  <Payment sx={{ fontSize: 16 }} />
                   Método de Pago
                 </label>
                 <select 
                   value={formCompraMaterial.idMetodoPago}
                   onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, idMetodoPago: e.target.value })}
                 >
-                  <option value="">Seleccionar método...</option>
+                  <option value="">Seleccionar...</option>
                   {metodosPago.map(m => (
                     <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                      {m.nombre}
                     </option>
                   ))}
                 </select>
@@ -931,12 +895,12 @@ export default function Egresos() {
 
               <div className="form-field col-12">
                 <label className="field-label">
-                  <Description sx={{ fontSize: 20 }} />
+                  <Description sx={{ fontSize: 16 }} />
                   Observaciones (opcional)
                 </label>
                 <textarea 
-                  placeholder="Notas adicionales sobre esta compra de material..." 
-                  rows={3}
+                  placeholder="Notas..." 
+                  rows={2}
                   value={formCompraMaterial.observaciones}
                   onChange={(e) => setFormCompraMaterial({ ...formCompraMaterial, observaciones: e.target.value })}
                 />
@@ -948,12 +912,12 @@ export default function Egresos() {
             <div className="form-grid">
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Description sx={{ fontSize: 20 }} />
-                  Descripción del Gasto
+                  <Description sx={{ fontSize: 16 }} />
+                  Descripción
                 </label>
                 <input 
                   type="text" 
-                  placeholder='Ej: Arriendo, servicios, publicidad, envíos...' 
+                  placeholder='Ej: Arriendo, servicios...' 
                   value={formGasto.descripcion}
                   onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
                 />
@@ -961,12 +925,12 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <AttachMoney sx={{ fontSize: 20 }} />
-                  Monto del Gasto
+                  <AttachMoney sx={{ fontSize: 16 }} />
+                  Monto
                 </label>
                 <input 
                   type="number" 
-                  placeholder="$ 0" 
+                  placeholder="0" 
                   min={0} 
                   step={100} 
                   value={formGasto.monto}
@@ -976,7 +940,7 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <CalendarToday sx={{ fontSize: 20 }} />
+                  <CalendarToday sx={{ fontSize: 16 }} />
                   Fecha
                 </label>
                 <input 
@@ -988,17 +952,17 @@ export default function Egresos() {
 
               <div className="form-field col-6">
                 <label className="field-label">
-                  <Payment sx={{ fontSize: 20 }} />
+                  <Payment sx={{ fontSize: 16 }} />
                   Método de Pago
                 </label>
                 <select 
                   value={formGasto.idMetodoPago}
                   onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
                 >
-                  <option value="">Seleccionar método...</option>
+                  <option value="">Seleccionar...</option>
                   {metodosPago.map(m => (
                     <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                      {m.nombre} {m.comisionAsociada > 0 ? `(${m.comisionAsociada}% comisión)` : ''}
+                      {m.nombre}
                     </option>
                   ))}
                 </select>
@@ -1009,23 +973,22 @@ export default function Egresos() {
       
       case 3:
         return (
-          <div style={{ padding: '1rem' }}>
+          <div style={{ padding: '0.5rem' }}>
             <div style={{
               background: 'linear-gradient(135deg, #E8F5E8, #C8E6C9)',
-              border: '3px solid #4CAF50',
-              borderRadius: '16px',
-              padding: '2rem',
-              marginBottom: '2rem',
+              border: '2px solid #4CAF50',
+              borderRadius: '12px',
+              padding: '1rem',
+              marginBottom: '1rem',
               textAlign: 'center'
             }}>
-              <div style={{ fontSize: '0.9rem', color: '#2E7D32', marginBottom: '0.5rem' }}>
-                Total del {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra Material' : 'Gasto'}
+              <div style={{ fontSize: '0.8rem', color: '#2E7D32', marginBottom: '0.25rem' }}>
+                Total
               </div>
               <div style={{ 
-                fontSize: '3rem', 
+                fontSize: '2rem', 
                 fontWeight: '700', 
-                color: '#2E7D32',
-                marginBottom: '0.5rem'
+                color: '#2E7D32'
               }}>
                 ${Math.round(
                   tipoEgreso === 'compra' ? calcularTotalCompra() :
@@ -1033,106 +996,72 @@ export default function Egresos() {
                   formGasto.monto
                 ).toLocaleString('es-CL')}
               </div>
-              <div style={{ fontSize: '0.85rem', color: '#66BB6A' }}>
-                {tipoEgreso === 'compra' ? `${formCompra.cantidad} unidad(es)` :
-                 tipoEgreso === 'material' ? `${formCompraMaterial.cantidad} ${getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura || ''}` :
-                 'Gasto operativo'}
-              </div>
             </div>
 
             <div style={{
-              background: 'var(--panel)',
-              border: '2px solid var(--border)',
-              borderRadius: '12px',
-              padding: '1.5rem',
-              marginBottom: '1.5rem'
+              background: '#FAF9F7',
+              border: '2px solid #D7CCC8',
+              borderRadius: '8px',
+              padding: '1rem',
+              marginBottom: '1rem'
             }}>
               <h3 style={{ 
-                margin: '0 0 1rem 0',
-                fontSize: '1.1rem',
+                margin: '0 0 0.75rem 0',
+                fontSize: '0.95rem',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
-                color: 'var(--brand)'
+                color: '#5D4037'
               }}>
-                <Description sx={{ fontSize: 20 }} />
-                Detalles del {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Material' : 'Gasto'}
+                <Description sx={{ fontSize: 16 }} />
+                Detalles
               </h3>
               
               {tipoEgreso === 'compra' && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
-                    <div><strong>Descripción:</strong> {formCompra.descripcion}</div>
-                    <div><strong>Cantidad:</strong> {formCompra.cantidad}</div>
-                    <div><strong>Precio Unitario:</strong> ${formCompra.precioUnitario.toLocaleString('es-CL')}</div>
-                    <div><strong>Fecha:</strong> {formatearFecha(formCompra.fecha)}</div>
-                    <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompra.idMetodoPago))?.nombre}</div>
-                    <div><strong>Documento:</strong> {formCompra.tipoDocumento === 'boleta' ? '🧾 Boleta' : formCompra.tipoDocumento === 'factura' ? '📄 Factura' : '📝 Sin documento'}</div>
-                  </div>
-                  {formCompra.observaciones && (
-                    <div style={{ 
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      background: '#FFF3E0',
-                      borderRadius: '8px',
-                      borderLeft: '4px solid #FF9800'
-                    }}>
-                      <strong>Observaciones:</strong> {formCompra.observaciones}
-                    </div>
-                  )}
-                </>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div><strong>Descripción:</strong> {formCompra.descripcion}</div>
+                  <div><strong>Cantidad:</strong> {formCompra.cantidad}</div>
+                  <div><strong>Precio:</strong> ${formCompra.precioUnitario.toLocaleString('es-CL')}</div>
+                  <div><strong>Fecha:</strong> {formatearFecha(formCompra.fecha)}</div>
+                  <div><strong>Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompra.idMetodoPago))?.nombre}</div>
+                  <div><strong>Doc:</strong> {formCompra.tipoDocumento === 'boleta' ? 'Boleta' : formCompra.tipoDocumento === 'factura' ? 'Factura' : 'Sin documento'}</div>
+                </div>
               )}
 
               {tipoEgreso === 'material' && (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '0.75rem' }}>
-                    <div><strong>Material:</strong> {getMaterialInfo(formCompraMaterial.idMaterial)?.nombre}</div>
-                    <div><strong>Cantidad:</strong> {formCompraMaterial.cantidad} {getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura}</div>
-                    <div><strong>Precio Unitario:</strong> ${formCompraMaterial.precioUnitario.toLocaleString('es-CL')}</div>
-                    <div><strong>Fecha:</strong> {formatearFecha(formCompraMaterial.fecha)}</div>
-                    <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompraMaterial.idMetodoPago))?.nombre}</div>
-                  </div>
-                  {formCompraMaterial.observaciones && (
-                    <div style={{ 
-                      marginTop: '1rem',
-                      padding: '1rem',
-                      background: '#FFF3E0',
-                      borderRadius: '8px',
-                      borderLeft: '4px solid #FF9800'
-                    }}>
-                      <strong>Observaciones:</strong> {formCompraMaterial.observaciones}
-                    </div>
-                  )}
-                </>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
+                  <div><strong>Material:</strong> {getMaterialInfo(formCompraMaterial.idMaterial)?.nombre}</div>
+                  <div><strong>Cantidad:</strong> {formCompraMaterial.cantidad} {getMaterialInfo(formCompraMaterial.idMaterial)?.unidadMedida?.abreviatura}</div>
+                  <div><strong>Precio:</strong> ${formCompraMaterial.precioUnitario.toLocaleString('es-CL')}</div>
+                  <div><strong>Fecha:</strong> {formatearFecha(formCompraMaterial.fecha)}</div>
+                  <div><strong>Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompraMaterial.idMetodoPago))?.nombre}</div>
+                </div>
               )}
 
               {tipoEgreso === 'gasto' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
                   <div><strong>Descripción:</strong> {formGasto.descripcion}</div>
                   <div><strong>Monto:</strong> ${formGasto.monto.toLocaleString('es-CL')}</div>
                   <div><strong>Fecha:</strong> {formatearFecha(formGasto.fecha)}</div>
-                  <div><strong>Método de Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formGasto.idMetodoPago))?.nombre}</div>
+                  <div><strong>Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formGasto.idMetodoPago))?.nombre}</div>
                 </div>
               )}
             </div>
 
             <div style={{
-              background: 'linear-gradient(135deg, #E3F2FD, #BBDEFB)',
+              background: '#E3F2FD',
               border: '2px solid #2196F3',
-              borderRadius: '12px',
-              padding: '1rem',
+              borderRadius: '8px',
+              padding: '0.75rem',
               display: 'flex',
               alignItems: 'center',
-              gap: '1rem'
+              gap: '0.75rem',
+              fontSize: '0.85rem'
             }}>
-              <CheckCircle sx={{ fontSize: 32, color: '#1565C0' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: '600', color: '#1565C0', marginBottom: '0.25rem' }}>
-                  Todo listo para registrar
-                </div>
-                <div style={{ fontSize: '0.85rem', color: '#1976D2' }}>
-                  Revisa los datos y presiona "Registrar" para confirmar
-                </div>
+              <CheckCircle sx={{ fontSize: 24, color: '#1565C0' }} />
+              <div>
+                <div style={{ fontWeight: '600', color: '#1565C0' }}>Todo listo</div>
+                <div style={{ color: '#1976D2' }}>Presiona "Registrar" para confirmar</div>
               </div>
             </div>
           </div>
@@ -1168,7 +1097,7 @@ export default function Egresos() {
         key={`tipo-${idx}`}
         className={`tipo-badge ${esCompra ? 'tipo-compra' : 'tipo-gasto'}`}
       >
-        {esCompra ? '🛒 Compra' : '💸 Gasto'}
+        {esCompra ? '🛒' : '💸'}
       </span>,
       <div key={`detalle-${idx}`} className="tabla-detalle">{detalle}</div>,
       <div key={`bruto-${idx}`} className="tabla-monto">
@@ -1189,18 +1118,19 @@ export default function Egresos() {
           className="btn-observaciones"
           onClick={() => setObservacionesModal(item.observaciones)}
         >
-          📝 Ver
+          📝
         </button>
       ) : (
         <span key={`obs-${idx}`} className="sin-observaciones">—</span>
       )
     ]
   })
+
   return (
     <div className="egresos-container">
       <style>{`
         .egresos-container {
-          padding: 1rem;
+          padding: 0.75rem;
           background: #EFEBE9;
           min-height: 100vh;
           max-width: 1400px;
@@ -1210,80 +1140,21 @@ export default function Egresos() {
         .egresos-header {
           background: linear-gradient(135deg, #5D4037, #8D6E63);
           color: white;
-          border-radius: 16px;
-          margin-bottom: 2rem;
-          box-shadow: 0 8px 20px rgba(93, 64, 55, 0.2);
-          overflow: hidden;
+          border-radius: 12px;
+          margin-bottom: 1rem;
+          box-shadow: 0 4px 12px rgba(93, 64, 55, 0.15);
         }
 
         .egresos-card {
           background: #FAF9F7;
           border: 1px solid #D7CCC8;
-          border-radius: 16px;
-          box-shadow: 0 4px 20px rgba(93, 64, 55, 0.1);
-          transition: all 0.3s ease;
-          overflow: hidden;
-          margin-bottom: 2rem;
+          border-radius: 12px;
+          box-shadow: 0 2px 8px rgba(93, 64, 55, 0.08);
+          margin-bottom: 1rem;
           position: relative;
-        }
-
-        .egresos-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 12px 30px rgba(93, 64, 55, 0.15);
         }
 
         .egresos-card::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 4px;
-          background: linear-gradient(90deg, #5D4037, #8D6E63);
-        }
-
-        .card-header {
-          padding: 1.5rem 2rem;
-          border-bottom: 1px solid #D7CCC8;
-          background: linear-gradient(135deg, #FAF9F7, #F5F3F0);
-        }
-
-        .card-title {
-          font-size: 1.5rem;
-          margin: 0 0 0.5rem 0;
-          color: #3E2723;
-          font-weight: 600;
-        }
-
-        .card-subtitle {
-          color: #8D6E63;
-          font-size: 0.9rem;
-          margin: 0;
-        }
-
-        .card-body {
-          padding: 2rem;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 2rem;
-        }
-
-        .stat-card {
-          background: linear-gradient(135deg, #FAF9F7, #F5F3F0);
-          border: 1px solid #D7CCC8;
-          padding: 1.5rem;
-          border-radius: 12px;
-          text-align: center;
-          transition: all 0.3s ease;
-          position: relative;
-          overflow: hidden;
-        }
-
-        .stat-card::before {
           content: '';
           position: absolute;
           top: 0;
@@ -1293,51 +1164,88 @@ export default function Egresos() {
           background: linear-gradient(90deg, #5D4037, #8D6E63);
         }
 
-        .stat-card:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px rgba(93, 64, 55, 0.1);
+        .card-header {
+          padding: 0.75rem 1rem;
+          border-bottom: 1px solid #D7CCC8;
+        }
+
+        .card-title {
+          font-size: 1.1rem;
+          margin: 0 0 0.25rem 0;
+          color: #3E2723;
+          font-weight: 600;
+        }
+
+        .card-subtitle {
+          color: #8D6E63;
+          font-size: 0.8rem;
+          margin: 0;
+        }
+
+        .card-body {
+          padding: 1rem;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.75rem;
+        }
+
+        .stat-card {
+          background: #FAF9F7;
+          border: 1px solid #D7CCC8;
+          padding: 0.75rem;
+          border-radius: 8px;
+          text-align: center;
+        }
+
+        .stat-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 2px;
+          background: linear-gradient(90deg, #5D4037, #8D6E63);
         }
 
         .stat-icon {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 60px;
-          height: 60px;
+          width: 40px;
+          height: 40px;
           border-radius: 50%;
-          margin: 0 auto 1rem;
-          font-size: 28px;
+          margin: 0 auto 0.5rem;
+          font-size: 20px;
         }
 
         .stat-label {
           color: #8D6E63;
-          font-size: 0.95rem;
+          font-size: 0.8rem;
           font-weight: 500;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.25rem;
           display: block;
         }
 
         .stat-value {
-          font-size: 2rem;
+          font-size: 1.3rem;
           font-weight: 700;
           color: #3E2723;
           display: block;
-          background: linear-gradient(135deg, #5D4037, #8D6E63);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
         }
 
         .form-grid {
           display: grid;
           grid-template-columns: repeat(12, 1fr);
-          gap: 1.5rem;
+          gap: 0.75rem;
         }
 
         .form-field {
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
+          gap: 0.35rem;
           grid-column: span 12;
         }
 
@@ -1345,79 +1253,59 @@ export default function Egresos() {
           grid-column: span 6;
         }
 
-        .form-field.col-12 {
-          grid-column: span 12;
-        }
-
         .field-label {
-          font-size: 1rem;
+          font-size: 0.85rem;
           color: #3E2723;
-          margin-bottom: 0.25rem;
           font-weight: 500;
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.35rem;
         }
 
         input, select, textarea {
           background: #FAF9F7;
           border: 2px solid #D7CCC8;
           color: #3E2723;
-          padding: 0.75rem 1rem;
-          border-radius: 8px;
+          padding: 0.5rem 0.75rem;
+          border-radius: 6px;
           outline: none;
-          font-size: 1rem;
-          height: 48px;
-          line-height: 1.4;
-          display: block;
+          font-size: 0.9rem;
+          height: 38px;
           width: 100%;
-          box-shadow: none;
-          transition: all 0.3s ease;
           font-family: inherit;
         }
 
         input:focus, select:focus, textarea:focus {
           border-color: #5D4037;
-          box-shadow: 0 0 0 3px rgba(93, 64, 55, 0.1);
-        }
-
-        input::placeholder, textarea::placeholder {
-          color: #8D6E63;
-          opacity: 0.7;
+          box-shadow: 0 0 0 2px rgba(93, 64, 55, 0.1);
         }
 
         textarea {
-          min-height: 120px;
-          padding: 1rem;
-          resize: vertical;
+          min-height: 60px;
+          padding: 0.5rem 0.75rem;
           height: auto;
         }
 
         .btn {
-          height: 48px;
-          min-height: 48px;
-          padding: 0 1.5rem;
+          height: 38px;
+          min-height: 38px;
+          padding: 0 1rem;
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          line-height: 1;
-          border-radius: 8px;
-          font-size: 1rem;
+          border-radius: 6px;
+          font-size: 0.9rem;
           font-weight: 500;
           border: 2px solid transparent;
           background: #5D4037;
           color: #fff;
           cursor: pointer;
-          transition: all 0.3s ease;
-          text-decoration: none;
-          gap: 0.5rem;
+          gap: 0.35rem;
           font-family: inherit;
         }
 
         .btn:hover {
           background: #8D6E63;
-          transform: translateY(-1px);
-          box-shadow: 0 6px 20px rgba(93, 64, 55, 0.2);
         }
 
         .btn.ghost {
@@ -1428,27 +1316,19 @@ export default function Egresos() {
 
         .btn.ghost:hover {
           background: #D7CCC8;
-          border-color: #5D4037;
         }
 
         .btn.small {
-          height: 36px;
-          min-height: 36px;
-          padding: 0 1rem;
-          font-size: 0.9rem;
-        }
-
-        .toolbar {
-          display: flex;
-          gap: 1rem;
-          margin-top: 1.5rem;
-          flex-wrap: wrap;
+          height: 32px;
+          min-height: 32px;
+          padding: 0 0.75rem;
+          font-size: 0.85rem;
         }
 
         .quantity-control {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.35rem;
         }
 
         .quantity-control input {
@@ -1459,25 +1339,24 @@ export default function Egresos() {
         .resumen-financiero {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 1rem;
-          margin: 1rem 0;
+          gap: 0.5rem;
         }
 
         .resumen-item {
-          padding: 1.25rem;
-          border-radius: 12px;
+          padding: 0.75rem;
+          border-radius: 8px;
           text-align: center;
           font-weight: 600;
         }
 
         .resumen-iva {
-          background: linear-gradient(135deg, #E8F5E8, #C8E6C9);
+          background: #E8F5E8;
           border: 2px solid #4CAF50;
           color: #2E7D32;
         }
 
         .resumen-costo {
-          background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+          background: #FFF3E0;
           border: 2px solid #FF9800;
           color: #EF6C00;
         }
@@ -1491,26 +1370,23 @@ export default function Egresos() {
         .tabla-container {
           overflow: auto;
           border: 1px solid #D7CCC8;
-          border-radius: 12px;
+          border-radius: 8px;
           background: #FAF9F7;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
 
         .tabla {
           width: 100%;
           border-collapse: separate;
           border-spacing: 0;
-          background: #FAF9F7;
         }
 
         .tabla thead th {
-          font-size: 1rem;
+          font-size: 0.85rem;
           position: sticky;
           top: 0;
           background: linear-gradient(135deg, #5D4037, #8D6E63);
           text-align: left;
-          padding: 1.25rem 1.5rem;
-          border-bottom: 1px solid #D7CCC8;
+          padding: 0.75rem;
           font-weight: 600;
           color: #FFF;
         }
@@ -1518,7 +1394,7 @@ export default function Egresos() {
         .tabla-sort-button {
           display: inline-flex;
           align-items: center;
-          gap: 0.35rem;
+          gap: 0.25rem;
           background: transparent;
           border: none;
           color: inherit;
@@ -1527,37 +1403,24 @@ export default function Egresos() {
           padding: 0;
         }
 
-        .tabla-sort-button:focus-visible {
-          outline: 2px solid rgba(255, 255, 255, 0.8);
-          outline-offset: 2px;
-        }
-
         .tabla td {
-          font-size: 0.95rem;
-          padding: 1.25rem 1.5rem;
+          font-size: 0.85rem;
+          padding: 0.75rem;
           border-bottom: 1px solid #D7CCC8;
           color: #3E2723;
         }
 
-        .tabla tbody tr {
-          transition: background 0.3s ease;
-        }
-
         .tabla tbody tr:hover {
-          background: #D7CCC8;
-        }
-
-        .tabla tbody tr:nth-child(even) {
           background: #F5F3F0;
         }
 
         .tipo-badge {
-          padding: 0.4rem 1rem;
-          border-radius: 20px;
-          font-size: 0.85rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 12px;
+          font-size: 0.8rem;
           font-weight: 600;
           display: inline-block;
-          min-width: 80px;
+          min-width: 40px;
           text-align: center;
         }
 
@@ -1571,32 +1434,24 @@ export default function Egresos() {
           color: #C62828;
         }
 
-        .tabla-fecha, .tabla-detalle, .tabla-monto, .tabla-metodo {
-          font-weight: 500;
-        }
-
         .tabla-monto {
           text-align: right;
           font-weight: 600;
           color: #5D4037;
-          font-size: 1.05rem;
         }
         
         .btn-observaciones {
           background: transparent;
           border: 2px solid #D7CCC8;
           color: #3E2723;
-          padding: 0.4rem 0.8rem;
-          border-radius: 6px;
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
           cursor: pointer;
-          font-size: 0.85rem;
-          transition: all 0.3s ease;
-          font-family: inherit;
+          font-size: 0.8rem;
         }
 
         .btn-observaciones:hover {
           background: #D7CCC8;
-          border-color: #5D4037;
         }
 
         .sin-observaciones {
@@ -1604,45 +1459,25 @@ export default function Egresos() {
         }
 
         .egresos-loading {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 3rem;
+          padding: 2rem;
+          text-align: center;
           color: #8D6E63;
-          font-size: 1.1rem;
-        }
-
-        .chart-placeholder {
-          position: relative;
-          min-height: 300px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0.6rem 0 1.2rem;
-          background: #F5F3F0;
-          border-radius: 12px;
-          border: 2px dashed #D7CCC8;
         }
 
         .material-info {
           background: #E8F5E8;
-          padding: 1rem;
-          border-radius: 8px;
-          border-left: 4px solid #4CAF50;
-          margin: 0.5rem 0;
+          padding: 0.5rem;
+          border-radius: 6px;
+          border-left: 3px solid #4CAF50;
         }
 
         .material-info p {
-          margin: 0.25rem 0;
-          font-size: 0.9rem;
+          margin: 0.15rem 0;
+          font-size: 0.8rem;
           color: #2E7D32;
         }
 
         @media (max-width: 768px) {
-          .egresos-container {
-            padding: 1rem;
-          }
-
           .form-field.col-6 {
             grid-column: span 12;
           }
@@ -1654,46 +1489,21 @@ export default function Egresos() {
           .resumen-financiero {
             grid-template-columns: 1fr;
           }
-
-          .toolbar {
-            flex-direction: column;
-          }
-
-          .btn {
-            width: 100%;
-          }
         }
       `}</style>
 
-      {/* Header con Resumen */}
+      {/* Header compacto */}
       <div className="egresos-card egresos-header">
         <div className="card-header">
-          <h1 className="card-title">Gestión de Egresos</h1>
-          <p className="card-subtitle">Control de compras, gastos y abastecimiento de materiales</p>
+          <h1 className="card-title">Egresos</h1>
+          <p className="card-subtitle">Control de compras y gastos</p>
         </div>
         <div className="card-body">
           <div className="stats-grid">
-            {resumen.map((r, index) => (
+            {resumen.map((r) => (
               <div key={r.label} className="stat-card">
-                <div style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  marginBottom: '1rem'
-                }}>
-                  <div className="stat-icon" style={{ backgroundColor: `${r.color}20`, color: r.color }}>
-                    {React.cloneElement(r.icon, { sx: { fontSize: 28 } })}
-                  </div>
-                  <span style={{
-                    fontSize: '0.85rem',
-                    fontWeight: '600',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '20px',
-                    background: r.trend === 'up' ? '#E8F5E8' : '#FFEBEE',
-                    color: r.trend === 'up' ? '#2E7D32' : '#C62828'
-                  }}>
-                    {r.trend === 'up' ? '↗' : '↘'}
-                  </span>
+                <div className="stat-icon" style={{ backgroundColor: `${r.color}20`, color: r.color }}>
+                  {React.cloneElement(r.icon, { sx: { fontSize: 20 } })}
                 </div>
                 <span className="stat-label">{r.label}</span>
                 <span className="stat-value">{r.value}</span>
@@ -1703,35 +1513,33 @@ export default function Egresos() {
         </div>
       </div>
 
-      {/* Formulario con Pasos */}
+      {/* Formulario compacto */}
       <div className="egresos-card">
         <div className="card-header">
-          <h2 className="card-title">Registrar Nuevo Egreso</h2>
-          <p className="card-subtitle">Complete los pasos para registrar un egreso</p>
+          <h2 className="card-title">Registrar Egreso</h2>
         </div>
         <div className="card-body">
-          {/* INDICADOR DE PASOS */}
+          {/* Indicador de pasos */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginBottom: '2rem',
+            marginBottom: '1rem',
             position: 'relative'
           }}>
-            {/* Línea de progreso */}
             <div style={{
               position: 'absolute',
-              top: '20px',
+              top: '16px',
               left: '10%',
               right: '10%',
-              height: '3px',
-              background: 'var(--border)',
+              height: '2px',
+              background: '#D7CCC8',
               zIndex: 0
             }}>
               <div style={{
                 height: '100%',
-                background: 'linear-gradient(90deg, #5D4037, #8D6E63)',
+                background: '#5D4037',
                 width: `${((pasoActual - 1) / 2) * 100}%`,
-                transition: 'width 0.3s ease'
+                transition: 'width 0.3s'
               }} />
             </div>
 
@@ -1745,25 +1553,21 @@ export default function Egresos() {
                 zIndex: 1
               }}>
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
-                  background: pasoActual >= paso.numero 
-                    ? 'linear-gradient(135deg, #5D4037, #8D6E63)' 
-                    : '#FAF9F7',
-                  border: `3px solid ${pasoActual >= paso.numero ? '#5D4037' : '#D7CCC8'}`,
+                  background: pasoActual >= paso.numero ? '#5D4037' : '#FAF9F7',
+                  border: `2px solid ${pasoActual >= paso.numero ? '#5D4037' : '#D7CCC8'}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: pasoActual >= paso.numero ? 'white' : '#8D6E63',
-                  fontWeight: '600',
-                  transition: 'all 0.3s ease',
-                  marginBottom: '0.5rem'
+                  marginBottom: '0.35rem'
                 }}>
-                  {React.cloneElement(paso.icono, { sx: { fontSize: 20 } })}
+                  {React.cloneElement(paso.icono, { sx: { fontSize: 16 } })}
                 </div>
                 <span style={{
-                  fontSize: '0.85rem',
+                  fontSize: '0.75rem',
                   fontWeight: pasoActual === paso.numero ? '600' : '400',
                   color: pasoActual >= paso.numero ? '#5D4037' : '#8D6E63',
                   textAlign: 'center'
@@ -1774,23 +1578,23 @@ export default function Egresos() {
             ))}
           </div>
 
-          {/* CONTENIDO DEL PASO */}
-          <div style={{ minHeight: '400px' }}>
+          {/* Contenido */}
+          <div style={{ minHeight: '280px' }}>
             {getContenidoPaso()}
           </div>
 
-          {/* BOTONES DE NAVEGACIÓN */}
+          {/* Botones */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            marginTop: '2rem',
-            paddingTop: '1rem',
+            marginTop: '1rem',
+            paddingTop: '0.75rem',
             borderTop: '2px solid #D7CCC8'
           }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.35rem' }}>
               {pasoActual > 1 && (
                 <button className="btn ghost" onClick={pasoAnterior}>
-                  <ArrowBack sx={{ fontSize: 20 }} />
+                  <ArrowBack sx={{ fontSize: 16 }} />
                   Anterior
                 </button>
               )}
@@ -1803,12 +1607,12 @@ export default function Egresos() {
               {pasoActual < 3 ? (
                 <button className="btn" onClick={siguientePaso}>
                   Siguiente
-                  <ArrowForward sx={{ fontSize: 20 }} />
+                  <ArrowForward sx={{ fontSize: 16 }} />
                 </button>
               ) : (
                 <button className="btn" onClick={siguientePaso}>
-                  <CheckCircle sx={{ fontSize: 20 }} />
-                  Registrar {tipoEgreso === 'compra' ? 'Compra' : tipoEgreso === 'material' ? 'Compra Material' : 'Gasto'}
+                  <CheckCircle sx={{ fontSize: 16 }} />
+                  Registrar
                 </button>
               )}
             </div>
@@ -1816,30 +1620,10 @@ export default function Egresos() {
         </div>
       </div>
 
-      {/* Panel de Análisis */}
-      <div className="egresos-card">
-        <div className="card-header">
-          <h2 className="card-title">Análisis de Egresos</h2>
-          <p className="card-subtitle">Distribución y tendencias de compras vs gastos</p>
-        </div>
-        <div className="card-body">
-          <div className="chart-placeholder">
-            <div style={{ textAlign: 'center', color: '#8D6E63' }}>
-              <Analytics sx={{ fontSize: 64, color: '#8D6E63', marginBottom: '1rem', opacity: 0.5 }} />
-              <div style={{ fontSize: '1.2rem', marginBottom: '0.5rem' }}>Dashboard de Egresos</div>
-              <div style={{ fontSize: '0.9rem', opacity: 0.7 }}>
-                Visualización de compras vs gastos mensuales
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabla de Movimientos */}
+      {/* Tabla compacta */}
       <div className="egresos-card">
         <div className="card-header">
           <h2 className="card-title">Movimientos Recientes</h2>
-          <p className="card-subtitle">Últimos egresos registrados en el sistema</p>
         </div>
         <div className="card-body">
           <div className="tabla-container">
@@ -1849,10 +1633,10 @@ export default function Egresos() {
                   <th><SortHeaderButton label="Fecha" columnKey="fecha" /></th>
                   <th><SortHeaderButton label="Tipo" columnKey="tipo" /></th>
                   <th><SortHeaderButton label="Detalle" columnKey="detalle" /></th>
-                  <th><SortHeaderButton label="Monto Bruto" columnKey="bruto" /></th>
-                  <th><SortHeaderButton label="Monto Neto" columnKey="neto" /></th>
-                  <th><SortHeaderButton label="Medio Pago" columnKey="metodo" /></th>
-                  <th>Observaciones</th>
+                  <th><SortHeaderButton label="Bruto" columnKey="bruto" /></th>
+                  <th><SortHeaderButton label="Neto" columnKey="neto" /></th>
+                  <th><SortHeaderButton label="Pago" columnKey="metodo" /></th>
+                  <th>Obs</th>
                 </tr>
               </thead>
               <tbody>
@@ -1869,7 +1653,7 @@ export default function Egresos() {
         </div>
       </div>
 
-      {/* Modal de Observaciones */}
+      {/* Modal */}
       {observacionesModal && (
         <div 
           style={{
@@ -1890,54 +1674,28 @@ export default function Egresos() {
           <div 
             style={{
               background: '#FAF9F7',
-              borderRadius: '16px',
-              padding: '2rem',
-              maxWidth: '600px',
+              borderRadius: '12px',
+              padding: '1.5rem',
+              maxWidth: '500px',
               width: '100%',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              border: '2px solid #D7CCC8'
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.75rem', 
-              marginBottom: '1.5rem', 
-              paddingBottom: '1rem', 
-              borderBottom: '2px solid #D7CCC8' 
+            <h3 style={{ 
+              margin: '0 0 1rem 0', 
+              fontSize: '1.1rem',
+              color: '#3E2723'
             }}>
-              <div style={{
-                background: 'linear-gradient(135deg, #5D4037, #8D6E63)',
-                padding: '0.75rem',
-                borderRadius: '12px',
-                color: 'white'
-              }}>
-                <Description sx={{ fontSize: 24 }} />
-              </div>
-              <h3 style={{ 
-                margin: 0, 
-                fontSize: '1.5rem', 
-                color: '#3E2723', 
-                fontWeight: '600' 
-              }}>
-                Observaciones del Egreso
-              </h3>
-            </div>
+              Observaciones
+            </h3>
             <div style={{
               background: '#D7CCC8',
-              padding: '1.5rem',
-              borderRadius: '12px',
-              borderLeft: '4px solid #5D4037',
-              marginBottom: '1.5rem'
+              padding: '1rem',
+              borderRadius: '8px',
+              marginBottom: '1rem'
             }}>
-              <p style={{ 
-                margin: 0, 
-                fontSize: '1.05rem', 
-                lineHeight: '1.6', 
-                color: '#3E2723', 
-                whiteSpace: 'pre-wrap' 
-              }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#3E2723' }}>
                 {observacionesModal}
               </p>
             </div>

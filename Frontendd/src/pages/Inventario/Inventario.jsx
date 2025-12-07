@@ -1,18 +1,9 @@
-// Inventario.jsx (archivo principal simplificado)
+// Inventario.jsx (con stock editable que calcula la diferencia)
 import React, { useState, useMemo } from 'react'
-import { Card, Toolbar, Button } from '../../components/UI.jsx'
-import { Add } from '@mui/icons-material'
-import {api} from '../../services/api/index.js'
- 
-// Importar componentes modulares
+import { Card, Toolbar, Button, Table } from '../../components/UI.jsx'
+import { Add, Edit, Delete, Visibility } from '@mui/icons-material'
+import { api } from '../../services/api/index.js'
 import { useInventario } from './hooks/useInventario'
-import ResumenInventario from './components/ResumenInventario'
-import FiltrosInventario from './components/FiltrosInventario'
-import TablaInventario from './components/TablaInventario'
-import ModalProducto from './components/modals/ModalProducto'
-import ModalAjusteStock from './components/modals/ModalAjusteStock'
-import ModalDetalles from './components/modals/ModalDetalles'
-import ModalConfirmacion from './components/modals/ModalConfirmacion'
 
 export default function Inventario() {
   const {
@@ -20,34 +11,21 @@ export default function Inventario() {
     productos,
     categorias,
     loading,
-    bajoStock,
-    filtro,
-    setFiltro,
-    cargarDatos,
-    buscarProductos,
-    filtrarPorCategoria,
-    ajustarStock,
-    actualizarPrecio,
-    actualizarCategoria,
-    eliminarProducto
+    cargarDatos
   } = useInventario()
 
   const [showForm, setShowForm] = useState(false)
-  const [showAjuste, setShowAjuste] = useState(false)
   const [showDetalles, setShowDetalles] = useState(null)
   const [showConfirmDelete, setShowConfirmDelete] = useState(null)
   const [productoEdit, setProductoEdit] = useState(null)
+  const [filtro, setFiltro] = useState({ buscar: '', categoria: 'all', stockBajo: false })
+  
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
     precio: 0,
     idCategoria: '',
     cantidad: 0
-  })
-  const [ajusteData, setAjusteData] = useState({
-    idProducto: '',
-    cantidad: 0,
-    motivo: ''
   })
 
   const inventarioFiltrado = useMemo(() => 
@@ -85,39 +63,21 @@ export default function Inventario() {
       setShowForm(false)
       setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
       await cargarDatos()
-      alert('Producto creado exitosamente')
+      alert('✅ Producto creado')
     } catch (error) {
-      console.error('Error al crear producto:', error)
-      alert('Error al crear el producto')
-    }
-  }
-
-  const handleAjusteStock = async (e) => {
-    e.preventDefault()
-    try {
-      await api.inventario.ajustarCantidad(
-        parseInt(ajusteData.idProducto), 
-        parseInt(ajusteData.cantidad)
-      )
-      
-      setShowAjuste(false)
-      setAjusteData({ idProducto: '', cantidad: 0, motivo: '' })
-      await cargarDatos()
-      alert('Stock ajustado exitosamente')
-    } catch (error) {
-      console.error('Error al ajustar stock:', error)
-      alert('Error al ajustar el stock')
+      alert('❌ Error al crear producto')
     }
   }
 
   const handleEditarProducto = (producto) => {
     setProductoEdit(producto)
+    const stockActual = inventario.find(i => i.producto?.idProducto === producto.idProducto)?.cantidadProducto || 0
     setFormData({
       nombre: producto.nombre || '',
       descripcion: producto.descripcion || '',
       precio: producto.precio || 0,
       idCategoria: producto.categoria?.idCategoria || '',
-      cantidad: inventario.find(i => i.producto?.idProducto === producto.idProducto)?.cantidadProducto || 0
+      cantidad: stockActual
     })
     setShowForm(true)
   }
@@ -125,6 +85,7 @@ export default function Inventario() {
   const handleActualizarProducto = async (e) => {
     e.preventDefault()
     try {
+      // Actualizar producto
       await api.productos.update(productoEdit.idProducto, {
         ...productoEdit,
         nombre: formData.nombre,
@@ -133,115 +94,398 @@ export default function Inventario() {
         categoria: { idCategoria: parseInt(formData.idCategoria) }
       })
 
+      // Actualizar stock - calcular la diferencia
+      const stockActual = inventario.find(i => i.producto?.idProducto === productoEdit.idProducto)?.cantidadProducto || 0
+      const stockNuevo = parseInt(formData.cantidad)
+      const diferencia = stockNuevo - stockActual
+
+      if (diferencia !== 0) {
+        await api.inventario.ajustarCantidad(
+          productoEdit.idProducto,
+          diferencia
+        )
+      }
+
       setShowForm(false)
       setProductoEdit(null)
       setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
       await cargarDatos()
-      alert('Producto actualizado exitosamente')
+      alert('✅ Producto actualizado')
     } catch (error) {
-      console.error('Error al actualizar producto:', error)
-      alert('Error al actualizar el producto')
+      console.error('Error:', error)
+      alert('❌ Error al actualizar')
     }
   }
 
-  const handleVerDetalles = (producto) => {
-    const inventarioItem = inventario.find(i => i.producto?.idProducto === producto.idProducto)
-    setShowDetalles({
-      producto,
-      inventario: inventarioItem
-    })
-  }
-
-  const handleEliminarProducto = async (producto) => {
-    const success = await eliminarProducto(producto)
-    if (success) {
+  const handleEliminarProducto = async () => {
+    try {
+      await api.productos.delete(showConfirmDelete.idProducto)
       setShowConfirmDelete(null)
+      await cargarDatos()
+      alert('✅ Producto eliminado')
+    } catch (error) {
+      alert('❌ Error al eliminar')
     }
   }
+
+  const rows = inventarioFiltrado.map(item => {
+    const producto = item.producto || {}
+    return [
+      producto.nombre || '-',
+      producto.categoria?.nombre || '-',
+      `$ ${(producto.precio || 0).toLocaleString('es-CL')}`,
+      item.cantidadProducto || 0,
+      <div key={producto.idProducto} style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button small variant="ghost" onClick={() => setShowDetalles({ producto, inventario: item })}>
+          <Visibility sx={{ fontSize: 18 }} />
+        </Button>
+        <Button small variant="ghost" onClick={() => handleEditarProducto(producto)}>
+          <Edit sx={{ fontSize: 18 }} />
+        </Button>
+        <Button 
+          small 
+          variant="ghost" 
+          onClick={() => setShowConfirmDelete(producto)}
+          style={{ background: 'var(--error)', color: 'white' }}
+        >
+          <Delete sx={{ fontSize: 18 }} />
+        </Button>
+      </div>
+    ]
+  })
 
   if (loading) {
-    return <div className="stack"><Card title="Cargando..."><p>Obteniendo inventario...</p></Card></div>
+    return (
+      <div className="stack" style={{ padding: '0.75rem' }}>
+        <Card>
+          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+            Cargando...
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="stack">
-      <ResumenInventario 
-        productos={productos} 
-        bajoStock={bajoStock} 
-        inventario={inventario} 
-      />
+    <div className="stack" style={{ padding: '0.75rem' }}>
+      <Card>
+        {/* FILTROS */}
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: '2fr 1fr auto', 
+          gap: '0.75rem',
+          marginBottom: '1rem'
+        }}>
+          <input
+            type="text"
+            placeholder="Buscar producto..."
+            value={filtro.buscar}
+            onChange={(e) => setFiltro(prev => ({ ...prev, buscar: e.target.value }))}
+            style={{
+              padding: '0.5rem',
+              border: '2px solid var(--border)',
+              borderRadius: '6px',
+              fontSize: '0.9rem'
+            }}
+          />
+          
+          <select
+            value={filtro.categoria}
+            onChange={(e) => setFiltro(prev => ({ ...prev, categoria: e.target.value }))}
+            style={{
+              padding: '0.5rem',
+              border: '2px solid var(--border)',
+              borderRadius: '6px',
+              fontSize: '0.9rem'
+            }}
+          >
+            <option value="all">Todas las categorías</option>
+            {categorias.map(cat => (
+              <option key={cat.idCategoria} value={cat.idCategoria}>
+                {cat.nombre}
+              </option>
+            ))}
+          </select>
 
-      <Card title="Gestión de Inventario" subtitle="Administra todos los productos en stock">
-        <FiltrosInventario
-          filtro={filtro}
-          setFiltro={setFiltro}
-          categorias={categorias}
-          buscarProductos={buscarProductos}
-          filtrarPorCategoria={filtrarPorCategoria}
-          cargarDatos={cargarDatos}
-          inventario={inventario}
-          inventarioFiltrado={inventarioFiltrado}
-        />
+          <label style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem',
+            fontSize: '0.9rem',
+            cursor: 'pointer',
+            whiteSpace: 'nowrap'
+          }}>
+            <input
+              type="checkbox"
+              checked={filtro.stockBajo}
+              onChange={(e) => setFiltro(prev => ({ ...prev, stockBajo: e.target.checked }))}
+            />
+            Bajo stock
+          </label>
+        </div>
 
-        <Toolbar style={{ marginBottom: '1.5rem' }}>
+        {/* TOOLBAR */}
+        <Toolbar style={{ marginBottom: '1rem' }}>
           <Button onClick={() => { setProductoEdit(null); setShowForm(true); }}>
-            <Add sx={{ fontSize: 20 }} />
-            Nuevo producto
-          </Button>
-          <Button variant="ghost" onClick={() => setShowAjuste(true)}>
-            Ajuste de stock
+            <Add sx={{ fontSize: 18 }} />
+            Nuevo
           </Button>
           <div style={{ flex: 1 }} />
-          <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-            Mostrando {inventarioFiltrado.length} de {inventario.length} productos
+          <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
+            {inventarioFiltrado.length} de {inventario.length} productos
           </span>
         </Toolbar>
-        
-        <TablaInventario
-          inventarioFiltrado={inventarioFiltrado}
-          categorias={categorias}
-          ajustarStock={ajustarStock}
-          actualizarPrecio={actualizarPrecio}
-          actualizarCategoria={actualizarCategoria}
-          handleVerDetalles={handleVerDetalles}
-          handleEditarProducto={handleEditarProducto}
-          setShowConfirmDelete={setShowConfirmDelete}
+
+        {/* TABLA */}
+        <Table
+          columns={['Producto', 'Categoría', 'Precio', 'Stock', 'Acciones']}
+          rows={rows}
         />
       </Card>
 
-      {/* Modales */}
-      <ModalProducto
-        showForm={showForm}
-        setShowForm={setShowForm}
-        productoEdit={productoEdit}
-        setProductoEdit={setProductoEdit}
-        formData={formData}
-        setFormData={setFormData}
-        categorias={categorias}
-        handleCrearProducto={handleCrearProducto}
-        handleActualizarProducto={handleActualizarProducto}
-      />
+      {/* MODAL FORMULARIO */}
+      {showForm && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--panel)',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '500px',
+            border: '2px solid var(--border)'
+          }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.3rem' }}>
+              {productoEdit ? 'Editar' : 'Nuevo'} Producto
+            </h3>
+            
+            <form onSubmit={productoEdit ? handleActualizarProducto : handleCrearProducto}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                  Nombre *
+                </label>
+                <input
+                  type="text"
+                  value={formData.nombre}
+                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                />
+              </div>
 
-      <ModalAjusteStock
-        showAjuste={showAjuste}
-        setShowAjuste={setShowAjuste}
-        ajusteData={ajusteData}
-        setAjusteData={setAjusteData}
-        productos={productos}
-        handleAjusteStock={handleAjusteStock}
-      />
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                  Descripción
+                </label>
+                <textarea
+                  value={formData.descripcion}
+                  onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+                  rows="2"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    resize: 'vertical',
+                    fontFamily: 'inherit'
+                  }}
+                />
+              </div>
 
-      <ModalDetalles
-        showDetalles={showDetalles}
-        setShowDetalles={setShowDetalles}
-        handleEditarProducto={handleEditarProducto}
-      />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                    Precio *
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.precio}
+                    onChange={(e) => setFormData(prev => ({ ...prev, precio: e.target.value }))}
+                    required
+                    min="0"
+                    step="1"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid var(--border)',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
 
-      <ModalConfirmacion
-        showConfirmDelete={showConfirmDelete}
-        setShowConfirmDelete={setShowConfirmDelete}
-        handleEliminarProducto={handleEliminarProducto}
-      />
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                    {productoEdit ? 'Stock *' : 'Stock inicial *'}
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.cantidad}
+                    onChange={(e) => setFormData(prev => ({ ...prev, cantidad: e.target.value }))}
+                    required
+                    min="0"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '2px solid var(--border)',
+                      borderRadius: '8px',
+                      fontSize: '1rem'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
+                  Categoría *
+                </label>
+                <select
+                  value={formData.idCategoria}
+                  onChange={(e) => setFormData(prev => ({ ...prev, idCategoria: e.target.value }))}
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid var(--border)',
+                    borderRadius: '8px',
+                    fontSize: '1rem'
+                  }}
+                >
+                  <option value="">Seleccione categoría</option>
+                  {categorias.map(cat => (
+                    <option key={cat.idCategoria} value={cat.idCategoria}>
+                      {cat.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => {
+                    setShowForm(false)
+                    setProductoEdit(null)
+                    setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {productoEdit ? 'Actualizar' : 'Crear'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DETALLES */}
+      {showDetalles && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--panel)',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '500px',
+            border: '2px solid var(--border)'
+          }}>
+            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.3rem' }}>
+              {showDetalles.producto.nombre}
+            </h3>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Descripción:</strong> {showDetalles.producto.descripcion || '-'}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Categoría:</strong> {showDetalles.producto.categoria?.nombre || '-'}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Precio:</strong> $ {(showDetalles.producto.precio || 0).toLocaleString('es-CL')}
+            </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <strong>Stock:</strong> {showDetalles.inventario?.cantidadProducto || 0} unidades
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+              <Button variant="ghost" onClick={() => setShowDetalles(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CONFIRMAR ELIMINACIÓN */}
+      {showConfirmDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            background: 'var(--panel)',
+            padding: '2rem',
+            borderRadius: '12px',
+            width: '90%',
+            maxWidth: '400px',
+            textAlign: 'center',
+            border: '2px solid var(--border)'
+          }}>
+            <Delete sx={{ fontSize: 48, color: '#F44336', marginBottom: '1rem' }} />
+            
+            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.3rem' }}>
+              ¿Eliminar "{showConfirmDelete.nombre}"?
+            </h3>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
+              <Button variant="ghost" onClick={() => setShowConfirmDelete(null)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleEliminarProducto} style={{ background: 'var(--error)' }}>
+                Eliminar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
