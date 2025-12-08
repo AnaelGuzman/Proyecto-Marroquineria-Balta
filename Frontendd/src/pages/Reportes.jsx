@@ -199,11 +199,11 @@ export default function Reportes() {
     setPeriodoActivo(base)
     setFiltros({ tipo: 'all', categoria: 'all' })
   }
-
+  
   const descargarReporteExcel = async () => {
     try {
       const { desde, hasta } = periodoActivo
-      const url = `${API_BASE_URL}/estadisticas/reporte-mensual?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`
+      const url = `${API_BASE_URL}/estadisticas/reporte-mensual/detallado?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`
 
       const res = await fetch(url, {
         method: 'GET',
@@ -221,7 +221,7 @@ export default function Reportes() {
       const urlBlob = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = urlBlob
-      a.download = `reporte_mensual_${desde}_${hasta}.xlsx`
+      a.download = `reporte_mensual_detallado_${desde}_${hasta}.xlsx`
       document.body.appendChild(a)
       a.click()
       a.remove()
