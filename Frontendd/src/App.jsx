@@ -68,30 +68,35 @@ const theme = createTheme({
   },
 });
 
-const routes = [
+// Todas las rutas disponibles con sus permisos
+const allRoutes = [
   { 
     path: '#/', 
     label: 'Inicio', 
     element: Dashboard,
-    icon: '🏠'
+    icon: '🏠',
+    permiso: 'INICIO'
   },
   { 
     path: '#/ingresos', 
     label: 'Venta', 
     element: Ingresos,
-    icon: '💰'
+    icon: '💰',
+    permiso: 'VENTA'
   },
   { 
     path: '#/egresos', 
     label: 'Compra', 
     element: Egresos,
-    icon: '🛒'
+    icon: '🛒',
+    permiso: 'COMPRA'
   },
   { 
     path: '#/inventario', 
     label: 'Inventario', 
     element: Inventario,
     icon: '📦',
+    permiso: 'INVENTARIO',
     submenu: [
       { path: '#/inventario', label: 'Gestión de Inventario' },
       { path: '#/inventarioMat', label: 'Inventario Materiales', element: InventarioMateriales },
@@ -102,10 +107,11 @@ const routes = [
     label: 'Estadísticas', 
     element: Reportes,
     icon: '📊',
+    permiso: 'ESTADISTICAS',
     submenu: [
       { path: '#/reportes', label: 'Dashboard General' },
-      { path: '#/ventas-estadisticas', label: 'Estadísticas de Ventas', element: StatVentas },
-      { path: '#/compras-estadisticas', label: 'Estadísticas de Compras', element: StatCompras },
+      { path: '#/ventas-estadisticas', label: 'Estadísticas de Venta', element: StatVentas },
+      { path: '#/compras-estadisticas', label: 'Estadísticas de Compra', element: StatCompras },
     ]
   },
   { 
@@ -113,9 +119,10 @@ const routes = [
     label: 'Configuración', 
     element: Configuracion,
     icon: '⚙️',
+    permiso: 'CONFIGURACION',
     submenu: [
       { path: '#/configuracion', label: 'Métodos y Categorías' },
-      { path: '#/usuarios', label: 'Gestión de Usuarios', element: GestionUsuarios },  // ✅ AGREGAR
+      { path: '#/usuarios', label: 'Gestión de Usuarios', element: GestionUsuarios },
     ]
   },
 ]
@@ -147,6 +154,36 @@ export default function App() {
     }
   }, []);
 
+  // Función para obtener permisos del usuario
+  const obtenerPermisos = (usuarioData) => {
+    if (!usuarioData) return [];
+    
+    // Si es ADMIN, tiene todos los permisos
+    if (usuarioData.rol === 'ADMIN') {
+      return ['INICIO', 'VENTA', 'COMPRA', 'INVENTARIO', 'ESTADISTICAS', 'CONFIGURACION'];
+    }
+    
+    // Si es USUARIO, cargar permisos del localStorage
+    const permisos = localStorage.getItem(`permisos_${usuarioData.rut}`);
+    if (permisos) {
+      try {
+        return JSON.parse(permisos);
+      } catch (e) {
+        return ['INICIO'];
+      }
+    }
+    return ['INICIO'];
+  };
+
+  // Filtrar rutas según permisos del usuario
+  const routes = useMemo(() => {
+    if (!usuario) return [];
+    
+    const permisos = obtenerPermisos(usuario);
+    
+    return allRoutes.filter(route => permisos.includes(route.permiso));
+  }, [usuario]);
+
   // Manejar rutas de autenticación
   useEffect(() => {
     const currentHash = window.location.hash || '#/';
@@ -162,7 +199,20 @@ export default function App() {
       window.location.hash = '#/';
       return;
     }
-  }, [isAuthenticated, hash]);
+
+    // Verificar si el usuario tiene permiso para la ruta actual
+    if (isAuthenticated && usuario) {
+      const permisos = obtenerPermisos(usuario);
+      const rutaActual = routes.find(r => r.path === currentHash);
+      const rutaEnSubmenu = routes.find(r => r.submenu?.some(s => s.path === currentHash));
+      
+      // Si no tiene permiso para la ruta actual, redirigir a la primera ruta permitida
+      if (!rutaActual && !rutaEnSubmenu && currentHash !== '#/') {
+        const primeraRutaPermitida = routes[0]?.path || '#/';
+        window.location.hash = primeraRutaPermitida;
+      }
+    }
+  }, [isAuthenticated, hash, usuario, routes]);
 
   React.useEffect(() => {
     const onHashChange = () => {
@@ -178,7 +228,7 @@ export default function App() {
     if (activeRouteParent) {
       setOpenMenuPath(activeRouteParent.path);
     }
-  }, [hash]);
+  }, [hash, routes]);
 
   // Gestos táctiles para cerrar el sidebar deslizando
   useEffect(() => {
@@ -247,7 +297,7 @@ export default function App() {
     window.location.hash = '#/';
   };
 
-    const Active = useMemo(() => {
+  const Active = useMemo(() => {
     let match = routes.find(r => hash === r.path);
     
     if (!match) {
@@ -262,8 +312,8 @@ export default function App() {
       }
     }
 
-    return match ? match.element : routes[0].element;
-  }, [hash]);
+    return match ? match.element : (routes[0]?.element || Dashboard);
+  }, [hash, routes]);
 
   // Renderizar páginas de autenticación
   if (hash === '#/login') {
@@ -275,8 +325,6 @@ export default function App() {
     );
   }
 
-
-
   // Si no está autenticado, mostrar login
   if (!isAuthenticated) {
     return (
@@ -286,7 +334,6 @@ export default function App() {
       </ThemeProvider>
     );
   }
-
 
   return (
     <ThemeProvider theme={theme}>
@@ -337,6 +384,7 @@ export default function App() {
             sidebarOpen={sidebarOpen}
             usuario={usuario}
             onLogout={handleLogout}
+            routes={routes}
           />
           <div className="page">
             <Active />
@@ -347,7 +395,7 @@ export default function App() {
   )
 }
 
-function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
+function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout, routes }) {
   const title = useMemo(() => {
     const directRoute = routes.find(r => hash === r.path)
     if (directRoute) return directRoute.label
@@ -358,7 +406,7 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout }) {
     }
 
     return 'Inicio'
-  }, [hash])
+  }, [hash, routes])
 
   const [showCalendar, setShowCalendar] = useState(false)
 

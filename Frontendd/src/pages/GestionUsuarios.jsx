@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Table } from '../components/UI.jsx';
 import { api } from '../services/api/index.js';
-import { PersonAdd, Delete, Edit } from '@mui/icons-material';
+import { PersonAdd, Delete, Edit, Security, Check } from '@mui/icons-material';
+
+// Permisos disponibles
+const PERMISOS_DISPONIBLES = [
+  { id: 'INICIO', label: 'Inicio', icon: '🏠' },
+  { id: 'VENTA', label: 'Venta', icon: '💰' },
+  { id: 'COMPRA', label: 'Compra', icon: '🛒' },
+  { id: 'INVENTARIO', label: 'Inventario', icon: '📦' },
+  { id: 'ESTADISTICAS', label: 'Estadísticas', icon: '📊' },
+  { id: 'CONFIGURACION', label: 'Configuración', icon: '⚙️' }
+];
 
 export default function GestionUsuarios() {
   const [usuarios, setUsuarios] = useState([]);
@@ -18,8 +28,9 @@ export default function GestionUsuarios() {
   const [success, setSuccess] = useState('');
   const [editandoUsuario, setEditandoUsuario] = useState(null);
   const [nuevoRol, setNuevoRol] = useState('');
+  const [editandoPermisos, setEditandoPermisos] = useState(null);
+  const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
 
-  // Verificar que el usuario actual es ADMIN
   const usuarioActual = api.auth.getUsuarioActual();
   const esAdmin = usuarioActual?.rol === 'ADMIN';
 
@@ -32,8 +43,6 @@ export default function GestionUsuarios() {
   const cargarUsuarios = async () => {
     try {
       setLoading(true);
-      // Asumiendo que tienes un endpoint para listar usuarios
-      // Si no lo tienes, te muestro cómo crearlo después
       const response = await fetch('http://localhost:8080/api/usuarios');
       const data = await response.json();
       setUsuarios(data);
@@ -42,6 +51,22 @@ export default function GestionUsuarios() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const cargarPermisos = (rut) => {
+    const permisos = localStorage.getItem(`permisos_${rut}`);
+    if (permisos) {
+      try {
+        return JSON.parse(permisos);
+      } catch (e) {
+        return ['INICIO'];
+      }
+    }
+    return ['INICIO'];
+  };
+
+  const guardarPermisos = (rut, permisos) => {
+    localStorage.setItem(`permisos_${rut}`, JSON.stringify(permisos));
   };
 
   const formatearRut = (rut) => {
@@ -78,7 +103,6 @@ export default function GestionUsuarios() {
         throw new Error('La contraseña debe tener al menos 6 caracteres');
       }
 
-      // Verificar duplicados
       const correoExiste = await api.auth.verificarCorreo(formData.correoElectronico);
       if (correoExiste.existe) {
         throw new Error('El correo electrónico ya está registrado');
@@ -89,7 +113,6 @@ export default function GestionUsuarios() {
         throw new Error('El RUT ya está registrado');
       }
 
-      // Registrar usuario
       await api.auth.registro({
         rut: formData.rut,
         nombre: formData.nombre,
@@ -97,6 +120,10 @@ export default function GestionUsuarios() {
         password: formData.password,
         rol: formData.rol
       });
+
+      if (formData.rol === 'USUARIO') {
+        guardarPermisos(formData.rut, ['INICIO']);
+      }
 
       setSuccess('Usuario creado exitosamente');
       setFormData({
@@ -117,58 +144,101 @@ export default function GestionUsuarios() {
 
   const handleEliminar = async (rut) => {
     if (!window.confirm('¿Estás seguro de eliminar este usuario?')) {
-        return;
+      return;
     }
 
     try {
-        const response = await fetch(`http://localhost:8080/api/usuarios/${rut}`, {
+      const response = await fetch(`http://localhost:8080/api/usuarios/${rut}`, {
         method: 'DELETE'
-        });
+      });
 
-        if (!response.ok) {
+      if (!response.ok) {
         throw new Error('Error al eliminar usuario');
-        }
+      }
 
-        setSuccess('Usuario eliminado exitosamente');
-        cargarUsuarios();
-        setTimeout(() => setSuccess(''), 3000);
+      localStorage.removeItem(`permisos_${rut}`);
+
+      setSuccess('Usuario eliminado exitosamente');
+      cargarUsuarios();
+      setTimeout(() => setSuccess(''), 3000);
     } catch (error) {
-        setError(error.message);
-        setTimeout(() => setError(''), 3000);
+      setError(error.message);
+      setTimeout(() => setError(''), 3000);
     }
-   };
+  };
 
-const handleEditarRol = (usuario) => {
-  setEditandoUsuario(usuario);
-  setNuevoRol(usuario.rol);
-};
+  const handleEditarRol = (usuario) => {
+    setEditandoUsuario(usuario);
+    setNuevoRol(usuario.rol);
+  };
 
-const handleGuardarRol = async () => {
-  try {
-    const response = await fetch(`http://localhost:8080/api/usuarios/${editandoUsuario.rut}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        ...editandoUsuario,
-        rol: nuevoRol
-      })
+  const handleGuardarRol = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/usuarios/${editandoUsuario.rut}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...editandoUsuario,
+          rol: nuevoRol
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al actualizar rol');
+      }
+
+      if (nuevoRol === 'ADMIN') {
+        localStorage.removeItem(`permisos_${editandoUsuario.rut}`);
+      }
+
+      setSuccess('Rol actualizado exitosamente');
+      setEditandoUsuario(null);
+      cargarUsuarios();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError(error.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleEditarPermisos = (usuario) => {
+    setEditandoPermisos(usuario);
+    const permisos = cargarPermisos(usuario.rut);
+    setPermisosSeleccionados(permisos);
+  };
+
+  const handleTogglePermiso = (permisoId) => {
+    setPermisosSeleccionados(prev => {
+      if (prev.includes(permisoId)) {
+        if (permisoId === 'INICIO' && prev.length === 1) {
+          return prev;
+        }
+        return prev.filter(p => p !== permisoId);
+      } else {
+        return [...prev, permisoId];
+      }
     });
+  };
 
-    if (!response.ok) {
-      throw new Error('Error al actualizar rol');
+  const handleGuardarPermisos = () => {
+    if (permisosSeleccionados.length === 0) {
+      setError('Debe seleccionar al menos un permiso');
+      return;
     }
 
-    setSuccess('Rol actualizado exitosamente');
-    setEditandoUsuario(null);
-    cargarUsuarios();
+    guardarPermisos(editandoPermisos.rut, permisosSeleccionados);
+    setSuccess('Permisos actualizados exitosamente');
+    setEditandoPermisos(null);
     setTimeout(() => setSuccess(''), 3000);
-  } catch (error) {
-    setError(error.message);
-    setTimeout(() => setError(''), 3000);
-  }
-};
+  };
+
+  const contarPermisos = (usuario) => {
+    if (usuario.rol === 'ADMIN') return 'Todos';
+    const permisos = cargarPermisos(usuario.rut);
+    return permisos.length;
+  };
 
   if (!esAdmin) {
     return (
@@ -190,7 +260,7 @@ const handleGuardarRol = async () => {
         <div>
           <h2 style={{ margin: 0 }}>Gestión de Usuarios</h2>
           <p style={{ color: 'var(--muted)', margin: '0.5rem 0 0 0' }}>
-            Administra los usuarios del sistema
+            Administra los usuarios y sus permisos
           </p>
         </div>
         <Button onClick={() => setShowModal(true)}>
@@ -213,7 +283,7 @@ const handleGuardarRol = async () => {
 
       <Card>
         <Table
-          columns={['RUT', 'Nombre', 'Correo', 'Rol', 'Fecha Creación', 'Acciones']}
+          columns={['RUT', 'Nombre', 'Correo', 'Rol', 'Permisos', 'Fecha Creación', 'Acciones']}
           rows={usuarios.map(u => [
             u.rut,
             u.nombre,
@@ -228,32 +298,59 @@ const handleGuardarRol = async () => {
             }}>
               {u.rol}
             </span>,
+            <span style={{
+              padding: '0.25rem 0.75rem',
+              borderRadius: '12px',
+              fontSize: '0.85rem',
+              fontWeight: 600,
+              background: '#f3e5f5',
+              color: '#6a1b9a',
+              cursor: u.rol === 'USUARIO' ? 'pointer' : 'default'
+            }}
+            onClick={() => u.rol === 'USUARIO' && handleEditarPermisos(u)}
+            title={u.rol === 'USUARIO' ? 'Click para editar permisos' : 'Los admins tienen todos los permisos'}
+            >
+              {contarPermisos(u)} {u.rol === 'USUARIO' && '✏️'}
+            </span>,
             (() => {
-        if (!u.fechaCreacion) return 'Sin fecha';
-        try {
-            const fecha = new Date(u.fechaCreacion);
-            if (isNaN(fecha.getTime())) return 'Fecha inválida';
-            return fecha.toLocaleDateString('es-CL');
-        } catch {
-            return 'Error en fecha';
-        }
-        })(),
+              if (!u.fechaCreacion) return 'Sin fecha';
+              try {
+                const fecha = new Date(u.fechaCreacion);
+                if (isNaN(fecha.getTime())) return 'Fecha inválida';
+                return fecha.toLocaleDateString('es-CL');
+              } catch {
+                return 'Error en fecha';
+              }
+            })(),
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button 
+              <Button 
                 small 
                 variant="ghost"
                 onClick={() => handleEditarRol(u)}
-            >
+                title="Editar rol"
+              >
                 <Edit sx={{ fontSize: 18 }} />
-            </Button>
-            <Button 
+              </Button>
+              {u.rol === 'USUARIO' && (
+                <Button 
+                  small 
+                  variant="ghost"
+                  onClick={() => handleEditarPermisos(u)}
+                  title="Gestionar permisos"
+                  style={{ color: '#6a1b9a' }}
+                >
+                  <Security sx={{ fontSize: 18 }} />
+                </Button>
+              )}
+              <Button 
                 small 
                 variant="ghost" 
                 style={{ color: '#d32f2f' }}
                 onClick={() => handleEliminar(u.rut)}
-            >
+                title="Eliminar usuario"
+              >
                 <Delete sx={{ fontSize: 18 }} />
-            </Button>
+              </Button>
             </div>
           ])}
         />
@@ -406,83 +503,200 @@ const handleGuardarRol = async () => {
               </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                
                 <Button type="submit" disabled={loading}>
                   {loading ? 'Creando...' : 'Crear Usuario'}
                 </Button>
               </div>
             </form>
           </div>
-          
         </div>
-        
       )}
 
-    {/* Modal de Editar Rol */}
-            {editandoUsuario && (
-            <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                background: 'rgba(0,0,0,0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 9999,
-                padding: '1rem'
-            }} onClick={() => setEditandoUsuario(null)}>
-                <div style={{
-                background: '#fff',
-                borderRadius: '12px',
-                padding: '2rem',
-                maxWidth: '400px',
-                width: '100%'
-                }} onClick={(e) => e.stopPropagation()}>
-                <h3 style={{ marginTop: 0 }}>Editar Rol de Usuario</h3>
-                
-                <div style={{ marginBottom: '1rem' }}>
-                    <p><strong>Usuario:</strong> {editandoUsuario.nombre}</p>
-                    <p><strong>RUT:</strong> {editandoUsuario.rut}</p>
-                </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-                    Rol
-                    </label>
-                    <select
-                    value={nuevoRol}
-                    onChange={(e) => setNuevoRol(e.target.value)}
-                    style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        borderRadius: '8px',
-                        border: '1px solid var(--border)',
-                        fontSize: '1rem'
-                    }}
-                    >
-                    <option value="USUARIO">Usuario</option>
-                    <option value="ADMIN">Administrador</option>
-                    </select>
-                </div>
-
-                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                    <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setEditandoUsuario(null)}
-                    >
-                    Cancelar
-                    </Button>
-                    <Button onClick={handleGuardarRol}>
-                    Guardar Cambios
-                    </Button>
-                </div>
-                </div>
+      {/* Modal de Editar Rol */}
+      {editandoUsuario && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }} onClick={() => setEditandoUsuario(null)}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '100%'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0 }}>Editar Rol de Usuario</h3>
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <p><strong>Usuario:</strong> {editandoUsuario.nombre}</p>
+              <p><strong>RUT:</strong> {editandoUsuario.rut}</p>
             </div>
-            )}  
 
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Rol
+              </label>
+              <select
+                value={nuevoRol}
+                onChange={(e) => setNuevoRol(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="USUARIO">Usuario</option>
+                <option value="ADMIN">Administrador</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setEditandoUsuario(null)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleGuardarRol}>
+                Guardar Cambios
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Editar Permisos */}
+      {editandoPermisos && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem',
+          overflowY: 'auto'
+        }} onClick={() => setEditandoPermisos(null)}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            margin: 'auto'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Security /> Gestionar Permisos
+            </h3>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p><strong>Usuario:</strong> {editandoPermisos.nombre}</p>
+              <p><strong>RUT:</strong> {editandoPermisos.rut}</p>
+            </div>
+
+            {error && (
+              <div style={{
+                padding: '0.75rem',
+                background: '#f8d7da',
+                color: '#721c24',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.9rem'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '1rem', fontWeight: 600 }}>
+                Módulos a los que puede acceder:
+              </label>
+              
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {PERMISOS_DISPONIBLES.map(permiso => (
+                  <div
+                    key={permiso.id}
+                    onClick={() => handleTogglePermiso(permiso.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem',
+                      padding: '1rem',
+                      borderRadius: '8px',
+                      border: `2px solid ${permisosSeleccionados.includes(permiso.id) ? 'var(--brand)' : 'var(--border)'}`,
+                      background: permisosSeleccionados.includes(permiso.id) ? 'rgba(93, 64, 55, 0.05)' : '#fff',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '6px',
+                      border: `2px solid ${permisosSeleccionados.includes(permiso.id) ? 'var(--brand)' : 'var(--border)'}`,
+                      background: permisosSeleccionados.includes(permiso.id) ? 'var(--brand)' : '#fff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#fff',
+                      fontSize: '14px'
+                    }}>
+                      {permisosSeleccionados.includes(permiso.id) && <Check sx={{ fontSize: 16 }} />}
+                    </div>
+                    <span style={{ fontSize: '1.5rem' }}>{permiso.icon}</span>
+                    <span style={{ fontWeight: 600, flex: 1 }}>{permiso.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ 
+              padding: '1rem',
+              background: '#fff3cd',
+              borderRadius: '8px',
+              marginBottom: '1rem',
+              fontSize: '0.9rem',
+              color: '#856404'
+            }}>
+              ℹ️ El usuario tendrá acceso solo a los módulos seleccionados
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditandoPermisos(null);
+                  setError('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleGuardarPermisos}>
+                Guardar Permisos
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
