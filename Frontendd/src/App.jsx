@@ -18,6 +18,7 @@ import { Button } from './components/UI.jsx'
 import { Logout, Person } from '@mui/icons-material'
 import AgendamientosModal from './components/AgendamientosModal.jsx'
 import GestionUsuarios from './pages/GestionUsuarios.jsx'
+import GastosRecurrentes from './pages/Compra/GastosRecurrentes.jsx'
 
 const theme = createTheme({
   palette: {
@@ -89,7 +90,11 @@ const allRoutes = [
     label: 'Compra', 
     element: Egresos,
     icon: '🛒',
-    permiso: 'COMPRA'
+    permiso: 'COMPRA',
+    submenu: [
+      { path: '#/egresos', label: 'Registrar Compra' },
+      { path: '#/gastos-recurrentes', label: 'Gastos Recurrentes', element: GastosRecurrentes },
+    ]
   },
   { 
     path: '#/inventario', 

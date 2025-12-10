@@ -3,7 +3,7 @@ import { api } from '../services/api/index.js'
 import { 
   TrendingDown, 
   ShoppingCart, 
-  Receipt, 
+  Receipt,
   Analytics, 
   AttachMoney, 
   CalendarToday, 
@@ -102,13 +102,6 @@ export default function Egresos() {
     observaciones: ''
   })
 
-  const [formGasto, setFormGasto] = useState({
-    descripcion: '',
-    monto: 0,
-    idMetodoPago: '',
-    fecha: new Date().toISOString().split('T')[0]
-  })
-
   const [formCompraMaterial, setFormCompraMaterial] = useState({
     idMaterial: '',
     cantidad: 1,
@@ -120,19 +113,19 @@ export default function Egresos() {
 
   const [resumen, setResumen] = useState([
     { 
-      label: 'Compras', 
+      label: 'Compras del Mes', 
       value: '$ 0',
       icon: <ShoppingCart />,
       color: '#5D4037',
     },
     { 
-      label: 'Gastos', 
+      label: 'Gastos del Mes', 
       value: '$ 0',
       icon: <Receipt />,
       color: '#8D6E63',
     },
     { 
-      label: 'Total', 
+      label: 'Total Egresos', 
       value: '$ 0',
       icon: <TrendingDown />,
       color: '#F44336',
@@ -178,19 +171,19 @@ export default function Egresos() {
 
       setResumen([
         { 
-          label: 'Compras', 
+          label: 'Compras del Mes', 
           value: `$ ${Math.round(comprasMes).toLocaleString('es-CL')}`,
           icon: <ShoppingCart />,
           color: '#5D4037',
         },
         { 
-          label: 'Gastos', 
+          label: 'Gastos del Mes', 
           value: `$ ${Math.round(gastosMes).toLocaleString('es-CL')}`,
           icon: <Receipt />,
           color: '#8D6E63',
         },
         { 
-          label: 'Total', 
+          label: 'Total Egresos', 
           value: `$ ${Math.round(totalEgresos).toLocaleString('es-CL')}`,
           icon: <TrendingDown />,
           color: '#F44336',
@@ -226,7 +219,7 @@ export default function Egresos() {
 
   const validarPaso1 = () => {
     if (!tipoEgreso) {
-      alert('⚠️ Seleccione un tipo de egreso');
+      alert('⚠️ Seleccione un tipo de compra');
       return false;
     }
     return true;
@@ -267,19 +260,6 @@ export default function Egresos() {
         alert('⚠️ La cantidad debe ser mayor a 0');
         return false;
       }
-    } else if (tipoEgreso === 'gasto') {
-      if (!formGasto.descripcion?.trim()) {
-        alert('⚠️ Ingrese una descripción');
-        return false;
-      }
-      if (!formGasto.idMetodoPago) {
-        alert('⚠️ Seleccione un método de pago');
-        return false;
-      }
-      if (!formGasto.monto || formGasto.monto <= 0) {
-        alert('⚠️ El monto debe ser mayor a 0');
-        return false;
-      }
     }
     return true;
   };
@@ -293,8 +273,6 @@ export default function Egresos() {
         handleGuardarCompra();
       } else if (tipoEgreso === 'material') {
         handleGuardarCompraMaterial();
-      } else {
-        handleGuardarGasto();
       }
     } else {
       setPasoActual(prev => Math.min(prev + 1, 3));
@@ -362,33 +340,6 @@ export default function Egresos() {
     }
   }
 
-  const handleGuardarGasto = async () => {
-    try {
-      const gastoData = {
-        fecha: new Date(formGasto.fecha).toISOString(),
-        monto: parseFloat(formGasto.monto),
-        metodoPago: { idMetodoPago: parseInt(formGasto.idMetodoPago) },
-        descripcion: formGasto.descripcion
-      }
-      
-      await api.gastos.registrar(gastoData)
-      alert('✅ Gasto registrado exitosamente')
-      
-      setFormGasto({
-        descripcion: '',
-        monto: 0,
-        idMetodoPago: '',
-        fecha: new Date().toISOString().split('T')[0]
-      })
-
-      setPasoActual(1);
-      await cargarDatos()
-    } catch (error) {
-      console.error('Error al registrar gasto:', error)
-      alert('❌ Error al registrar el gasto: ' + (error.message || 'Error desconocido'))
-    }
-  }
-
   const handleGuardarCompraMaterial = async () => {
     try {
       const materialSeleccionado = materiales.find(m => m.idMaterial === parseInt(formCompraMaterial.idMaterial))
@@ -440,13 +391,6 @@ export default function Egresos() {
           tipoDocumento: 'boleta',
           fecha: new Date().toISOString().split('T')[0],
           observaciones: ''
-        })
-      } else if (tipoEgreso === 'gasto') {
-        setFormGasto({
-          descripcion: '',
-          monto: 0,
-          idMetodoPago: '',
-          fecha: new Date().toISOString().split('T')[0]
         })
       } else if (tipoEgreso === 'material') {
         setFormCompraMaterial({
@@ -612,7 +556,7 @@ export default function Egresos() {
           <div className="form-field">
             <label className="field-label">
               <Analytics sx={{ fontSize: 18 }} />
-              Tipo de Egreso
+              Tipo de Compra
             </label>
             <select 
               value={tipoEgreso} 
@@ -620,33 +564,30 @@ export default function Egresos() {
             >
               <option value="compra">🛒 Compra General</option>
               <option value="material">📦 Compra de Materiales</option>
-              <option value="gasto">💸 Gasto Operativo</option>
             </select>
             
             <div style={{
               marginTop: '1rem',
               padding: '1rem',
-              background: tipoEgreso === 'compra' ? '#E8F5E8' : tipoEgreso === 'material' ? '#E3F2FD' : '#FFF3E0',
-              border: `2px solid ${tipoEgreso === 'compra' ? '#4CAF50' : tipoEgreso === 'material' ? '#2196F3' : '#FF9800'}`,
+              background: tipoEgreso === 'compra' ? '#E8F5E8' : '#E3F2FD',
+              border: `2px solid ${tipoEgreso === 'compra' ? '#4CAF50' : '#2196F3'}`,
               borderRadius: '8px'
             }}>
               <h4 style={{ 
                 margin: '0 0 0.25rem 0',
                 fontSize: '0.95rem',
-                color: tipoEgreso === 'compra' ? '#2E7D32' : tipoEgreso === 'material' ? '#1565C0' : '#EF6C00'
+                color: tipoEgreso === 'compra' ? '#2E7D32' : '#1565C0'
               }}>
-                {tipoEgreso === 'compra' ? '🛒 Compra General' : tipoEgreso === 'material' ? '📦 Compra de Materiales' : '💸 Gasto Operativo'}
+                {tipoEgreso === 'compra' ? '🛒 Compra General' : '📦 Compra de Materiales'}
               </h4>
               <p style={{ 
                 margin: 0, 
                 fontSize: '0.85rem',
-                color: tipoEgreso === 'compra' ? '#388E3C' : tipoEgreso === 'material' ? '#1976D2' : '#F57C00'
+                color: tipoEgreso === 'compra' ? '#388E3C' : '#1976D2'
               }}>
                 {tipoEgreso === 'compra' 
                   ? 'Registro de compras de insumos y materiales'
-                  : tipoEgreso === 'material'
-                  ? 'Registro de materiales para inventario'
-                  : 'Registro de gastos operativos'
+                  : 'Registro de materiales para inventario'
                 }
               </p>
             </div>
@@ -907,69 +848,8 @@ export default function Egresos() {
               </div>
             </div>
           );
-        } else {
-          return (
-            <div className="form-grid">
-              <div className="form-field col-6">
-                <label className="field-label">
-                  <Description sx={{ fontSize: 16 }} />
-                  Descripción
-                </label>
-                <input 
-                  type="text" 
-                  placeholder='Ej: Arriendo, servicios...' 
-                  value={formGasto.descripcion}
-                  onChange={(e) => setFormGasto({ ...formGasto, descripcion: e.target.value })}
-                />
-              </div>
-
-              <div className="form-field col-6">
-                <label className="field-label">
-                  <AttachMoney sx={{ fontSize: 16 }} />
-                  Monto
-                </label>
-                <input 
-                  type="number" 
-                  placeholder="0" 
-                  min={0} 
-                  step={100} 
-                  value={formGasto.monto}
-                  onChange={(e) => setFormGasto({ ...formGasto, monto: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
-
-              <div className="form-field col-6">
-                <label className="field-label">
-                  <CalendarToday sx={{ fontSize: 16 }} />
-                  Fecha
-                </label>
-                <input 
-                  type="date" 
-                  value={formGasto.fecha}
-                  onChange={(e) => setFormGasto({ ...formGasto, fecha: e.target.value })}
-                />
-              </div>
-
-              <div className="form-field col-6">
-                <label className="field-label">
-                  <Payment sx={{ fontSize: 16 }} />
-                  Método de Pago
-                </label>
-                <select 
-                  value={formGasto.idMetodoPago}
-                  onChange={(e) => setFormGasto({ ...formGasto, idMetodoPago: e.target.value })}
-                >
-                  <option value="">Seleccionar...</option>
-                  {metodosPago.map(m => (
-                    <option key={m.idMetodoPago} value={m.idMetodoPago}>
-                      {m.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          );
         }
+        break;
       
       case 3:
         return (
@@ -992,8 +872,7 @@ export default function Egresos() {
               }}>
                 ${Math.round(
                   tipoEgreso === 'compra' ? calcularTotalCompra() :
-                  tipoEgreso === 'material' ? calcularTotalCompraMaterial() :
-                  formGasto.monto
+                  calcularTotalCompraMaterial()
                 ).toLocaleString('es-CL')}
               </div>
             </div>
@@ -1035,15 +914,6 @@ export default function Egresos() {
                   <div><strong>Precio:</strong> ${formCompraMaterial.precioUnitario.toLocaleString('es-CL')}</div>
                   <div><strong>Fecha:</strong> {formatearFecha(formCompraMaterial.fecha)}</div>
                   <div><strong>Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formCompraMaterial.idMetodoPago))?.nombre}</div>
-                </div>
-              )}
-
-              {tipoEgreso === 'gasto' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
-                  <div><strong>Descripción:</strong> {formGasto.descripcion}</div>
-                  <div><strong>Monto:</strong> ${formGasto.monto.toLocaleString('es-CL')}</div>
-                  <div><strong>Fecha:</strong> {formatearFecha(formGasto.fecha)}</div>
-                  <div><strong>Pago:</strong> {metodosPago.find(m => m.idMetodoPago === parseInt(formGasto.idMetodoPago))?.nombre}</div>
                 </div>
               )}
             </div>
@@ -1097,7 +967,7 @@ export default function Egresos() {
         key={`tipo-${idx}`}
         className={`tipo-badge ${esCompra ? 'tipo-compra' : 'tipo-gasto'}`}
       >
-        {esCompra ? '🛒' : '💸'}
+        {esCompra ? '🛒 Compra' : '💸 Gasto'}
       </span>,
       <div key={`detalle-${idx}`} className="tabla-detalle">{detalle}</div>,
       <div key={`bruto-${idx}`} className="tabla-monto">
@@ -1420,7 +1290,7 @@ export default function Egresos() {
           font-size: 0.8rem;
           font-weight: 600;
           display: inline-block;
-          min-width: 40px;
+          min-width: 80px;
           text-align: center;
         }
 
@@ -1495,8 +1365,8 @@ export default function Egresos() {
       {/* Header compacto */}
       <div className="egresos-card egresos-header">
         <div className="card-header">
-          <h1 className="card-title">Egresos</h1>
-          <p className="card-subtitle">Control de compras y gastos</p>
+          <h1 className="card-title">Compras</h1>
+          <p className="card-subtitle">Control de compras y gastos operativos</p>
         </div>
         <div className="card-body">
           <div className="stats-grid">
@@ -1516,7 +1386,7 @@ export default function Egresos() {
       {/* Formulario compacto */}
       <div className="egresos-card">
         <div className="card-header">
-          <h2 className="card-title">Registrar Egreso</h2>
+          <h2 className="card-title">Registrar Compra</h2>
         </div>
         <div className="card-body">
           {/* Indicador de pasos */}
@@ -1624,6 +1494,7 @@ export default function Egresos() {
       <div className="egresos-card">
         <div className="card-header">
           <h2 className="card-title">Movimientos Recientes</h2>
+          <p className="card-subtitle">Compras y gastos operativos del mes</p>
         </div>
         <div className="card-body">
           <div className="tabla-container">
