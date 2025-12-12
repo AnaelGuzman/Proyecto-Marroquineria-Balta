@@ -35,7 +35,7 @@ export default function Inventario() {
         producto.nombre?.toLowerCase().includes(filtro.buscar.toLowerCase())
       const categoriaMatch = filtro.categoria === 'all' || 
         producto.categoria?.idCategoria === parseInt(filtro.categoria)
-      const stockBajoMatch = !filtro.stockBajo || item.cantidadProducto <= 10
+      const stockBajoMatch = !filtro.stockBajo || item.cantidadProducto < 10
       
       return nombreMatch && categoriaMatch && stockBajoMatch
     }), [inventario, filtro]
