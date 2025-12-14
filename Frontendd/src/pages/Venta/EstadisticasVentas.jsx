@@ -3,28 +3,22 @@ import {
   Card, 
   CardContent, 
   Typography, 
-  Grid, 
   Box,
-  Button,
-  Paper,
   Chip,
   Tooltip
 } from '@mui/material'; 
 import { 
-  BarChart, 
   TrendingUp,
   AttachMoney,
   Payment,
-  ArrowBackIos,
-  ArrowForwardIos,
-  ShowChart,
   Analytics,
   Insights,
   ShoppingBag,
-  ReceiptLong,
-  CalendarToday
+  ReceiptLong
 } from '@mui/icons-material'; 
 import { api } from '../../services/api'; 
+import PeriodoToolbar from '../../components/PeriodoToolbar.jsx';
+import '../estadisticas-page.css';
 
 const CARD_BASE_SX = {
   width: '100%',
@@ -36,6 +30,8 @@ const CARD_BASE_SX = {
   boxShadow: '0 8px 20px rgba(93, 64, 55, 0.1)',
   backgroundColor: '#FAF9F7'
 };
+
+const KPI_CARD_HEIGHT = 170;
 
 export default function EstadisticasVentas() {
   const [datos, setDatos] = useState({
@@ -164,6 +160,14 @@ export default function EstadisticasVentas() {
     });
   };
 
+  const restablecerPeriodoActual = () => {
+    const ahora = new Date();
+    setPeriodo({
+      inicio: new Date(ahora.getFullYear(), ahora.getMonth(), 1),
+      fin: new Date()
+    });
+  };
+
   // Métricas clave
   const calcularMetricasClave = () => {
     const ventasFiltradas = datos.todasVentas;
@@ -199,21 +203,6 @@ export default function EstadisticasVentas() {
     };
   };
 
-  // Resumen ejecutivo
-  const generarResumenEjecutivo = () => {
-    const comparativa = calcularComparativa();
-    const metricas = calcularMetricasClave();
-    const mejorMetodoPago = datos.metodosPago.sort((a, b) => b.monto - a.monto)[0];
-    const productoTop = datos.productosMasVendidos[0];
-    
-    return {
-      crecimiento: comparativa.porcentaje,
-      mejorMetodo: mejorMetodoPago?.nombre || 'N/A',
-      productoDestacado: productoTop?.[0]?.nombre || 'N/A',
-      ticketPromedio: metricas.ticketPromedio
-    };
-  };
-
   if (loading) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -226,96 +215,37 @@ export default function EstadisticasVentas() {
 
   const metricas = calcularMetricasClave();
   const comparativa = calcularComparativa();
-  const resumen = generarResumenEjecutivo();
   const rangoLabel = `${periodo.inicio.toLocaleDateString('es-CL')} - ${periodo.fin.toLocaleDateString('es-CL')}`;
   const diasPeriodo = Math.max(1, Math.round((periodo.fin - periodo.inicio) / (1000 * 60 * 60 * 24)) + 1);
 
   const kpiCards = [
     {
       key: 'ventas-totales',
-      element: (
-        <MetricaRapida 
-          titulo="VENTAS TOTALES"
-          valor={`$${metricas.totalVentas.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`}
-          icono={<AttachMoney />}
-          color="#5D4037"
-        />
-      )
+      titulo: 'Ventas totales',
+      valor: `$${metricas.totalVentas.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <AttachMoney fontSize="small" />,
+      color: '#5D4037'
     },
     {
       key: 'ticket-promedio',
-      element: (
-        <MetricaRapida 
-          titulo="TICKET PROMEDIO"
-          valor={`$${metricas.ticketPromedio.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`}
-          icono={<ReceiptLong />}
-          color="#A1887F"
-        />
-      )
+      titulo: 'Ticket promedio',
+      valor: `$${metricas.ticketPromedio.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <ReceiptLong fontSize="small" />,
+      color: '#A1887F'
     },
     {
       key: 'cantidad-ventas',
-      element: (
-        <MetricaRapida 
-          titulo="CANTIDAD VENTAS"
-          valor={metricas.cantidadVentas.toString()}
-          icono={<ShoppingBag />}
-          color="#BCAAA4"
-        />
-      )
+      titulo: 'Cantidad ventas',
+      valor: metricas.cantidadVentas.toString(),
+      icono: <ShoppingBag fontSize="small" />,
+      color: '#BCAAA4'
     },
     {
       key: 'comparativa',
-      element: (
-        <Card sx={{ ...CARD_BASE_SX, textAlign: 'center', justifyContent: 'center' }}>
-          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#5D4037', fontWeight: 'bold' }}>
-              Comparativa Mensual
-            </Typography>
-            <Chip 
-              label={`${comparativa.esPositivo ? '+' : ''}${comparativa.porcentaje.toFixed(1)}%`}
-              color={comparativa.esPositivo ? 'success' : 'error'}
-              sx={{ fontSize: '1.5rem', px: 2.5, py: 1, borderRadius: 4, alignSelf: 'center' }}
-            />
-            <Typography variant="body2" sx={{ color: '#8D6E63', mt: 1.5 }}>
-              vs mes anterior (${comparativa.mesAnterior.toLocaleString('es-CL', { minimumFractionDigits: 0 })})
-            </Typography>
-          </CardContent>
-        </Card>
-      )
-    }
-  ];
-
-  const chartCards = [
-    {
-      key: 'resumen-financiero',
-      element: (
-        <Card sx={CARD_BASE_SX}>
-          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-              <TrendingUp sx={{ mr: 1 }} /> Resumen Financiero
-            </Typography>
-            <Box sx={{ mt: 2, flex: 1 }}>
-              <GraficoVentasMes datos={datos.ventasMes} comisiones={datos.comisiones} />
-            </Box>
-          </CardContent>
-        </Card>
-      )
-    },
-    {
-      key: 'metodos-pago',
-      element: (
-        <Card sx={CARD_BASE_SX}>
-          <CardContent sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Typography variant="h6" gutterBottom sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center' }}>
-              <Payment sx={{ mr: 1 }} /> Métodos de Pago
-            </Typography>
-            <Box sx={{ mt: 2, flex: 1, display: 'flex', justifyContent: 'center' }}>
-              <GraficoMetodosPago datos={datos.metodosPago} />
-            </Box>
-          </CardContent>
-        </Card>
-      )
+      titulo: `Comparativa vs mes anterior ($${comparativa.mesAnterior.toLocaleString('es-CL', { minimumFractionDigits: 0 })})`,
+      valor: `${comparativa.esPositivo ? '+' : ''}${comparativa.porcentaje.toFixed(1)}%`,
+      icono: <TrendingUp fontSize="small" />,
+      color: comparativa.esPositivo ? '#2E7D32' : '#C62828',
     }
   ];
 
@@ -328,7 +258,7 @@ export default function EstadisticasVentas() {
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Insights sx={{ color: '#5D4037' }} />
               <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold' }}>
-                Resumen ejecutivo
+                Resumen
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'right' }}>
@@ -341,26 +271,56 @@ export default function EstadisticasVentas() {
             </Box>
           </Box>
 
-          {/* Bloque superior: variación y método/producto destacados */}
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 1fr' } }}>
-            <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#F5F5F5' }}>
-              <Typography variant="body2" sx={{ color: '#5D4037', mb: 0.5 }}>Variación mensual</Typography>
-              <Typography variant="h4" sx={{ color: comparativa.esPositivo ? '#2E7D32' : '#D32F2F', fontWeight: 'bold' }}>
-                {comparativa.esPositivo ? '↗' : '↘'} {Math.abs(comparativa.porcentaje).toFixed(1)}%
+          {/* Resumen financiero + métodos de pago (integrados en el resumen) */}
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }
+            }}
+          >
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 2,
+                border: '1px solid #D7CCC8',
+                backgroundColor: '#FAF9F7',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}
+              >
+                <TrendingUp fontSize="small" /> Resumen financiero
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                vs mes anterior (${comparativa.mesAnterior.toLocaleString('es-CL', { minimumFractionDigits: 0 })})
-              </Typography>
+              <Box sx={{ flex: 1, minHeight: 180 }}>
+                <GraficoVentasMes datos={datos.ventasMes} comisiones={datos.comisiones} />
+              </Box>
             </Box>
-            <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#F5F5F5' }}>
-              <Typography variant="body2" sx={{ color: '#5D4037', mb: 0.5 }}>Mejor método de pago</Typography>
-              <Typography variant="subtitle1" sx={{ color: '#5D4037', fontWeight: 'bold' }}>{resumen.mejorMetodo}</Typography>
-            </Box>
-            <Box sx={{ p: 2, borderRadius: 2, bgcolor: '#F5F5F5' }}>
-              <Typography variant="body2" sx={{ color: '#5D4037', mb: 0.5 }}>Producto destacado</Typography>
-              <Typography variant="subtitle1" sx={{ color: '#5D4037', fontWeight: 'bold', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {resumen.productoDestacado}
+
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 2,
+                border: '1px solid #D7CCC8',
+                backgroundColor: '#FAF9F7',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}
+              >
+                <Payment fontSize="small" /> Métodos de pago
               </Typography>
+              <Box sx={{ flex: 1, minHeight: 180, display: 'flex', justifyContent: 'center' }}>
+                <GraficoMetodosPago datos={datos.metodosPago} />
+              </Box>
             </Box>
           </Box>
 
@@ -380,29 +340,47 @@ export default function EstadisticasVentas() {
             </Box>
           </Box>
 
-          {/* Bloque inferior: Comisiones y métricas extra resumidas */}
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #D7CCC8' }}>
-              <Typography variant="subtitle2" sx={{ color: '#5D4037', mb: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <AttachMoney fontSize="small" /> Comisiones
-              </Typography>
-              <GraficoComisiones comisiones={datos.comisiones} />
-            </Box>
-            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #D7CCC8' }}>
-              <Typography variant="subtitle2" sx={{ color: '#5D4037', mb: 1 }}>Métricas adicionales</Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Ventas por día</Typography>
-                  <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold' }}>
-                    {metricas.ventasPorDia.toFixed(1)}
-                  </Typography>
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">Productos por venta</Typography>
-                  <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold' }}>
-                    {metricas.productosPorVenta.toFixed(1)}
-                  </Typography>
-                </Box>
+          {/* Bloque compacto: Comisiones + métricas (sin duplicar ticket promedio) */}
+          <Box
+            sx={{
+              p: 1.75,
+              borderRadius: 2,
+              border: '1px solid #D7CCC8',
+              backgroundColor: '#FAF9F7'
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{ color: '#5D4037', mb: 1.25, display: 'flex', alignItems: 'center', gap: 0.6 }}
+            >
+              <AttachMoney fontSize="small" /> Comisiones y métricas
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' }
+              }}
+            >
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Comisiones (período)</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  ${datos.comisiones.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Ventas por día</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {metricas.ventasPorDia.toFixed(1)}
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Productos por venta</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {metricas.productosPorVenta.toFixed(1)}
+                </Typography>
               </Box>
             </Box>
           </Box>
@@ -412,72 +390,33 @@ export default function EstadisticasVentas() {
   };
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1600, margin: '0 auto' }}>
-      {/* Header del período */}
-      <Card sx={{ mb: 3, background: 'linear-gradient(135deg, #5D4037, #8D6E63)', boxShadow: 3 }}>
-        <CardContent sx={{ p: 3 }}>
-          <Grid container alignItems="center" justifyContent="space-between">
-            <Grid item>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Analytics sx={{ fontSize: 40, color: 'white' }} />
-                <Box>
-                  <Typography variant="h4" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    Estadísticas de Ventas
-                  </Typography>
-                  <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-                    {formatearMes(periodo.inicio)}
-                  </Typography>
-                </Box>
-              </Box>
-            </Grid>
-            <Grid item>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                <Button variant="outlined" startIcon={<ArrowBackIos />} onClick={() => cambiarMes(-1)} sx={{ color: 'white', borderColor: 'white' }}>Anterior</Button>
-                <Button variant="outlined" onClick={() => setPeriodo({ inicio: new Date(new Date().getFullYear(), new Date().getMonth(), 1), fin: new Date() })} sx={{ color: 'white', borderColor: 'white' }}>Actual</Button>
-                <Button variant="outlined" endIcon={<ArrowForwardIos />} onClick={() => cambiarMes(1)} sx={{ color: 'white', borderColor: 'white' }}>Siguiente</Button>
-              </Box>
-            </Grid>
-          </Grid>
-        </CardContent>
+    <Box sx={{ p: { xs: 2, sm: 2.25, md: 2.5, lg: 3 }, maxWidth: 1600, margin: '0 auto' }} className="estadisticas-page">
+      <PeriodoToolbar
+        icon={Analytics}
+        titulo={formatearMes(periodo.inicio)}
+        periodoLabel={rangoLabel}
+        onPrev={() => cambiarMes(-1)}
+        onReset={restablecerPeriodoActual}
+        onNext={() => cambiarMes(1)}
+      />
+
+      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 2.25, md: 2.5 } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: { xs: 1.25, sm: 1.5, md: 1.75 },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              lg: 'repeat(4, minmax(0, 1fr))'
+            }
+          }}
+        >
+          {kpiCards.map(kpi => (
+            <MetricaCompacta key={kpi.key} {...kpi} />
+          ))}
+        </Box>
       </Card>
-
-      {/* Fila 1: 4 KPIs */}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(4, minmax(0, 1fr))'
-          },
-          mb: 3
-        }}
-      >
-        {kpiCards.map(({ key, element }) => (
-          <Box key={key} sx={{ display: 'flex', width: '100%' }}>
-            {element}
-          </Box>
-        ))}
-      </Box>
-
-      {/* Fila 2: 2 gráficos (torta financiero + métodos de pago en torta) */}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          gridTemplateColumns: {
-            xs: '1fr',
-            md: 'repeat(2, minmax(0, 1fr))'
-          },
-          mb: 3
-        }}
-      >
-        {chartCards.map(({ key, element }) => (
-          <Box key={key} sx={{ display: 'flex', width: '100%' }}>
-            {element}
-          </Box>
-        ))}
-      </Box>
 
       {/* Tarjeta resumen global con el resto de componentes */}
       <Box>
@@ -489,35 +428,49 @@ export default function EstadisticasVentas() {
 
 // --- Componentes Auxiliares Actualizados para Uniformidad ---
 
-function MetricaRapida({ titulo, valor, icono, color }) {
+function MetricaCompacta({ titulo, valor, subtitulo, icono, color }) {
   return (
-    <Card sx={{ ...CARD_BASE_SX, borderLeft: `6px solid ${color}`, textAlign: 'center', justifyContent: 'center' }}>
-      <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-        <Box sx={{ 
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 64,
-          height: 64,
-          borderRadius: '20px',
-          backgroundColor: `${color}1a`,
-          color: color
-        }}>
-          {React.cloneElement(icono, { sx: { fontSize: 32 } })}
-        </Box>
-        <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#3E2723', lineHeight: 1 }}>
+    <Box sx={{
+      p: 1.25,
+      borderRadius: 2,
+      border: '1px solid #D7CCC8',
+      backgroundColor: '#F5F5F5',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 0.9,
+      minHeight: 88
+    }}>
+      <Box sx={{
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: `${color}20`,
+        color,
+        display: 'grid',
+        placeItems: 'center',
+        fontSize: '1.2rem'
+      }}>
+        {icono}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="subtitle2" sx={{ color: '#5D4037', fontWeight: 550, fontSize: '1.1rem', lineHeight: 1.2 }}>
           {valor}
         </Typography>
-        <Typography variant="body2" sx={{ color: '#8D6E63', letterSpacing: 1, fontWeight: 600 }}>
+        <Typography variant="body2" sx={{ color: '#6D4C41', fontWeight: 500, fontSize: '0.85rem' }}>
           {titulo}
         </Typography>
-      </CardContent>
-    </Card>
+        {subtitulo && (
+          <Typography variant="caption" sx={{ color: '#8D6E63', fontSize: '0.78rem' }}>
+            {subtitulo}
+          </Typography>
+        )}
+      </Box>
+    </Box>
   );
 }
 
 const FIXED_ROW_COUNT = 6;
-const FIXED_TABLE_HEIGHT = 180;
+const FIXED_TABLE_HEIGHT = 150;
 const TABLE_ROW_TEMPLATE = 'minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.5fr)';
 
 function GraficoTendenciaMensual({ datos }) {

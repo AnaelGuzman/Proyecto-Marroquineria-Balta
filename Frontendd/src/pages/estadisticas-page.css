@@ -1,0 +1,25 @@
+.estadisticas-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.estadisticas-page .periodo-toolbar-wrapper {
+  margin-bottom: 8px;
+}
+
+@media (max-width: 1280px) {
+  .estadisticas-page {
+    gap: 12px;
+  }
+
+  .estadisticas-page .periodo-toolbar-wrapper {
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 600px) {
+  .estadisticas-page {
+    padding: 16px 12px;
+  }
+}
