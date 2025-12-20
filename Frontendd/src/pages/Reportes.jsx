@@ -1,46 +1,49 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Box,
-  Grid,
   Card,
   CardContent,
-  CardHeader,
   Typography,
   TextField,
   MenuItem,
   Button,
   Stack,
-  Divider,
   Chip,
-  LinearProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  IconButton,
   Tooltip
-} from '@mui/material'
+} from '@mui/material';
 import {
   FilterList,
   Download,
   TrendingUp,
-  Paid,
+  AttachMoney,
   ShoppingCart,
   Assessment,
-  PieChart,
-  Equalizer,
-  InfoOutlined
-} from '@mui/icons-material'
-import { api } from '../services/api/index.js'
-import { API_BASE_URL } from '../services/api/config.js'
+  Insights,
+  Analytics,
+  ReceiptLong,
+  ShoppingBag
+} from '@mui/icons-material';
+import { api } from '../services/api/index.js';
+import { API_BASE_URL } from '../services/api/config.js';
+import PeriodoToolbar from '../components/PeriodoToolbar.jsx';
+
+
+const CARD_BASE_SX = {
+  width: '100%',
+  height: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  borderRadius: 3,
+  border: '1px solid #D7CCC8',
+  boxShadow: '0 8px 20px rgba(93, 64, 55, 0.1)',
+  backgroundColor: '#FAF9F7'
+};
 
 const FILTRO_TIPO_OPTIONS = [
   { value: 'all', label: 'Todos' },
   { value: 'ing', label: 'Ingresos' },
   { value: 'egr', label: 'Egresos' }
-]
+];
 
 const FILTRO_CATEGORIA_OPTIONS = [
   { value: 'all', label: 'Todas' },
@@ -48,24 +51,27 @@ const FILTRO_CATEGORIA_OPTIONS = [
   { value: 'mkt', label: 'Publicidad / Marketing' },
   { value: 'prod', label: 'Producción' },
   { value: 'adm', label: 'Administración' }
-]
+];
+
+const FIXED_ROW_COUNT = 6;
+const FIXED_TABLE_HEIGHT = 150;
+const TABLE_ROW_TEMPLATE = 'minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.5fr)';
 
 const crearPeriodoInicial = () => {
-  const now = new Date()
-  const inicioMes = new Date(now.getFullYear(), now.getMonth(), 1)
+  const now = new Date();
   return {
-    desde: inicioMes.toISOString().slice(0, 7),
-    hasta: now.toISOString().slice(0, 7)
-  }
-}
+    inicio: new Date(now.getFullYear(), now.getMonth(), 1),
+    fin: new Date()
+  };
+};
 
-const numberFormatter = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 0 })
+const numberFormatter = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 0 });
 
 export default function Reportes() {
-  const [periodo, setPeriodo] = useState(() => crearPeriodoInicial())
-  const [periodoActivo, setPeriodoActivo] = useState(() => crearPeriodoInicial())
-  const [filtros, setFiltros] = useState({ tipo: 'all', categoria: 'all' })
-  const [loading, setLoading] = useState(false)
+  const [periodo, setPeriodo] = useState(() => crearPeriodoInicial());
+  const [periodoActivo, setPeriodoActivo] = useState(() => crearPeriodoInicial());
+  const [filtros, setFiltros] = useState({ tipo: 'all', categoria: 'all' });
+  const [loading, setLoading] = useState(false);
   const [resumen, setResumen] = useState({
     ingresos: 0,
     egresos: 0,
@@ -73,33 +79,34 @@ export default function Reportes() {
     compras: 0,
     gastos: 0,
     operaciones: 0
-  })
-  const [serieMensual, setSerieMensual] = useState([])
-  const [categoriaDistribucion, setCategoriaDistribucion] = useState([])
-  const [ventasDetalle, setVentasDetalle] = useState([])
+  });
+  const [serieMensual, setSerieMensual] = useState([]);
+  const [categoriaDistribucion, setCategoriaDistribucion] = useState([]);
+  const [showFiltros, setShowFiltros] = useState(false);
 
   useEffect(() => {
-    let cancelado = false
+    let cancelado = false;
 
     const cargarReportes = async () => {
-      setLoading(true)
+      setLoading(true);
       try {
-        const { inicioISO, finISO } = obtenerRangoISO(periodoActivo)
+        const inicioISO = periodoActivo.inicio.toISOString();
+        const finISO = periodoActivo.fin.toISOString();
 
         const [totalVentas, totalCompras, totalGastos, ventasPeriodo] = await Promise.all([
           api.ventas.getTotalPorPeriodo(inicioISO, finISO).catch(() => 0),
           api.compras.getTotalPorPeriodo(inicioISO, finISO).catch(() => 0),
           api.gastos.getTotalPorPeriodo(inicioISO, finISO).catch(() => 0),
           api.ventas.getPorPeriodo(inicioISO, finISO).catch(() => [])
-        ])
+        ]);
 
-        if (cancelado) return
+        if (cancelado) return;
 
-        const ingresos = parseFloat(totalVentas) || 0
-        const compras = parseFloat(totalCompras) || 0
-        const gastos = parseFloat(totalGastos) || 0
-        const egresos = compras + gastos
-        const saldo = ingresos - egresos
+        const ingresos = parseFloat(totalVentas) || 0;
+        const compras = parseFloat(totalCompras) || 0;
+        const gastos = parseFloat(totalGastos) || 0;
+        const egresos = compras + gastos;
+        const saldo = ingresos - egresos;
 
         setResumen({
           ingresos,
@@ -108,50 +115,48 @@ export default function Reportes() {
           compras,
           gastos,
           operaciones: ventasPeriodo.length
-        })
+        });
 
-        setVentasDetalle(ventasPeriodo)
-
-        const meses = generarMesesPeriodo(periodoActivo)
+        const meses = generarMesesPeriodo(periodoActivo);
         const serie = await Promise.all(
           meses.map(async (mes) => {
             const [ventasMes, comprasMes] = await Promise.all([
               api.ventas.getTotalPorPeriodo(mes.inicio, mes.fin).catch(() => 0),
               api.compras.getTotalPorPeriodo(mes.inicio, mes.fin).catch(() => 0)
-            ])
+            ]);
             return {
-              label: mes.label,
+              mes: mes.label,
               ventas: parseFloat(ventasMes) || 0,
               compras: parseFloat(comprasMes) || 0
-            }
+            };
           })
-        )
+        );
 
         if (!cancelado) {
-          setSerieMensual(serie)
-          setCategoriaDistribucion(construirDistribucionCategorias(ventasPeriodo))
+          setSerieMensual(serie);
+          setCategoriaDistribucion(construirDistribucionCategorias(ventasPeriodo));
         }
       } catch (error) {
-        console.error('Error al cargar reportes:', error)
+        console.error('Error al cargar reportes:', error);
       } finally {
         if (!cancelado) {
-          setLoading(false)
+          setLoading(false);
         }
       }
-    }
+    };
 
-    cargarReportes()
+    cargarReportes();
     return () => {
-      cancelado = true
-    }
-  }, [periodoActivo])
+      cancelado = true;
+    };
+  }, [periodoActivo]);
 
   const indicadores = useMemo(() => {
-    const ticketPromedio = resumen.operaciones ? resumen.ingresos / resumen.operaciones : 0
-    const margen = resumen.ingresos ? (resumen.saldo / resumen.ingresos) * 100 : 0
-    const reinversion = resumen.ingresos ? (resumen.egresos / resumen.ingresos) * 100 : 0
-    const diasPeriodo = obtenerDiasPeriodo(periodoActivo)
-    const promedioDiario = diasPeriodo ? resumen.ingresos / diasPeriodo : 0
+    const ticketPromedio = resumen.operaciones ? resumen.ingresos / resumen.operaciones : 0;
+    const margen = resumen.ingresos ? (resumen.saldo / resumen.ingresos) * 100 : 0;
+    const reinversion = resumen.ingresos ? (resumen.egresos / resumen.ingresos) * 100 : 0;
+    const diasPeriodo = Math.max(1, Math.round((periodoActivo.fin - periodoActivo.inicio) / (1000 * 60 * 60 * 24)) + 1);
+    const promedioDiario = diasPeriodo ? resumen.ingresos / diasPeriodo : 0;
 
     return {
       ticketPromedio,
@@ -159,8 +164,8 @@ export default function Reportes() {
       reinversion,
       promedioDiario,
       diasPeriodo
-    }
-  }, [resumen, periodoActivo])
+    };
+  }, [resumen, periodoActivo]);
 
   const comparativaSerie = useMemo(() => {
     if (!serieMensual.length) {
@@ -169,15 +174,15 @@ export default function Reportes() {
         totalVentas: 0,
         totalCompras: 0,
         diferencia: 0,
-        mejorMesVentas: { label: '-', ventas: 0 },
-        mejorMesCompras: { label: '-', compras: 0 }
-      }
+        mejorMesVentas: { mes: '-', ventas: 0 },
+        mejorMesCompras: { mes: '-', compras: 0 }
+      };
     }
 
-    const totalVentas = serieMensual.reduce((sum, item) => sum + item.ventas, 0)
-    const totalCompras = serieMensual.reduce((sum, item) => sum + item.compras, 0)
-    const mejorMesVentas = serieMensual.reduce((prev, curr) => (curr.ventas > prev.ventas ? curr : prev), serieMensual[0])
-    const mejorMesCompras = serieMensual.reduce((prev, curr) => (curr.compras > prev.compras ? curr : prev), serieMensual[0])
+    const totalVentas = serieMensual.reduce((sum, item) => sum + item.ventas, 0);
+    const totalCompras = serieMensual.reduce((sum, item) => sum + item.compras, 0);
+    const mejorMesVentas = serieMensual.reduce((prev, curr) => (curr.ventas > prev.ventas ? curr : prev), serieMensual[0]);
+    const mejorMesCompras = serieMensual.reduce((prev, curr) => (curr.compras > prev.compras ? curr : prev), serieMensual[0]);
 
     return {
       meses: serieMensual.length,
@@ -186,816 +191,760 @@ export default function Reportes() {
       diferencia: totalVentas - totalCompras,
       mejorMesVentas,
       mejorMesCompras
-    }
-  }, [serieMensual])
+    };
+  }, [serieMensual]);
 
-  const handleAplicar = () => {
-    setPeriodoActivo({ ...periodo })
-  }
+  const cambiarMes = (meses) => {
+    const nuevaFecha = new Date(periodoActivo.inicio);
+    nuevaFecha.setMonth(nuevaFecha.getMonth() + meses);
 
-  const handleLimpiar = () => {
-    const base = crearPeriodoInicial()
-    setPeriodo(base)
-    setPeriodoActivo(base)
-    setFiltros({ tipo: 'all', categoria: 'all' })
-  }
-  
+    setPeriodoActivo({
+      inicio: new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth(), 1),
+      fin: new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth() + 1, 0)
+    });
+    setPeriodo({
+      inicio: new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth(), 1),
+      fin: new Date(nuevaFecha.getFullYear(), nuevaFecha.getMonth() + 1, 0)
+    });
+  };
+
+  const formatearMes = (fecha) => {
+    return fecha.toLocaleDateString('es-CL', {
+      month: 'long',
+      year: 'numeric'
+    });
+  };
+
+  const restablecerPeriodoActual = () => {
+    const base = crearPeriodoInicial();
+    setPeriodo(base);
+    setPeriodoActivo(base);
+  };
+
+  const handleAplicarFiltros = () => {
+    setPeriodoActivo({ ...periodo });
+    setShowFiltros(false);
+  };
+
+  const handleLimpiarFiltros = () => {
+    const base = crearPeriodoInicial();
+    setPeriodo(base);
+    setPeriodoActivo(base);
+    setFiltros({ tipo: 'all', categoria: 'all' });
+  };
+
   const descargarReporteExcel = async () => {
     try {
-      const { desde, hasta } = periodoActivo
-      const url = `${API_BASE_URL}/estadisticas/reporte-mensual/detallado?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`
+      const desde = periodoActivo.inicio.toISOString().slice(0, 7);
+      const hasta = periodoActivo.fin.toISOString().slice(0, 7);
+      const url = `${API_BASE_URL}/estadisticas/reporte-mensual/detallado?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
 
       const res = await fetch(url, {
         method: 'GET',
         headers: {
           Accept: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         }
-      })
+      });
 
       if (!res.ok) {
-        const txt = await res.text()
-        throw new Error(txt || 'Error al descargar reporte')
+        throw new Error('Error al descargar reporte');
       }
 
-      const blob = await res.blob()
-      const urlBlob = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = urlBlob
-      a.download = `reporte_mensual_detallado_${desde}_${hasta}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      window.URL.revokeObjectURL(urlBlob)
+      const blob = await res.blob();
+      const urlBlob = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = urlBlob;
+      a.download = `reporte_mensual_detallado_${desde}_${hasta}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(urlBlob);
     } catch (err) {
-      console.error('Error descargando reporte:', err)
-      alert('No se pudo descargar el reporte. Revisa la consola.')
+      console.error('Error descargando reporte:', err);
+      alert('No se pudo descargar el reporte. Revisa la consola.');
     }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: 'center' }}>
+        <Typography variant="h6" color="text.secondary">
+          Cargando reportes...
+        </Typography>
+      </Box>
+    );
   }
 
-  const rangoLabel = `${periodoActivo.desde} - ${periodoActivo.hasta}`
+  const rangoLabel = `${periodoActivo.inicio.toLocaleDateString('es-CL')} - ${periodoActivo.fin.toLocaleDateString('es-CL')}`;
+  const diasPeriodo = indicadores.diasPeriodo;
 
-  const cards = [
-    // Fila 1: Balance del período + Indicadores clave (2 columnas)
+  const kpiCards = [
     {
-      key: 'balance',
-      element: (
-        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
-          <CardHeader
-            title="Balance del período"
-            subheader={`Resumen financiero ${rangoLabel}`}
-            action={
-              <Chip
-                label={resumen.saldo >= 0 ? 'Saldo positivo' : 'Saldo negativo'}
-                color={resumen.saldo >= 0 ? 'success' : 'error'}
-                variant="outlined"
-              />
-            }
-          />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={4}>
-                <MetricHighlight
-                  label="Ingresos"
-                  value={`$ ${numberFormatter.format(resumen.ingresos)}`}
-                  icon={<Paid />}
-                  color="#4CAF50"
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <MetricHighlight
-                  label="Egresos"
-                  value={`$ ${numberFormatter.format(resumen.egresos)}`}
-                  icon={<ShoppingCart />}
-                  color="#E57373"
-                />
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <MetricHighlight
-                  label="Saldo"
-                  value={`$ ${numberFormatter.format(resumen.saldo)}`}
-                  icon={<TrendingUp />}
-                  color="#5D4037"
-                />
-              </Grid>
-            </Grid>
-            <Divider sx={{ my: 3 }} />
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-              <Chip label={`Período: ${rangoLabel}`} variant="outlined" />
-              <Chip label={`${resumen.operaciones} operaciones registradas`} variant="outlined" />
-              <Chip label={`${indicadores.diasPeriodo} días analizados`} variant="outlined" />
-            </Stack>
-          </CardContent>
-        </Card>
-      )
+      key: 'ingresos-totales',
+      titulo: 'Ingresos totales',
+      valor: `$${resumen.ingresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <AttachMoney fontSize="small" />,
+      color: '#5D4037'
     },
     {
-      key: 'indicadores',
-      element: (
-        <Card sx={{ borderRadius: 3, width: '100%', height: '100%', background: 'linear-gradient(160deg,#5D4037,#8D6E63)' }}>
-          <CardHeader
-            title={<Typography variant="h6" sx={{ color: 'white' }}>Indicadores clave</Typography>}
-            subheader={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>KPI del período</Typography>}
-          />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <KpiBadge
-                  titulo="Ticket promedio"
-                  valor={`$ ${numberFormatter.format(indicadores.ticketPromedio)}`}
-                  icono={<Assessment />}
-                  tooltip="Valor medio ingresado por venta en el período seleccionado"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <KpiBadge
-                  titulo="Margen"
-                  valor={`${indicadores.margen.toFixed(1)}%`}
-                  icono={<TrendingUp />}
-                  tooltip="Porcentaje del saldo respecto de los ingresos (utilidad)"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <KpiBadge
-                  titulo="Promedio diario"
-                  valor={`$ ${numberFormatter.format(indicadores.promedioDiario)}`}
-                  icono={<Equalizer />}
-                  tooltip="Ingresos promedios generados por día dentro del período"
-                />
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      )
-    },
-
-    // Fila 2: Resumen ejecutivo + Detalle de egresos + Distribución por categoría (3 columnas)
-    {
-      key: 'resumen-ejecutivo',
-      element: (
-        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
-          <CardHeader title="Resumen ejecutivo" subheader="Hallazgos del período" />
-          <CardContent>
-            <Stack spacing={2}>
-              <ResumenItem
-                title="Reinversión"
-                description="Porcentaje de egresos sobre ventas"
-                value={`${indicadores.reinversion.toFixed(1)}%`}
-                info="Proporción de las ventas que se destina a cubrir egresos"
-              />
-              <ResumenItem
-                title="Operaciones"
-                description="Ventas registradas"
-                value={resumen.operaciones}
-                info="Número total de ventas contabilizadas en el período"
-              />
-              <ResumenItem
-                title="Saldo"
-                description="Resultado neto"
-                value={`$ ${numberFormatter.format(resumen.saldo)}`}
-                info="Ingresos menos egresos acumulados del período"
-              />
-            </Stack>
-          </CardContent>
-        </Card>
-      )
+      key: 'egresos-totales',
+      titulo: 'Egresos totales',
+      valor: `$${resumen.egresos.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <ShoppingCart fontSize="small" />,
+      color: '#A1887F'
     },
     {
-      key: 'detalle-egresos',
-      element: (
-        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
-          <CardHeader title="Detalle de egresos" subheader="Compras vs gastos operativos" />
-          <CardContent>
-            <Stack spacing={3}>
-              <EgresoBreakdown
-                label="Compras"
-                value={resumen.compras}
-                total={resumen.egresos}
-                color="#5D4037"
-              />
-              <EgresoBreakdown
-                label="Gastos operativos"
-                value={resumen.gastos}
-                total={resumen.egresos}
-                color="#8D6E63"
-              />
-            </Stack>
-          </CardContent>
-        </Card>
-      )
+      key: 'saldo',
+      titulo: 'Saldo neto',
+      valor: `$${resumen.saldo.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <TrendingUp fontSize="small" />,
+      color: resumen.saldo >= 0 ? '#2E7D32' : '#C62828'
     },
     {
-      key: 'distribucion-categoria',
-      element: (
-        <Card sx={{ borderRadius: 3, width: '100%', height: '100%' }}>
-          <CardHeader
-            title="Distribución por categoría"
-            subheader="Top categorías del período"
-            action={<PieChart sx={{ color: '#5D4037' }} />}
-          />
-          <CardContent>
-            <CategoryDistribution data={categoriaDistribucion} />
-          </CardContent>
-        </Card>
-      )
+      key: 'ticket-promedio',
+      titulo: 'Ticket promedio',
+      valor: `$${indicadores.ticketPromedio.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`,
+      icono: <ReceiptLong fontSize="small" />,
+      color: '#BCAAA4'
     }
-  ]
+  ];
+
+  const summaryCard = {
+    key: 'resumen-global',
+    element: (
+      <Card sx={{ ...CARD_BASE_SX, mt: 1 }}>
+        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Insights sx={{ color: '#5D4037' }} />
+              <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold' }}>
+                Resumen
+              </Typography>
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="body2" sx={{ color: '#8D6E63' }}>
+                Período: {rangoLabel}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {diasPeriodo} días analizados
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Resumen financiero + Distribución de egresos */}
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }
+            }}
+          >
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 2,
+                border: '1px solid #D7CCC8',
+                backgroundColor: '#FAF9F7',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}
+              >
+                <TrendingUp fontSize="small" /> Balance del período
+              </Typography>
+              <Box sx={{ flex: 1, minHeight: 180 }}>
+                <GraficoBalance ingresos={resumen.ingresos} egresos={resumen.egresos} saldo={resumen.saldo} />
+              </Box>
+            </Box>
+
+            <Box
+              sx={{
+                p: 1.75,
+                borderRadius: 2,
+                border: '1px solid #D7CCC8',
+                backgroundColor: '#FAF9F7',
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column'
+              }}
+            >
+              <Typography
+                variant="subtitle1"
+                sx={{ color: '#5D4037', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 0.75, mb: 1 }}
+              >
+                <ShoppingCart fontSize="small" /> Distribución de egresos
+              </Typography>
+              <Box sx={{ flex: 1, minHeight: 180, display: 'flex', justifyContent: 'center' }}>
+                <GraficoEgresos compras={resumen.compras} gastos={resumen.gastos} />
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Bloque medio: Tendencia mensual + Top categorías */}
+          <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' } }}>
+            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #D7CCC8', backgroundColor: '#FAF9F7', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="subtitle1" sx={{ color: '#5D4037', fontWeight: 'bold', mb: 1 }}>
+                Tendencia mensual (Ventas vs Compras)
+              </Typography>
+              <GraficoTendenciaMensual datos={serieMensual} />
+            </Box>
+            <Box sx={{ p: 2, borderRadius: 2, border: '1px solid #D7CCC8', backgroundColor: '#FAF9F7', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <Typography variant="subtitle1" sx={{ color: '#5D4037', fontWeight: 'bold', mb: 1 }}>
+                Top categorías por ventas
+              </Typography>
+              <GraficoBarrasCategorias datos={categoriaDistribucion} />
+            </Box>
+          </Box>
+
+          {/* Bloque compacto: Indicadores y métricas */}
+          <Box
+            sx={{
+              p: 1.75,
+              borderRadius: 2,
+              border: '1px solid #D7CCC8',
+              backgroundColor: '#FAF9F7'
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{ color: '#5D4037', mb: 1.25, display: 'flex', alignItems: 'center', gap: 0.6 }}
+            >
+              <Assessment fontSize="small" /> Indicadores y métricas
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, minmax(0, 1fr))' }
+              }}
+            >
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Operaciones</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {resumen.operaciones}
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Margen</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {indicadores.margen.toFixed(1)}%
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Promedio diario</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  ${indicadores.promedioDiario.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Reinversión</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {indicadores.reinversion.toFixed(1)}%
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+
+          {/* Comparativa de serie mensual */}
+          <Box
+            sx={{
+              p: 1.75,
+              borderRadius: 2,
+              border: '1px solid #D7CCC8',
+              backgroundColor: '#FAF9F7'
+            }}
+          >
+            <Typography
+              variant="subtitle2"
+              sx={{ color: '#5D4037', mb: 1.25, display: 'flex', alignItems: 'center', gap: 0.6 }}
+            >
+              <Analytics fontSize="small" /> Comparativa del período
+            </Typography>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, minmax(0, 1fr))' }
+              }}
+            >
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Meses analizados</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {comparativaSerie.meses}
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Total ventas</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  ${(comparativaSerie.totalVentas/1000).toFixed(0)}k
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Total compras</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  ${(comparativaSerie.totalCompras/1000).toFixed(0)}k
+                </Typography>
+              </Box>
+
+              <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
+                <Typography variant="caption" color="text.secondary">Mejor mes ventas</Typography>
+                <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
+                  {comparativaSerie.mejorMesVentas.mes}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    )
+  };
 
   return (
-    <Box sx={{ p: 3, backgroundColor: '#EFEBE9', minHeight: '100%' }}>
-      <Box sx={{ maxWidth: 1600, mx: 'auto', width: '100%' }}>
-        <Card sx={{ borderRadius: 3, boxShadow: '0 15px 45px rgba(93,64,55,0.12)', width: '100%', mb: 3 }}>
-          <CardHeader
-            avatar={<FilterList sx={{ color: '#5D4037' }} />}
-            title={<Typography variant="h5">Panel de filtros</Typography>}
-            subheader="Define el período y los criterios para actualizar el tablero"
-          />
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Desde"
-                  type="month"
-                  fullWidth
-                  value={periodo.desde}
-                  onChange={(e) => setPeriodo({ ...periodo, desde: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Hasta"
-                  type="month"
-                  fullWidth
-                  value={periodo.hasta}
-                  onChange={(e) => setPeriodo({ ...periodo, hasta: e.target.value })}
-                />
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Tipo"
-                  select
-                  fullWidth
-                  value={filtros.tipo}
-                  onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
-                >
-                  {FILTRO_TIPO_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={3}>
-                <TextField
-                  label="Categoría"
-                  select
-                  fullWidth
-                  value={filtros.categoria}
-                  onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value })}
-                >
-                  {FILTRO_CATEGORIA_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-            </Grid>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end" sx={{ mt: 3 }}>
-              <Button variant="outlined" color="inherit" onClick={handleLimpiar}>
-                Limpiar
-              </Button>
-              <Button variant="contained" sx={{ backgroundColor: '#5D4037', '&:hover': { backgroundColor: '#3E2723' } }} onClick={handleAplicar}>
-                Aplicar
-              </Button>
-              <Button
-                variant="contained"
-                color="secondary"
-                startIcon={<Download />}
-                onClick={descargarReporteExcel}
-              >
-                Descargar Excel
-              </Button>
-            </Stack>
-          </CardContent>
-        </Card>
+    <Box sx={{ p: { xs: 2, sm: 2.25, md: 2.5, lg: 3 }, maxWidth: 1600, margin: '0 auto' }} className="estadisticas-page">
+      <PeriodoToolbar
+        icon={Analytics}
+        titulo={formatearMes(periodoActivo.inicio)}
+        periodoLabel={rangoLabel}
+        onPrev={() => cambiarMes(-1)}
+        onReset={restablecerPeriodoActual}
+        onNext={() => cambiarMes(1)}
+      />
 
-        {loading ? (
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <Card sx={{ borderRadius: 3 }}>
-                <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <CircularProgress size={28} sx={{ color: '#5D4037' }} />
-                  <Typography variant="body1" color="text.secondary">
-                    Obteniendo datos del período seleccionado...
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        ) : (
-          <>
-            {/* Fila 1: 2 columnas, cada card ocupa la mitad del ancho en md+ */}
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 3,
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  md: 'repeat(2, minmax(0, 1fr))'
-                },
-                mt: 1,
-                mb: 3
-              }}
-            >
-              {cards
-                .filter((card) => card.key === 'balance' || card.key === 'indicadores')
-                .map(({ key, element }) => (
-                  <Box key={key} sx={{ display: 'flex', width: '100%' }}>
-                    {element}
-                  </Box>
-                ))}
-            </Box>
+      {/* Botones de acción */}
+      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
+        <Button
+          variant="outlined"
+          startIcon={<FilterList />}
+          onClick={() => setShowFiltros(!showFiltros)}
+          sx={{ borderColor: '#5D4037', color: '#5D4037' }}
+        >
+          {showFiltros ? 'Ocultar filtros' : 'Mostrar filtros'}
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Download />}
+          onClick={descargarReporteExcel}
+          sx={{ backgroundColor: '#5D4037', '&:hover': { backgroundColor: '#3E2723' } }}
+        >
+          Descargar Excel
+        </Button>
+      </Stack>
 
-            {/* Fila 2: 3 columnas iguales en md+ */}
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 3,
-                gridTemplateColumns: {
-                  xs: '1fr',
-                  md: 'repeat(3, minmax(0, 1fr))'
-                }
-              }}
+      {/* Panel de filtros expandible */}
+      {showFiltros && (
+        <Card sx={{ ...CARD_BASE_SX, mb: 2, p: 2 }}>
+          <Typography variant="h6" sx={{ color: '#5D4037', mb: 2 }}>
+            Filtros avanzados
+          </Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }
+            }}
+          >
+            <TextField
+              label="Desde"
+              type="date"
+              fullWidth
+              value={periodo.inicio.toISOString().slice(0, 10)}
+              onChange={(e) => setPeriodo({ ...periodo, inicio: new Date(e.target.value) })}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Hasta"
+              type="date"
+              fullWidth
+              value={periodo.fin.toISOString().slice(0, 10)}
+              onChange={(e) => setPeriodo({ ...periodo, fin: new Date(e.target.value) })}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Tipo"
+              select
+              fullWidth
+              value={filtros.tipo}
+              onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
             >
-              {cards
-                .filter(
-                  (card) =>
-                    card.key === 'resumen-ejecutivo' ||
-                    card.key === 'detalle-egresos' ||
-                    card.key === 'distribucion-categoria'
-                )
-                .map(({ key, element }) => (
-                  <Box key={key} sx={{ display: 'flex', width: '100%' }}>
-                    {element}
-                  </Box>
-                ))}
-            </Box>
-          </>
-        )}
-        {!loading && (
-          <Box sx={{ mt: 3 }}>
-            <Card sx={{ borderRadius: 3, width: '100%' }}>
-              <CardHeader
-                title="Ventas vs Compras"
-                subheader="Comparativo mensual"
-              />
-              <CardContent>
-                <Grid container spacing={2} sx={{ mb: 3 }}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <InlineStat
-                      label="Meses analizados"
-                      value={comparativaSerie.meses}
-                      helper="Rango seleccionado"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <InlineStat
-                      label="Total ventas"
-                      value={`$ ${numberFormatter.format(comparativaSerie.totalVentas)}`}
-                      helper="Suma mensual"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <InlineStat
-                      label="Total compras"
-                      value={`$ ${numberFormatter.format(comparativaSerie.totalCompras)}`}
-                      helper="Suma mensual"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <InlineStat
-                      label="Mejor mes venta"
-                      value={comparativaSerie.mejorMesVentas?.label || '-'}
-                      helper={`$ ${numberFormatter.format(comparativaSerie.mejorMesVentas?.ventas || 0)}`}
-                    />
-                  </Grid>
-                </Grid>
-                <VentasComprasChart data={serieMensual} />
-              </CardContent>
-            </Card>
+              {FILTRO_TIPO_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Categoría"
+              select
+              fullWidth
+              value={filtros.categoria}
+              onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value })}
+            >
+              {FILTRO_CATEGORIA_OPTIONS.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
-        )}
+          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
+            <Button variant="outlined" onClick={handleLimpiarFiltros}>
+              Limpiar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleAplicarFiltros}
+              sx={{ backgroundColor: '#5D4037', '&:hover': { backgroundColor: '#3E2723' } }}
+            >
+              Aplicar
+            </Button>
+          </Stack>
+        </Card>
+      )}
+
+      {/* KPIs */}
+      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 2.25, md: 2.5 } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: { xs: 1.25, sm: 1.5, md: 1.75 },
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2, minmax(0, 1fr))',
+              lg: 'repeat(4, minmax(0, 1fr))'
+            }
+          }}
+        >
+          {kpiCards.map(kpi => (
+            <MetricaCompacta key={kpi.key} {...kpi} />
+          ))}
+        </Box>
+      </Card>
+
+      {/* Tarjeta resumen global */}
+      <Box>
+        {summaryCard.element}
       </Box>
     </Box>
-  )
+  );
 }
 
-function obtenerRangoISO(periodo) {
-  const inicio = new Date(`${periodo.desde}-01T00:00:00`)
-  const fin = new Date(`${periodo.hasta}-01T00:00:00`)
-  fin.setMonth(fin.getMonth() + 1)
-  fin.setDate(0)
-  fin.setHours(23, 59, 59, 999)
-
-  return {
-    inicioISO: inicio.toISOString(),
-    finISO: fin.toISOString()
-  }
-}
+// --- Funciones auxiliares ---
 
 function generarMesesPeriodo(periodo) {
-  const inicio = new Date(`${periodo.desde}-01T00:00:00`)
-  const fin = new Date(`${periodo.hasta}-01T00:00:00`)
-  fin.setMonth(fin.getMonth() + 1)
-  fin.setDate(0)
+  const meses = [];
+  const cursor = new Date(periodo.inicio);
+  let contador = 0;
 
-  const meses = []
-  const cursor = new Date(inicio)
-  let contador = 0
-  while (cursor <= fin && contador < 12) {
-    const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1)
-    const finMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999)
+  while (cursor <= periodo.fin && contador < 12) {
+    const inicioMes = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+    const finMes = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0, 23, 59, 59, 999);
     meses.push({
       label: inicioMes.toLocaleDateString('es-CL', { month: 'short' }),
       inicio: inicioMes.toISOString(),
       fin: finMes.toISOString()
-    })
-    cursor.setMonth(cursor.getMonth() + 1)
-    contador += 1
+    });
+    cursor.setMonth(cursor.getMonth() + 1);
+    contador += 1;
   }
 
   return meses.length ? meses : [{
-    label: inicio.toLocaleDateString('es-CL', { month: 'short' }),
-    inicio: inicio.toISOString(),
-    fin: fin.toISOString()
-  }]
-}
-
-function obtenerDiasPeriodo(periodo) {
-  const inicio = new Date(`${periodo.desde}-01T00:00:00`)
-  const fin = new Date(`${periodo.hasta}-01T00:00:00`)
-  fin.setMonth(fin.getMonth() + 1)
-  fin.setDate(0)
-  return Math.max(1, Math.ceil((fin - inicio) / (1000 * 60 * 60 * 24)) + 1)
+    label: periodo.inicio.toLocaleDateString('es-CL', { month: 'short' }),
+    inicio: periodo.inicio.toISOString(),
+    fin: periodo.fin.toISOString()
+  }];
 }
 
 function construirDistribucionCategorias(ventas) {
-  const acumulado = new Map()
+  const acumulado = new Map();
   ventas.forEach((venta) => {
     (venta.detalles || []).forEach((detalle) => {
-      const categoria = detalle?.producto?.categoria?.nombre || detalle?.producto?.categoria || 'Sin categoría'
-      const cantidad = Number(detalle?.cantidad) || 0
-      const precio = Number(detalle?.precioUnitario || detalle?.precio || 0)
-      const subtotal = Number(detalle?.subtotal || cantidad * precio) || 0
-      acumulado.set(categoria, (acumulado.get(categoria) || 0) + subtotal)
-    })
-  })
+      const categoria = detalle?.producto?.categoria?.nombre || detalle?.producto?.categoria || 'Sin categoría';
+      const cantidad = Number(detalle?.cantidad) || 0;
+      const precio = Number(detalle?.precioUnitario || detalle?.precio || 0);
+      const subtotal = Number(detalle?.subtotal || cantidad * precio) || 0;
+      acumulado.set(categoria, (acumulado.get(categoria) || 0) + subtotal);
+    });
+  });
 
-  const data = Array.from(acumulado.entries()).map(([nombre, monto]) => ({ nombre, monto }))
-  const total = data.reduce((sum, item) => sum + item.monto, 0) || 1
-
+  const data = Array.from(acumulado.entries()).map(([nombre, monto]) => ({ nombre, monto }));
   return data
     .sort((a, b) => b.monto - a.monto)
     .slice(0, 6)
-    .map((item) => ({
-      ...item,
-      porcentaje: (item.monto / total) * 100
-    }))
+    .map(item => [{ nombre: item.nombre }, item.monto]);
 }
 
-function MetricHighlight({ label, value, icon, color }) {
+// --- Componentes auxiliares ---
+
+function MetricaCompacta({ titulo, valor, subtitulo, icono, color }) {
   return (
-    <Stack spacing={1}
-      sx={{
-        p: 2,
-        borderRadius: 2,
-        backgroundColor: '#FAF9F7',
-        border: '1px solid rgba(93,64,55,0.12)',
-        height: '100%'
-      }}
-    >
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Box
-          sx={{
-            width: 36,
-            height: 36,
-            borderRadius: 2,
-            backgroundColor: `${color}20`,
-            color,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-        >
-          {icon}
-        </Box>
-        <Typography variant="body2" color="text.secondary">
-          {label}
+    <Box sx={{
+      p: 1.25,
+      borderRadius: 2,
+      border: '1px solid #D7CCC8',
+      backgroundColor: '#F5F5F5',
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 0.9,
+      minHeight: 88
+    }}>
+      <Box sx={{
+        width: 36,
+        height: 36,
+        borderRadius: 12,
+        backgroundColor: `${color}20`,
+        color,
+        display: 'grid',
+        placeItems: 'center',
+        fontSize: '1.2rem'
+      }}>
+        {icono}
+      </Box>
+      <Box sx={{ minWidth: 0 }}>
+        <Typography variant="subtitle2" sx={{ color: '#5D4037', fontWeight: 550, fontSize: '1.1rem', lineHeight: 1.2 }}>
+          {valor}
         </Typography>
-      </Stack>
-      <Typography variant="h5" sx={{ fontWeight: 700, color: '#3E2723' }}>
-        {value}
-      </Typography>
-    </Stack>
-  )
-}
-
-function KpiBadge({ titulo, valor, icono, tooltip }) {
-  return (
-    <Box
-      sx={{
-        p: 2,
-        borderRadius: 2,
-        backgroundColor: 'rgba(255,255,255,0.12)',
-        color: '#fff'
-      }}
-    >
-      <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Box sx={{ width: 36, height: 36, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {icono}
-          </Box>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.8)' }}>
-            {titulo}
+        <Typography variant="body2" sx={{ color: '#6D4C41', fontWeight: 500, fontSize: '0.85rem' }}>
+          {titulo}
+        </Typography>
+        {subtitulo && (
+          <Typography variant="caption" sx={{ color: '#8D6E63', fontSize: '0.78rem' }}>
+            {subtitulo}
           </Typography>
-        </Stack>
-        {tooltip && (
-          <Tooltip title={tooltip} arrow>
-            <IconButton size="small" sx={{ color: 'rgba(255,255,255,0.9)' }}>
-              <InfoOutlined fontSize="inherit" />
-            </IconButton>
-          </Tooltip>
         )}
-      </Stack>
-      <Typography variant="h5" sx={{ fontWeight: 700 }}>
-        {valor}
-      </Typography>
-    </Box>
-  )
-}
-
-function VentasComprasChart({ data }) {
-  if (!data.length) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        Aún no hay datos suficientes para graficar este período.
-      </Typography>
-    )
-  }
-
-  const maxValue = Math.max(...data.map((item) => Math.max(item.ventas, item.compras)), 1) * 1.1
-  const gridLines = [0, 0.25, 0.5, 0.75, 1].map(p => ({
-    value: maxValue * p,
-    percent: p * 100
-  }))
-
-  return (
-    <Box sx={{ width: '100%', p: 2, bgcolor: '#FAF9F7', borderRadius: 2, border: '1px solid rgba(93,64,55,0.1)' }}>
-      <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#4CAF50' }} />
-          <Typography variant="caption">Ventas</Typography>
-        </Stack>
-        <Stack direction="row" alignItems="center" spacing={1}>
-          <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: '#E57373' }} />
-          <Typography variant="caption">Compras</Typography>
-        </Stack>
-      </Stack>
-
-      <Box sx={{ position: 'relative', height: 300, width: '100%', mb: 3 }}>
-        {/* Grid Lines & Y Labels */}
-        {gridLines.map((line, i) => (
-          <Box
-            key={i}
-            sx={{
-              position: 'absolute',
-              bottom: `${line.percent}%`,
-              left: 0,
-              right: 0,
-              display: 'flex',
-              alignItems: 'center',
-              transform: 'translateY(50%)'
-            }}
-          >
-            <Typography variant="caption" sx={{ width: 60, textAlign: 'right', mr: 1, color: 'text.secondary', fontSize: '0.7rem' }}>
-              $ {numberFormatter.format(line.value)}
-            </Typography>
-            <Box sx={{ flex: 1, height: '1px', bgcolor: 'rgba(0,0,0,0.05)' }} />
-          </Box>
-        ))}
-
-        {/* Chart Area */}
-        <Box sx={{ position: 'absolute', top: 0, bottom: 0, left: 70, right: 0 }}>
-          <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style={{ overflow: 'visible' }}>
-            <polyline
-              points={data.map((d, i) => {
-                const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100
-                const y = 100 - (d.compras / maxValue) * 100
-                return `${x},${y}`
-              }).join(' ')}
-              fill="none"
-              stroke="#E57373"
-              strokeWidth="2"
-              vectorEffect="non-scaling-stroke"
-            />
-            <polyline
-              points={data.map((d, i) => {
-                const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100
-                const y = 100 - (d.ventas / maxValue) * 100
-                return `${x},${y}`
-              }).join(' ')}
-              fill="none"
-              stroke="#4CAF50"
-              strokeWidth="2"
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-
-          {/* Points Overlay */}
-          {data.map((d, i) => {
-            const x = data.length === 1 ? 50 : (i / (data.length - 1)) * 100
-            const yVentas = 100 - (d.ventas / maxValue) * 100
-            const yCompras = 100 - (d.compras / maxValue) * 100
-
-            return (
-              <React.Fragment key={i}>
-                <Tooltip title={`Ventas: $ ${numberFormatter.format(d.ventas)}`} arrow>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      left: `${x}%`,
-                      top: `${yVentas}%`,
-                      width: 12,
-                      height: 12,
-                      bgcolor: '#4CAF50',
-                      borderRadius: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      border: '2px solid white',
-                      boxShadow: 1,
-                      cursor: 'pointer',
-                      zIndex: 2,
-                      transition: 'transform 0.2s',
-                      '&:hover': { transform: 'translate(-50%, -50%) scale(1.5)' }
-                    }}
-                  />
-                </Tooltip>
-
-                <Tooltip title={`Compras: $ ${numberFormatter.format(d.compras)}`} arrow>
-                  <Box
-                    sx={{
-                      position: 'absolute',
-                      left: `${x}%`,
-                      top: `${yCompras}%`,
-                      width: 12,
-                      height: 12,
-                      bgcolor: '#E57373',
-                      borderRadius: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      border: '2px solid white',
-                      boxShadow: 1,
-                      cursor: 'pointer',
-                      zIndex: 2,
-                      transition: 'transform 0.2s',
-                      '&:hover': { transform: 'translate(-50%, -50%) scale(1.5)' }
-                    }}
-                  />
-                </Tooltip>
-                
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: 'absolute',
-                    bottom: -30,
-                    left: `${x}%`,
-                    transform: 'translateX(-50%)',
-                    color: 'text.secondary',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {d.label}
-                </Typography>
-              </React.Fragment>
-            )
-          })}
-        </Box>
       </Box>
     </Box>
-  )
+  );
 }
 
-function CategoryDistribution({ data }) {
-  if (!data.length) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        Sin registros de categoría para este rango.
-      </Typography>
-    )
-  }
+function GraficoBalance({ ingresos, egresos, saldo }) {
+  const total = Math.max(ingresos, 1);
+  const pIngresos = (ingresos / total) * 100;
+  const pEgresos = (egresos / total) * 100;
 
-  const total = data.reduce((sum, item) => sum + item.monto, 0) || 1
+  const datosTorta = [
+    { nombre: 'Ingresos', valor: ingresos, color: '#4CAF50' },
+    { nombre: 'Egresos', valor: egresos, color: '#FF6B6B' }
+  ];
 
   return (
-    <Stack spacing={2}>
-      {data.map((item) => (
-        <Box key={item.nombre}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography variant="subtitle2">{item.nombre}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {item.porcentaje.toFixed(1)}%
-            </Typography>
-          </Stack>
-          <LinearProgress
-            variant="determinate"
-            value={(item.monto / total) * 100}
-            sx={{ height: 8, borderRadius: 4, mt: 1, backgroundColor: '#F0E7E1', '& .MuiLinearProgress-bar': { backgroundColor: '#5D4037' } }}
-          />
-          <Typography variant="caption" color="text.secondary">
-            $ {numberFormatter.format(item.monto)}
+    <Box sx={{ textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <Box sx={{ position: 'relative', height: 140, mb: 2 }}>
+        <Box sx={{
+          position: 'relative', width: 140, height: 140, margin: '0 auto', borderRadius: '50%',
+          background: `conic-gradient(#4CAF50 0% ${pIngresos}%, #FF6B6B ${pIngresos}% 100%)`
+        }} />
+        <Box sx={{
+          position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+          textAlign: 'center', backgroundColor: 'white', borderRadius: '50%', width: 90, height: 90,
+          display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', boxShadow: 1
+        }}>
+          <Typography variant="caption" sx={{ color: '#8D6E63' }}>Saldo</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: saldo >= 0 ? '#4CAF50' : '#FF6B6B' }}>
+            ${Math.round(saldo/1000)}k
           </Typography>
         </Box>
-      ))}
-
-      <Table size="small" sx={{ mt: 2 }}>
-        <TableHead>
-          <TableRow>
-            <TableCell>Categoría</TableCell>
-            <TableCell align="right">Monto</TableCell>
-            <TableCell align="right">% participación</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {data.map((item) => (
-            <TableRow key={item.nombre}>
-              <TableCell>{item.nombre}</TableCell>
-              <TableCell align="right">$ {numberFormatter.format(item.monto)}</TableCell>
-              <TableCell align="right">{item.porcentaje.toFixed(1)}%</TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </Stack>
-  )
+      </Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+        {datosTorta.map((item, index) => (
+          <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ width: 10, height: 10, backgroundColor: item.color, borderRadius: '50%' }} />
+            <Typography variant="caption" sx={{ fontWeight: 'medium' }}>{item.nombre}</Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
 }
 
-function EgresoBreakdown({ label, value, total, color }) {
-  const porcentaje = total ? (value / total) * 100 : 0
+function GraficoEgresos({ compras, gastos }) {
+  const total = compras + gastos || 1;
+  const pCompras = (compras / total) * 100;
+
+  const colors = ['#5D4037', '#8D6E63'];
+  const datos = [
+    { nombre: 'Compras', monto: compras },
+    { nombre: 'Gastos', monto: gastos }
+  ];
+
   return (
-    <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Typography variant="subtitle2">{label}</Typography>
-        <Typography variant="subtitle2">$ {numberFormatter.format(value)}</Typography>
-      </Stack>
-      <LinearProgress
-        variant="determinate"
-        value={porcentaje}
-        sx={{ mt: 1, height: 8, borderRadius: 4, backgroundColor: '#F5F5F5', '& .MuiLinearProgress-bar': { backgroundColor: color } }}
-      />
-      <Typography variant="caption" color="text.secondary">
-        {porcentaje.toFixed(1)}% del total de egresos
-      </Typography>
+    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ position: 'relative', height: 140 }}>
+        <Box
+          sx={{
+            position: 'relative',
+            width: 140,
+            height: 140,
+            margin: '0 auto',
+            borderRadius: '50%',
+            background: `conic-gradient(#5D4037 0% ${pCompras}%, #8D6E63 ${pCompras}% 100%)`
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            textAlign: 'center',
+            backgroundColor: 'white',
+            borderRadius: '50%',
+            width: 90,
+            height: 90,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            boxShadow: 1
+          }}
+        >
+          <Typography variant="caption" sx={{ color: '#8D6E63' }}>Total</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 'bold', color: '#5D4037' }}>
+            ${Math.round(total/1000)}k
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 1.5 }}>
+        {datos.map((seg, index) => (
+          <Box key={seg.nombre} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: colors[index] }} />
+            <Typography variant="caption" sx={{ color: '#5D4037' }}>
+              {seg.nombre} ({((seg.monto/total)*100).toFixed(0)}%)
+            </Typography>
+          </Box>
+        ))}
+      </Box>
     </Box>
-  )
+  );
 }
 
-function ResumenItem({ title, description, value, info }) {
+function GraficoTendenciaMensual({ datos }) {
+  // Mostrar hasta 6 meses
+  const displayData = datos.slice(-6);
+  const maxValor = Math.max(...displayData.flatMap(d => [d.ventas, d.compras]), 1);
+
+  // Rellenar hasta 6 filas
+  const filledData = [...displayData];
+  while (filledData.length < FIXED_ROW_COUNT) {
+    filledData.push({ mes: '-', ventas: 0, compras: 0, isEmpty: true });
+  }
+
   return (
-    <Box sx={{ p: 2, borderRadius: 2, border: '1px solid rgba(93,64,55,0.1)', backgroundColor: '#FAF9F7' }}>
-      <Stack direction="row" spacing={1} alignItems="center">
-        <Typography variant="subtitle2" sx={{ color: '#5D4037' }}>
-          {title}
-        </Typography>
-        {info && (
-          <Tooltip title={info} arrow>
-            <IconButton size="small" sx={{ color: '#5D4037', p: 0.5 }}>
-              <InfoOutlined fontSize="inherit" />
-            </IconButton>
-          </Tooltip>
-        )}
-      </Stack>
-      <Typography variant="body2" color="text.secondary">
-        {description}
-      </Typography>
-      <Typography variant="h6" sx={{ mt: 1, fontWeight: 700 }}>
-        {value}
-      </Typography>
+    <Box sx={{ width: '100%', height: FIXED_TABLE_HEIGHT, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      {filledData.map((item, index) => {
+        const porcentajeVentas = item.isEmpty ? 0 : (item.ventas / maxValor) * 100;
+        const porcentajeCompras = item.isEmpty ? 0 : (item.compras / maxValor) * 100;
+        const mesLabel = item.mes;
+        return (
+          <Box
+            key={index}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1fr)',
+              alignItems: 'center',
+              columnGap: 1.5,
+              height: 24
+            }}
+          >
+            <Tooltip title={item.isEmpty ? '' : mesLabel} disableHoverListener={item.isEmpty} arrow>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: item.isEmpty ? 'transparent' : '#5D4037',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {mesLabel}
+              </Typography>
+            </Tooltip>
+            <Box sx={{ width: '100%', height: 8, backgroundColor: '#EFEBE9', borderRadius: 4, overflow: 'hidden', justifySelf: 'stretch' }}>
+              {!item.isEmpty && (
+                <Tooltip title={`Ventas: $${(item.ventas/1000).toFixed(0)}k`} arrow>
+                  <Box sx={{ width: `${porcentajeVentas}%`, height: '100%', background: 'linear-gradient(90deg, #4CAF50, #66BB6A)', borderRadius: 4 }} />
+                </Tooltip>
+              )}
+            </Box>
+            <Box sx={{ width: '100%', height: 8, backgroundColor: '#EFEBE9', borderRadius: 4, overflow: 'hidden', justifySelf: 'stretch' }}>
+              {!item.isEmpty && (
+                <Tooltip title={`Compras: $${(item.compras/1000).toFixed(0)}k`} arrow>
+                  <Box sx={{ width: `${porcentajeCompras}%`, height: '100%', background: 'linear-gradient(90deg, #FF6B6B, #FF8A80)', borderRadius: 4 }} />
+                </Tooltip>
+              )}
+            </Box>
+          </Box>
+        );
+      })}
     </Box>
-  )
+  );
 }
 
-function InlineStat({ label, value, helper }) {
+function GraficoBarrasCategorias({ datos }) {
+  const maxCantidad = Math.max(...datos.map(item => item[1] || 0), 1);
+
+  // Rellenar hasta 6 filas
+  const filledData = [...datos];
+  while (filledData.length < FIXED_ROW_COUNT) {
+    filledData.push([{ nombre: '-' }, 0, true]);
+  }
+  const displayData = filledData.slice(0, FIXED_ROW_COUNT);
+
   return (
-    <Box sx={{ p: 2, borderRadius: 2, backgroundColor: '#FAF9F7', border: '1px solid rgba(93,64,55,0.1)', height: '100%' }}>
-      <Typography variant="body2" color="text.secondary">
-        {label}
-      </Typography>
-      <Typography variant="h6" sx={{ fontWeight: 700, mt: 0.5 }}>
-        {value}
-      </Typography>
-      {helper && (
-        <Typography variant="caption" color="text.secondary">
-          {helper}
-        </Typography>
-      )}
+    <Box sx={{ width: '100%', height: FIXED_TABLE_HEIGHT, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      {displayData.map((item, index) => {
+        const isEmpty = item[2] === true;
+        const categoria = item[0];
+        const monto = item[1] || 0;
+        const porcentaje = isEmpty ? 0 : (maxCantidad > 0 ? (monto / maxCantidad) * 100 : 0);
+        const categoriaName = categoria?.nombre || '-';
+        return (
+          <Box
+            key={index}
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: TABLE_ROW_TEMPLATE,
+              alignItems: 'center',
+              columnGap: 1.5,
+              height: 24
+            }}
+          >
+            <Tooltip title={isEmpty ? '' : categoriaName} disableHoverListener={isEmpty} arrow>
+              <Typography
+                variant="caption"
+                sx={{
+                  color: isEmpty ? 'transparent' : '#5D4037',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {categoriaName}
+              </Typography>
+            </Tooltip>
+            <Box sx={{ width: '100%', height: 8, backgroundColor: '#EFEBE9', borderRadius: 4, overflow: 'hidden', justifySelf: 'stretch' }}>
+              {!isEmpty && (
+                <Box sx={{ width: `${porcentaje}%`, height: '100%', background: 'linear-gradient(90deg, #5D4037, #8D6E63)', borderRadius: 4 }} />
+              )}
+            </Box>
+            <Typography
+              variant="caption"
+              sx={{ textAlign: 'right', fontWeight: 'bold', color: isEmpty ? 'transparent' : '#5D4037' }}
+            >
+              {isEmpty ? '-' : `$${(monto/1000).toFixed(0)}k`}
+            </Typography>
+          </Box>
+        );
+      })}
     </Box>
-  )
+  );
 }

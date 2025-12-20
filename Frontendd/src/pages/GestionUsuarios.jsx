@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Table } from '../components/UI.jsx';
 import { api } from '../services/api/index.js';
-import { PersonAdd, Delete, Edit, Security, Check } from '@mui/icons-material';
+import { PersonAdd, Delete, Edit, Security, Check, Key } from '@mui/icons-material';
 
 // Permisos disponibles
 const PERMISOS_DISPONIBLES = [
@@ -30,6 +30,9 @@ export default function GestionUsuarios() {
   const [nuevoRol, setNuevoRol] = useState('');
   const [editandoPermisos, setEditandoPermisos] = useState(null);
   const [permisosSeleccionados, setPermisosSeleccionados] = useState([]);
+  const [editandoPassword, setEditandoPassword] = useState(null);
+  const [nuevaPassword, setNuevaPassword] = useState('');
+  const [confirmarPassword, setConfirmarPassword] = useState('');
 
   const usuarioActual = api.auth.getUsuarioActual();
   const esAdmin = usuarioActual?.rol === 'ADMIN';
@@ -234,6 +237,47 @@ export default function GestionUsuarios() {
     setTimeout(() => setSuccess(''), 3000);
   };
 
+  const handleCambiarPassword = async () => {
+    setError('');
+    
+    if (nuevaPassword.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
+    if (nuevaPassword !== confirmarPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/auth/cambiar-password-admin/${editandoPassword.rut}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          password: nuevaPassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al cambiar contraseña');
+      }
+
+      setSuccess('Contraseña actualizada exitosamente');
+      setEditandoPassword(null);
+      setNuevaPassword('');
+      setConfirmarPassword('');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (error) {
+      setError(error.message);
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
   const contarPermisos = (usuario) => {
     if (usuario.rol === 'ADMIN') return 'Todos';
     const permisos = cargarPermisos(usuario.rut);
@@ -251,6 +295,24 @@ export default function GestionUsuarios() {
 
   return (
     <div style={{ padding: '2rem' }}>
+      <style>{`
+        .tabla-usuarios td {
+          font-size: 0.8rem !important;
+          padding: 0.5rem !important;
+          white-space: nowrap;
+        }
+        
+        .tabla-usuarios th {
+          font-size: 0.85rem !important;
+          padding: 0.6rem !important;
+        }
+
+        .rut-cell {
+          font-size: 0.75rem;
+          font-family: monospace;
+        }
+      `}</style>
+
       <div style={{ 
         display: 'flex', 
         justifyContent: 'space-between', 
@@ -282,78 +344,94 @@ export default function GestionUsuarios() {
       )}
 
       <Card>
-        <Table
-          columns={['RUT', 'Nombre', 'Correo', 'Rol', 'Permisos', 'Fecha Creación', 'Acciones']}
-          rows={usuarios.map(u => [
-            u.rut,
-            u.nombre,
-            u.correoElectronico,
-            <span style={{
-              padding: '0.25rem 0.75rem',
-              borderRadius: '12px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              background: u.rol === 'ADMIN' ? '#ffe0b2' : '#e3f2fd',
-              color: u.rol === 'ADMIN' ? '#e65100' : '#1565c0'
-            }}>
-              {u.rol}
-            </span>,
-            <span style={{
-              padding: '0.25rem 0.75rem',
-              borderRadius: '12px',
-              fontSize: '0.85rem',
-              fontWeight: 600,
-              background: '#f3e5f5',
-              color: '#6a1b9a',
-              cursor: u.rol === 'USUARIO' ? 'pointer' : 'default'
-            }}
-            onClick={() => u.rol === 'USUARIO' && handleEditarPermisos(u)}
-            title={u.rol === 'USUARIO' ? 'Click para editar permisos' : 'Los admins tienen todos los permisos'}
-            >
-              {contarPermisos(u)} {u.rol === 'USUARIO' && '✏️'}
-            </span>,
-            (() => {
-              if (!u.fechaCreacion) return 'Sin fecha';
-              try {
-                const fecha = new Date(u.fechaCreacion);
-                if (isNaN(fecha.getTime())) return 'Fecha inválida';
-                return fecha.toLocaleDateString('es-CL');
-              } catch {
-                return 'Error en fecha';
-              }
-            })(),
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <Button 
-                small 
-                variant="ghost"
-                onClick={() => handleEditarRol(u)}
-                title="Editar rol"
+        <div className="tabla-usuarios">
+          <Table
+            columns={['RUT', 'Nombre', 'Correo', 'Rol', 'Permisos', 'Fecha', 'Acciones']}
+            rows={usuarios.map(u => [
+              <span className="rut-cell">{u.rut}</span>,
+              u.nombre,
+              u.correoElectronico,
+              <span style={{
+                padding: '0.25rem 0.75rem',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                background: u.rol === 'ADMIN' ? '#ffe0b2' : '#e3f2fd',
+                color: u.rol === 'ADMIN' ? '#e65100' : '#1565c0'
+              }}>
+                {u.rol}
+              </span>,
+              <span style={{
+                padding: '0.25rem 0.75rem',
+                borderRadius: '12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                background: '#f3e5f5',
+                color: '#6a1b9a',
+                cursor: u.rol === 'USUARIO' ? 'pointer' : 'default'
+              }}
+              onClick={() => u.rol === 'USUARIO' && handleEditarPermisos(u)}
+              title={u.rol === 'USUARIO' ? 'Click para editar permisos' : 'Los admins tienen todos los permisos'}
               >
-                <Edit sx={{ fontSize: 18 }} />
-              </Button>
-              {u.rol === 'USUARIO' && (
+                {contarPermisos(u)} {u.rol === 'USUARIO' && '✏️'}
+              </span>,
+              (() => {
+                if (!u.fechaCreacion) return 'Sin fecha';
+                try {
+                  const fecha = new Date(u.fechaCreacion);
+                  if (isNaN(fecha.getTime())) return 'Fecha inválida';
+                  return fecha.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit', year: '2-digit' });
+                } catch {
+                  return 'Error';
+                }
+              })(),
+              <div style={{ display: 'flex', gap: '0.35rem' }}>
                 <Button 
                   small 
                   variant="ghost"
-                  onClick={() => handleEditarPermisos(u)}
-                  title="Gestionar permisos"
-                  style={{ color: '#6a1b9a' }}
+                  onClick={() => handleEditarRol(u)}
+                  title="Editar rol"
                 >
-                  <Security sx={{ fontSize: 18 }} />
+                  <Edit sx={{ fontSize: 16 }} />
                 </Button>
-              )}
-              <Button 
-                small 
-                variant="ghost" 
-                style={{ color: '#d32f2f' }}
-                onClick={() => handleEliminar(u.rut)}
-                title="Eliminar usuario"
-              >
-                <Delete sx={{ fontSize: 18 }} />
-              </Button>
-            </div>
-          ])}
-        />
+                <Button 
+                  small 
+                  variant="ghost"
+                  onClick={() => {
+                    setEditandoPassword(u);
+                    setNuevaPassword('');
+                    setConfirmarPassword('');
+                    setError('');
+                  }}
+                  title="Cambiar contraseña"
+                  style={{ color: '#f57c00' }}
+                >
+                  <Key sx={{ fontSize: 16 }} />
+                </Button>
+                {u.rol === 'USUARIO' && (
+                  <Button 
+                    small 
+                    variant="ghost"
+                    onClick={() => handleEditarPermisos(u)}
+                    title="Gestionar permisos"
+                    style={{ color: '#6a1b9a' }}
+                  >
+                    <Security sx={{ fontSize: 16 }} />
+                  </Button>
+                )}
+                <Button 
+                  small 
+                  variant="ghost" 
+                  style={{ color: '#d32f2f' }}
+                  onClick={() => handleEliminar(u.rut)}
+                  title="Eliminar usuario"
+                >
+                  <Delete sx={{ fontSize: 16 }} />
+                </Button>
+              </div>
+            ])}
+          />
+        </div>
       </Card>
 
       {/* Modal de Crear Usuario */}
@@ -571,6 +649,167 @@ export default function GestionUsuarios() {
               </Button>
               <Button onClick={handleGuardarRol}>
                 Guardar Cambios
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Cambiar Contraseña */}
+      {editandoPassword && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }} onClick={() => {
+          setEditandoPassword(null);
+          setNuevaPassword('');
+          setConfirmarPassword('');
+          setError('');
+        }}>
+          <div style={{
+            background: '#fff',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '100%'
+          }} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ marginTop: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Key /> Cambiar Contraseña
+            </h3>
+            
+            <div style={{ marginBottom: '1rem' }}>
+              <p><strong>Usuario:</strong> {editandoPassword.nombre}</p>
+              <p><strong>RUT:</strong> {editandoPassword.rut}</p>
+              <p><strong>Correo:</strong> {editandoPassword.correoElectronico}</p>
+            </div>
+
+            {error && (
+              <div style={{
+                padding: '0.75rem',
+                background: '#f8d7da',
+                color: '#721c24',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.9rem'
+              }}>
+                ⚠️ {error}
+              </div>
+            )}
+
+            {/* Campo oculto para que el navegador asocie correctamente */}
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value={editandoPassword.correoElectronico}
+              style={{ display: 'none' }}
+              readOnly
+            />
+
+            <div style={{ marginBottom: '1rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Nueva Contraseña
+              </label>
+              <input
+                type="password"
+                name="new-password"
+                autoComplete="new-password"
+                value={nuevaPassword}
+                onChange={(e) => {
+                  setNuevaPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Mínimo 6 caracteres"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  fontSize: '1rem'
+                }}
+                minLength={6}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                Confirmar Nueva Contraseña
+              </label>
+              <input
+                type="password"
+                name="confirm-password"
+                autoComplete="new-password"
+                value={confirmarPassword}
+                onChange={(e) => {
+                  setConfirmarPassword(e.target.value);
+                  setError('');
+                }}
+                placeholder="Repetir contraseña"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  fontSize: '1rem'
+                }}
+                minLength={6}
+              />
+            </div>
+
+            {nuevaPassword && confirmarPassword && nuevaPassword === confirmarPassword && (
+              <div style={{
+                padding: '0.75rem',
+                background: '#d4edda',
+                color: '#155724',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.9rem'
+              }}>
+                ✓ Las contraseñas coinciden
+              </div>
+            )}
+
+            {nuevaPassword && confirmarPassword && nuevaPassword !== confirmarPassword && (
+              <div style={{
+                padding: '0.75rem',
+                background: '#f8d7da',
+                color: '#721c24',
+                borderRadius: '8px',
+                marginBottom: '1rem',
+                fontSize: '0.9rem'
+              }}>
+                ✗ Las contraseñas no coinciden
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditandoPassword(null);
+                  setNuevaPassword('');
+                  setConfirmarPassword('');
+                  setError('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleCambiarPassword}
+                disabled={!nuevaPassword || !confirmarPassword || nuevaPassword !== confirmarPassword}
+              >
+                Cambiar Contraseña
               </Button>
             </div>
           </div>

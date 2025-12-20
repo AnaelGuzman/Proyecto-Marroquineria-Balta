@@ -7,6 +7,7 @@ import com.marroquineriabalta.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
@@ -62,6 +63,35 @@ public class AuthController {
             return ResponseEntity.ok(Map.of("mensaje", "Contraseña actualizada exitosamente"));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/generate-hash/{password}")
+    public ResponseEntity<String> generateHash(@PathVariable String password) {
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        String hash = encoder.encode(password);
+        return ResponseEntity.ok(hash);
+    }
+
+    @PutMapping("/cambiar-password-admin/{rut}")
+    public ResponseEntity<?> cambiarPasswordPorAdmin(
+            @PathVariable String rut,
+            @RequestBody Map<String, String> request) {
+        try {
+            String nuevaPassword = request.get("password");
+
+            if (nuevaPassword == null || nuevaPassword.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "La contraseña es obligatoria"));
+            }
+
+            authService.cambiarPasswordPorAdmin(rut, nuevaPassword);
+
+            return ResponseEntity.ok()
+                    .body(Map.of("mensaje", "Contraseña actualizada exitosamente"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", e.getMessage()));
         }
     }
 

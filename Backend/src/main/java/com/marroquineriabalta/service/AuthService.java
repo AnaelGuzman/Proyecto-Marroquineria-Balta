@@ -119,4 +119,19 @@ public class AuthService {
 
         return true;
     }
+    public boolean cambiarPasswordPorAdmin(String rut, String passwordNueva) {
+        Usuario usuario = usuarioRepository.findById(rut)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        if (passwordNueva == null || passwordNueva.length() < 6) {
+            throw new RuntimeException("La nueva contraseña debe tener al menos 6 caracteres");
+        }
+
+        // ✅ ENCRIPTAR NUEVA CONTRASEÑA
+        String passwordEncriptada = passwordEncoder.encode(passwordNueva);
+        usuario.setUserPassword(passwordEncriptada);
+        usuarioRepository.save(usuario);
+
+        return true;
+    }
 }
