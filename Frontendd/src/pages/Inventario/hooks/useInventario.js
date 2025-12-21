@@ -91,64 +91,144 @@ export function useInventario() {
 
   const consumirMaterialesParaProducto = async (idProducto, cantidad) => {
     try {
+      console.log('🔧 Iniciando consumo de materiales...')
+      console.log('📦 Producto ID:', idProducto)
+      console.log('📊 Cantidad a producir:', cantidad)
+
       // Obtener la receta del producto
       const receta = await api.recetas.getMaterialesPorProducto(idProducto)
       
-      // Consumir materiales por cada unidad del producto
+      console.log('📋 Receta obtenida:', receta)
+
+      if (!receta || receta.length === 0) {
+        throw new Error('El producto no tiene receta definida. No se puede producir.')
+      }
+      
+      // Verificar stock ANTES de consumir
+      const materialesInsuficientes = []
+      
       for (const item of receta) {
         if (item.material && item.cantidad) {
-          const cantidadTotal = item.cantidad * cantidad
+          const cantidadNecesaria = parseFloat(item.cantidad) * cantidad
+          const stockActual = item.material.stockActual || 0
+          
+          console.log(`📌 Material: ${item.material.nombre}`)
+          console.log(`   Stock actual: ${stockActual}`)
+          console.log(`   Cantidad necesaria: ${cantidadNecesaria}`)
+          
+          if (stockActual < cantidadNecesaria) {
+            materialesInsuficientes.push({
+              nombre: item.material.nombre,
+              necesario: cantidadNecesaria,
+              disponible: stockActual,
+              faltante: cantidadNecesaria - stockActual
+            })
+          }
+        }
+      }
+      
+      // Si hay materiales insuficientes, mostrar error detallado
+      if (materialesInsuficientes.length > 0) {
+        let mensaje = '❌ Stock insuficiente de materiales:\n\n'
+        materialesInsuficientes.forEach(mat => {
+          mensaje += `• ${mat.nombre}:\n`
+          mensaje += `  Necesario: ${mat.necesario}\n`
+          mensaje += `  Disponible: ${mat.disponible}\n`
+          mensaje += `  Faltante: ${mat.faltante}\n\n`
+        })
+        throw new Error(mensaje)
+      }
+      
+      // Si hay suficiente stock, consumir materiales
+      console.log('✅ Stock suficiente, procediendo a consumir materiales...')
+      
+      for (const item of receta) {
+        if (item.material && item.cantidad) {
+          const cantidadTotal = parseFloat(item.cantidad) * cantidad
+          
+          console.log(`🔻 Registrando salida:`)
+          console.log(`   Material ID: ${item.material.idMaterial}`)
+          console.log(`   Cantidad: ${cantidadTotal}`)
+          
           await api.inventarioMateriales.registrarSalida(
             item.material.idMaterial,
             cantidadTotal,
-            `Producción de ${cantidad} unidades del producto`
+            `Producción de ${cantidad} unidad(es) del producto`
           )
+          
+          console.log(`✅ Salida registrada para ${item.material.nombre}`)
         }
       }
+      
+      console.log('✅ Todos los materiales consumidos correctamente')
+      
+      // ✅ IMPORTANTE: Notificar que se deben recargar los materiales
+      // Esto se hará desde Inventario.jsx después de llamar a ajustarStock
+      
     } catch (error) {
-      console.error('Error al consumir materiales:', error)
-      throw new Error('No se pudieron consumir los materiales: ' + error.message)
+      console.error('❌ Error al consumir materiales:', error)
+      throw error
     }
   }
 
+const ajustarStock = async (idProducto, delta) => {
+  try {
+    console.log('🔧 Ajustando stock:')
+    console.log('  Producto ID:', idProducto)
+    console.log('  Delta:', delta)
 
-  const ajustarStock = async (idProducto, delta) => {
-    try {
-      const item = inventario.find(i => i.producto?.idProducto === idProducto)
-      if (!item) return
-      
-      const nuevaCantidad = item.cantidadProducto + delta
-      
-      if (nuevaCantidad < 0) {
-        alert('No se puede tener stock negativo')
+    const item = inventario.find(i => i.producto?.idProducto === idProducto)
+    if (!item) {
+      alert('❌ Producto no encontrado en inventario')
+      return
+    }
+    
+    const nuevaCantidad = item.cantidadProducto + delta
+    
+    if (nuevaCantidad < 0) {
+      alert('❌ No se puede tener stock negativo')
+      return
+    }
+    
+    // Si es un incremento (producción), consumir materiales PRIMERO
+    if (delta > 0) {
+      console.log('📈 Es un incremento, consumiendo materiales...')
+      try {
+        await consumirMaterialesParaProducto(idProducto, delta)
+        console.log('✅ Materiales consumidos exitosamente')
+      } catch (error) {
+        // Si falla el consumo de materiales, no continuar
+        console.error('❌ Fallo en consumo:', error)
+        alert(error.message)
         return
       }
-      
-      // Si es un incremento (producción), consumir materiales
-      if (delta > 0) {
-        await consumirMaterialesParaProducto(idProducto, delta)
-      }
-      
-      await api.inventario.ajustarCantidad(idProducto, delta)
-      
-      const nuevoInventario = inventario.map(item => 
-        item.producto?.idProducto === idProducto 
-          ? { 
-              ...item, 
-              cantidadProducto: nuevaCantidad, 
-              fechaActualizacion: new Date(),
-              idInventario: item.idInventario,
-              producto: { ...item.producto }
-            }
-          : item
-      )
-      
-      setInventario(nuevoInventario)
-    } catch (error) {
-      console.error('Error al ajustar stock:', error)
-      alert('Error al ajustar el stock: ' + error.message)
     }
+    
+    // Solo si el consumo fue exitoso, actualizar el inventario del producto
+    console.log('📦 Actualizando inventario del producto...')
+    await api.inventario.ajustarCantidad(idProducto, delta)
+    
+    const nuevoInventario = inventario.map(item => 
+      item.producto?.idProducto === idProducto 
+        ? { 
+            ...item, 
+            cantidadProducto: nuevaCantidad, 
+            fechaActualizacion: new Date(),
+            idInventario: item.idInventario,
+            producto: { ...item.producto }
+          }
+        : item
+    )
+    
+    setInventario(nuevoInventario)
+    
+    console.log('✅ Stock actualizado correctamente')
+    alert(`✅ Stock actualizado correctamente${delta > 0 ? ' y materiales consumidos' : ''}`)
+  } catch (error) {
+    console.error('❌ Error al ajustar stock:', error)
+    alert('❌ Error al ajustar el stock: ' + error.message)
   }
+}
 
   const actualizarPrecio = async (idProducto, delta) => {
     try {

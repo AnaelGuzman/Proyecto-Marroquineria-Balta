@@ -1,9 +1,31 @@
-// Inventario.jsx (con stock editable que calcula la diferencia)
+// Inventario.jsx - COMPLETO CON MATERIALES
 import React, { useState, useMemo } from 'react'
-import { Card, Toolbar, Button, Table } from '../../components/UI.jsx'
-import { Add, Edit, Delete, Visibility } from '@mui/icons-material'
+import { Card, Toolbar, Button } from '../../components/UI.jsx'
+import { Add, Science, Inventory } from '@mui/icons-material'
 import { api } from '../../services/api/index.js'
+ 
+// Importar componentes modulares
 import { useInventario } from './hooks/useInventario'
+import FiltrosInventario from './components/FiltrosInventario'
+import TablaInventario from './components/TablaInventario'
+import TablaRecetas from './components/TablaRecetas'
+import TablaMateriales from './components/TablaMateriales'
+import ModalProducto from './components/modals/ModalProducto'
+import ModalAjusteStock from './components/modals/ModalAjusteStock'
+import ModalDetalles from './components/modals/ModalDetalles'
+import ModalConfirmacion from './components/modals/ModalConfirmacion'
+import { 
+  ModalVerReceta, 
+  ModalAgregarMaterial, 
+  ModalCalcularCosto, 
+  ModalConfirmarEliminacion 
+} from './components/modals/ModalesRecetas'
+import { 
+  ModalMovimiento,
+  ModalHistorialMovimientos,
+  ModalDetallesMaterial
+} from './components/modals/ModalesMateriales'
+import { useInventarioMateriales } from './hooks/useInventarioMateriales'
 
 export default function Inventario() {
   const {
@@ -11,15 +33,34 @@ export default function Inventario() {
     productos,
     categorias,
     loading,
-    cargarDatos
+    bajoStock,
+    filtro,
+    setFiltro,
+    cargarDatos,
+    buscarProductos,
+    filtrarPorCategoria,
+    ajustarStock,
+    actualizarPrecio,
+    actualizarCategoria,
+    eliminarProducto
   } = useInventario()
 
+  // Hook para materiales
+  const {
+    materiales: materialesInventario,
+    loading: loadingMateriales,
+    cargarDatos: cargarDatosMateriales,
+    cargarMovimientosPorMaterial,
+    registrarEntrada,
+    registrarSalida
+  } = useInventarioMateriales()
+
+  // Estados de inventario
   const [showForm, setShowForm] = useState(false)
+  const [showAjuste, setShowAjuste] = useState(false)
   const [showDetalles, setShowDetalles] = useState(null)
   const [showConfirmDelete, setShowConfirmDelete] = useState(null)
   const [productoEdit, setProductoEdit] = useState(null)
-  const [filtro, setFiltro] = useState({ buscar: '', categoria: 'all', stockBajo: false })
-  
   const [formData, setFormData] = useState({
     nombre: '',
     descripcion: '',
@@ -27,6 +68,58 @@ export default function Inventario() {
     idCategoria: '',
     cantidad: 0
   })
+  const [ajusteData, setAjusteData] = useState({
+    idProducto: '',
+    cantidad: 0,
+    motivo: ''
+  })
+
+  // Estados de recetas
+  const [vistaActual, setVistaActual] = useState('inventario')
+  const [showRecetaModal, setShowRecetaModal] = useState(null)
+  const [showAgregarMaterialModal, setShowAgregarMaterialModal] = useState(null)
+  const [showCostoModal, setShowCostoModal] = useState(null)
+  const [deleteConfirmReceta, setDeleteConfirmReceta] = useState(null)
+  const [recetaActual, setRecetaActual] = useState([])
+  const [costoCalculado, setCostoCalculado] = useState(null)
+  const [materiales, setMateriales] = useState([])
+  const [filtroRecetas, setFiltroRecetas] = useState({ buscar: '' })
+  const [filtroMateriales, setFiltroMateriales] = useState({ buscar: '', stockBajo: false })
+  const [formMaterial, setFormMaterial] = useState({
+    idMaterial: '',
+    cantidad: ''
+  })
+
+  // Estados para modales de materiales
+  const [showMovimientosModal, setShowMovimientosModal] = useState(null)
+  const [showMovimientoModal, setShowMovimientoModal] = useState(null)
+  const [showDetallesMaterial, setShowDetallesMaterial] = useState(null)
+  const [movimientos, setMovimientos] = useState([])
+  const [tipoMovimiento, setTipoMovimiento] = useState('entrada')
+  const [formMovimiento, setFormMovimiento] = useState({
+    cantidad: '',
+    costoUnitario: '',
+    observaciones: ''
+  })
+
+  // Cargar materiales al cambiar a vista de recetas o materiales
+  React.useEffect(() => {
+    if ((vistaActual === 'recetas' || vistaActual === 'materiales') && materiales.length === 0) {
+      cargarMateriales()
+    }
+  }, [vistaActual])
+
+  const cargarMateriales = async () => {
+    try {
+      const materialesData = await api.materiales.getAll()
+      setMateriales(materialesData)
+      
+      // ✅ IMPORTANTE: También recargar los datos del hook
+      await cargarDatosMateriales()
+    } catch (err) {
+      console.error('Error cargando materiales:', err)
+    }
+  }
 
   const inventarioFiltrado = useMemo(() => 
     inventario.filter(item => {
@@ -35,12 +128,32 @@ export default function Inventario() {
         producto.nombre?.toLowerCase().includes(filtro.buscar.toLowerCase())
       const categoriaMatch = filtro.categoria === 'all' || 
         producto.categoria?.idCategoria === parseInt(filtro.categoria)
-      const stockBajoMatch = !filtro.stockBajo || item.cantidadProducto < 10
+      const stockBajoMatch = !filtro.stockBajo || item.cantidadProducto <= 10
       
       return nombreMatch && categoriaMatch && stockBajoMatch
     }), [inventario, filtro]
   )
 
+  const productosFiltrados = useMemo(() =>
+    productos.filter(producto =>
+      filtroRecetas.buscar === '' ||
+      producto.nombre?.toLowerCase().includes(filtroRecetas.buscar.toLowerCase())
+    ), [productos, filtroRecetas]
+  )
+
+  const materialesFiltrados = useMemo(() =>
+    materialesInventario.filter(material => {
+      const nombreMatch = filtroMateriales.buscar === '' ||
+        material.nombre?.toLowerCase().includes(filtroMateriales.buscar.toLowerCase())
+      const stockBajoMatch = !filtroMateriales.stockBajo ||
+        (material.stockActual || 0) < (material.stockMinimo || 10)
+      
+      return nombreMatch && stockBajoMatch
+    }), [materialesInventario, filtroMateriales]
+  )
+
+  // ========== FUNCIONES DE INVENTARIO ==========
+  
   const handleCrearProducto = async (e) => {
     e.preventDefault()
     try {
@@ -65,19 +178,41 @@ export default function Inventario() {
       await cargarDatos()
       alert('✅ Producto creado')
     } catch (error) {
-      alert('❌ Error al crear producto')
+      console.error('Error al crear producto:', error)
+      alert('❌ Error al crear el producto')
+    }
+  }
+
+  const handleAjusteStock = async (e) => {
+    e.preventDefault()
+    
+    const delta = parseInt(ajusteData.cantidad)
+    const idProducto = parseInt(ajusteData.idProducto)
+    
+    try {
+      // Usar ajustarStock del hook (consume materiales)
+      await ajustarStock(idProducto, delta)
+      
+      // ✅ Si fue producción, recargar materiales
+      if (delta > 0) {
+        await cargarDatosMateriales()
+      }
+      
+      setShowAjuste(false)
+      setAjusteData({ idProducto: '', cantidad: 0, motivo: '' })
+    } catch (error) {
+      console.error('Error al ajustar stock:', error)
     }
   }
 
   const handleEditarProducto = (producto) => {
     setProductoEdit(producto)
-    const stockActual = inventario.find(i => i.producto?.idProducto === producto.idProducto)?.cantidadProducto || 0
     setFormData({
       nombre: producto.nombre || '',
       descripcion: producto.descripcion || '',
       precio: producto.precio || 0,
       idCategoria: producto.categoria?.idCategoria || '',
-      cantidad: stockActual
+      cantidad: inventario.find(i => i.producto?.idProducto === producto.idProducto)?.cantidadProducto || 0
     })
     setShowForm(true)
   }
@@ -85,7 +220,6 @@ export default function Inventario() {
   const handleActualizarProducto = async (e) => {
     e.preventDefault()
     try {
-      // Actualizar producto
       await api.productos.update(productoEdit.idProducto, {
         ...productoEdit,
         nombre: formData.nombre,
@@ -94,398 +228,438 @@ export default function Inventario() {
         categoria: { idCategoria: parseInt(formData.idCategoria) }
       })
 
-      // Actualizar stock - calcular la diferencia
-      const stockActual = inventario.find(i => i.producto?.idProducto === productoEdit.idProducto)?.cantidadProducto || 0
-      const stockNuevo = parseInt(formData.cantidad)
-      const diferencia = stockNuevo - stockActual
-
-      if (diferencia !== 0) {
-        await api.inventario.ajustarCantidad(
-          productoEdit.idProducto,
-          diferencia
-        )
-      }
-
       setShowForm(false)
       setProductoEdit(null)
       setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
       await cargarDatos()
       alert('✅ Producto actualizado')
     } catch (error) {
-      console.error('Error:', error)
-      alert('❌ Error al actualizar')
+      console.error('Error al actualizar producto:', error)
+      alert('❌ Error al actualizar el producto')
     }
   }
 
-  const handleEliminarProducto = async () => {
-    try {
-      await api.productos.delete(showConfirmDelete.idProducto)
+  const handleVerDetalles = (producto) => {
+    const inventarioItem = inventario.find(i => i.producto?.idProducto === producto.idProducto)
+    setShowDetalles({
+      producto,
+      inventario: inventarioItem
+    })
+  }
+
+  const handleEliminarProducto = async (producto) => {
+    const success = await eliminarProducto(producto)
+    if (success) {
       setShowConfirmDelete(null)
-      await cargarDatos()
-      alert('✅ Producto eliminado')
-    } catch (error) {
-      alert('❌ Error al eliminar')
     }
   }
 
-  const rows = inventarioFiltrado.map(item => {
-    const producto = item.producto || {}
-    return [
-      producto.nombre || '-',
-      producto.categoria?.nombre || '-',
-      `$ ${(producto.precio || 0).toLocaleString('es-CL')}`,
-      item.cantidadProducto || 0,
-      <div key={producto.idProducto} style={{ display: 'flex', gap: '0.5rem' }}>
-        <Button small variant="ghost" onClick={() => setShowDetalles({ producto, inventario: item })}>
-          <Visibility sx={{ fontSize: 18 }} />
-        </Button>
-        <Button small variant="ghost" onClick={() => handleEditarProducto(producto)}>
-          <Edit sx={{ fontSize: 18 }} />
-        </Button>
-        <Button 
-          small 
-          variant="ghost" 
-          onClick={() => setShowConfirmDelete(producto)}
-          style={{ background: 'var(--error)', color: 'white' }}
-        >
-          <Delete sx={{ fontSize: 18 }} />
-        </Button>
-      </div>
-    ]
-  })
+  // ========== FUNCIONES DE RECETAS ==========
 
-  if (loading) {
-    return (
-      <div className="stack" style={{ padding: '0.75rem' }}>
-        <Card>
-          <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
-            Cargando...
-          </div>
-        </Card>
-      </div>
-    )
+  const obtenerRecetaProducto = async (idProducto) => {
+    try {
+      const receta = await api.recetas.getMaterialesPorProducto(idProducto)
+      return receta || []
+    } catch (err) {
+      console.error('Error obteniendo receta:', err)
+      return []
+    }
+  }
+
+  const handleVerReceta = async (producto) => {
+    try {
+      const receta = await obtenerRecetaProducto(producto.idProducto)
+      setRecetaActual(receta)
+      setShowRecetaModal(producto)
+    } catch (err) {
+      alert('❌ Error al cargar receta')
+    }
+  }
+
+  const handleEditarReceta = async (producto) => {
+    const receta = await obtenerRecetaProducto(producto.idProducto)
+    setRecetaActual(receta)
+    setShowAgregarMaterialModal(producto)
+  }
+
+  const handleAgregarMaterial = async (e) => {
+    e.preventDefault()
+
+    if (!formMaterial.idMaterial || !formMaterial.cantidad) {
+      alert('⚠️ Complete todos los campos')
+      return
+    }
+
+    try {
+      await api.recetas.agregarMaterial({
+        producto: { idProducto: showAgregarMaterialModal.idProducto },
+        material: { idMaterial: parseInt(formMaterial.idMaterial) },
+        cantidad: parseFloat(formMaterial.cantidad)
+      })
+
+      const recetaActualizada = await obtenerRecetaProducto(showAgregarMaterialModal.idProducto)
+      setRecetaActual(recetaActualizada)
+      setFormMaterial({ idMaterial: '', cantidad: '' })
+      alert('✅ Material agregado a la receta')
+    } catch (err) {
+      alert('❌ Error al agregar material')
+    }
+  }
+
+  const handleEliminarMaterial = async () => {
+    if (!deleteConfirmReceta) return
+
+    try {
+      await api.recetas.eliminarMaterial(deleteConfirmReceta.idMaterialProducto)
+
+      const recetaActualizada = await obtenerRecetaProducto(showRecetaModal.idProducto)
+      setRecetaActual(recetaActualizada)
+
+      setDeleteConfirmReceta(null)
+      alert('✅ Material eliminado de la receta')
+    } catch (err) {
+      console.error('Error:', err)
+      alert('❌ Error al eliminar material')
+      setDeleteConfirmReceta(null)
+    }
+  }
+
+  const handleCalcularCosto = async (producto) => {
+    try {
+      const costo = await api.recetas.getCostoProducto(producto.idProducto)
+      const receta = await obtenerRecetaProducto(producto.idProducto)
+      
+      setCostoCalculado(costo)
+      setRecetaActual(receta)
+      setShowCostoModal(producto)
+    } catch (err) {
+      alert('❌ Error al calcular costo')
+    }
+  }
+
+  // ========== FUNCIONES DE MATERIALES ==========
+
+  const handleRegistrarMovimiento = async (e) => {
+    e.preventDefault()
+    
+    try {
+      if (tipoMovimiento === 'entrada') {
+        if (!formMovimiento.costoUnitario) {
+          alert('⚠️ El costo unitario es obligatorio para entradas')
+          return
+        }
+        
+        await registrarEntrada(
+          showMovimientoModal.idMaterial,
+          parseFloat(formMovimiento.cantidad),
+          parseFloat(formMovimiento.costoUnitario),
+          formMovimiento.observaciones
+        )
+        alert('✅ Entrada registrada')
+      } else {
+        const stockActual = showMovimientoModal.stockActual || 0
+        const cantidadSalida = parseFloat(formMovimiento.cantidad)
+        
+        if (cantidadSalida > stockActual) {
+          alert(`❌ Stock insuficiente. Stock actual: ${stockActual}`)
+          return
+        }
+        
+        await registrarSalida(
+          showMovimientoModal.idMaterial,
+          cantidadSalida,
+          formMovimiento.observaciones
+        )
+        alert('✅ Salida registrada')
+      }
+      
+      // Ya NO es necesario llamar cargarMateriales aquí
+      // porque registrarEntrada y registrarSalida ya recargan automáticamente
+      
+      setShowMovimientoModal(null)
+      setFormMovimiento({ cantidad: '', costoUnitario: '', observaciones: '' })
+      setTipoMovimiento('entrada')
+    } catch (err) {
+      console.error('Error al registrar movimiento:', err)
+      alert('❌ Error al registrar movimiento')
+    }
+  }
+
+  if (loading || loadingMateriales) {
+    return <div className="stack"><Card><p>Cargando...</p></Card></div>
   }
 
   return (
-    <div className="stack" style={{ padding: '0.75rem' }}>
+    <div className="stack">
       <Card>
-        {/* FILTROS */}
+        {/* Tabs para cambiar entre vistas */}
         <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '2fr 1fr auto', 
-          gap: '0.75rem',
-          marginBottom: '1rem'
+          display: 'flex', 
+          gap: '0.5rem',
+          borderBottom: '2px solid var(--border)',
+          marginBottom: '1.5rem'
         }}>
-          <input
-            type="text"
-            placeholder="Buscar producto..."
-            value={filtro.buscar}
-            onChange={(e) => setFiltro(prev => ({ ...prev, buscar: e.target.value }))}
+          <Button
+            variant={vistaActual === 'inventario' ? 'primary' : 'ghost'}
+            onClick={() => setVistaActual('inventario')}
             style={{
-              padding: '0.5rem',
-              border: '2px solid var(--border)',
-              borderRadius: '6px',
-              fontSize: '0.9rem'
-            }}
-          />
-          
-          <select
-            value={filtro.categoria}
-            onChange={(e) => setFiltro(prev => ({ ...prev, categoria: e.target.value }))}
-            style={{
-              padding: '0.5rem',
-              border: '2px solid var(--border)',
-              borderRadius: '6px',
-              fontSize: '0.9rem'
+              borderRadius: '8px 8px 0 0',
+              borderBottom: vistaActual === 'inventario' ? '3px solid var(--brand)' : 'none'
             }}
           >
-            <option value="all">Todas las categorías</option>
-            {categorias.map(cat => (
-              <option key={cat.idCategoria} value={cat.idCategoria}>
-                {cat.nombre}
-              </option>
-            ))}
-          </select>
-
-          <label style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem',
-            fontSize: '0.9rem',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap'
-          }}>
-            <input
-              type="checkbox"
-              checked={filtro.stockBajo}
-              onChange={(e) => setFiltro(prev => ({ ...prev, stockBajo: e.target.checked }))}
-            />
-            Bajo stock
-          </label>
+            📦 Inventario
+          </Button>
+          <Button
+            variant={vistaActual === 'recetas' ? 'primary' : 'ghost'}
+            onClick={() => setVistaActual('recetas')}
+            style={{
+              borderRadius: '8px 8px 0 0',
+              borderBottom: vistaActual === 'recetas' ? '3px solid var(--brand)' : 'none'
+            }}
+          >
+            <Science sx={{ fontSize: 18 }} />
+            Recetas
+          </Button>
+          <Button
+            variant={vistaActual === 'materiales' ? 'primary' : 'ghost'}
+            onClick={() => setVistaActual('materiales')}
+            style={{
+              borderRadius: '8px 8px 0 0',
+              borderBottom: vistaActual === 'materiales' ? '3px solid var(--brand)' : 'none'
+            }}
+          >
+            <Inventory sx={{ fontSize: 18 }} />
+            Materiales
+          </Button>
         </div>
 
-        {/* TOOLBAR */}
-        <Toolbar style={{ marginBottom: '1rem' }}>
-          <Button onClick={() => { setProductoEdit(null); setShowForm(true); }}>
-            <Add sx={{ fontSize: 18 }} />
-            Nuevo
-          </Button>
-          <div style={{ flex: 1 }} />
-          <span style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-            {inventarioFiltrado.length} de {inventario.length} productos
-          </span>
-        </Toolbar>
+        {/* VISTA DE INVENTARIO */}
+        {vistaActual === 'inventario' && (
+          <>
+            <FiltrosInventario
+              filtro={filtro}
+              setFiltro={setFiltro}
+              categorias={categorias}
+              buscarProductos={buscarProductos}
+              filtrarPorCategoria={filtrarPorCategoria}
+              cargarDatos={cargarDatos}
+              inventario={inventario}
+              inventarioFiltrado={inventarioFiltrado}
+            />
 
-        {/* TABLA */}
-        <Table
-          columns={['Producto', 'Categoría', 'Precio', 'Stock', 'Acciones']}
-          rows={rows}
-        />
+            <Toolbar style={{ marginBottom: '1.5rem' }}>
+              <Button onClick={() => { setProductoEdit(null); setShowForm(true); }}>
+                <Add sx={{ fontSize: 20 }} />
+                Nuevo producto
+              </Button>
+              <Button variant="ghost" onClick={() => setShowAjuste(true)}>
+                Ajuste de stock
+              </Button>
+              <div style={{ flex: 1 }} />
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                Mostrando {inventarioFiltrado.length} de {inventario.length} productos
+              </span>
+            </Toolbar>
+            
+            <TablaInventario
+              inventarioFiltrado={inventarioFiltrado}
+              categorias={categorias}
+              ajustarStock={ajustarStock}
+              actualizarPrecio={actualizarPrecio}
+              actualizarCategoria={actualizarCategoria}
+              handleVerDetalles={handleVerDetalles}
+              handleEditarProducto={handleEditarProducto}
+              setShowConfirmDelete={setShowConfirmDelete}
+            />
+          </>
+        )}
+
+        {/* VISTA DE RECETAS */}
+        {vistaActual === 'recetas' && (
+          <>
+            <div style={{ marginBottom: '1rem' }}>
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={filtroRecetas.buscar}
+                onChange={(e) => setFiltroRecetas(prev => ({ ...prev, buscar: e.target.value }))}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <Toolbar style={{ marginBottom: '1.5rem' }}>
+              <div style={{ flex: 1 }} />
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                Mostrando {productosFiltrados.length} de {productos.length} productos
+              </span>
+            </Toolbar>
+
+            <TablaRecetas
+              productosFiltrados={productosFiltrados}
+              handleVerReceta={handleVerReceta}
+              handleEditarReceta={handleEditarReceta}
+              handleCalcularCosto={handleCalcularCosto}
+            />
+          </>
+        )}
+
+        {/* VISTA DE MATERIALES */}
+        {vistaActual === 'materiales' && (
+          <>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '2fr auto', 
+              gap: '0.75rem',
+              marginBottom: '1rem'
+            }}>
+              <input
+                type="text"
+                placeholder="Buscar material..."
+                value={filtroMateriales.buscar}
+                onChange={(e) => setFiltroMateriales(prev => ({ ...prev, buscar: e.target.value }))}
+                style={{
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: '0.9rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={filtroMateriales.stockBajo}
+                  onChange={(e) => setFiltroMateriales(prev => ({ ...prev, stockBajo: e.target.checked }))}
+                />
+                Bajo stock
+              </label>
+            </div>
+
+            <Toolbar style={{ marginBottom: '1.5rem' }}>
+              <div style={{ flex: 1 }} />
+              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+                {materialesFiltrados.length} de {materialesInventario.length} materiales
+              </span>
+            </Toolbar>
+
+            <TablaMateriales
+              materialesFiltrados={materialesFiltrados}
+              setShowMovimientoModal={setShowMovimientoModal}
+              handleVerMovimientos={async (material) => {
+                try {
+                  const movimientosData = await cargarMovimientosPorMaterial(material.idMaterial)
+                  setMovimientos(movimientosData)
+                  setShowMovimientosModal(material)
+                } catch (err) {
+                  alert('❌ Error al cargar movimientos')
+                }
+              }}
+              setShowDetallesMaterial={setShowDetallesMaterial}
+            />
+          </>
+        )}
       </Card>
 
-      {/* MODAL FORMULARIO */}
-      {showForm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'var(--panel)',
-            padding: '2rem',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '500px',
-            border: '2px solid var(--border)'
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.3rem' }}>
-              {productoEdit ? 'Editar' : 'Nuevo'} Producto
-            </h3>
-            
-            <form onSubmit={productoEdit ? handleActualizarProducto : handleCrearProducto}>
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                  Nombre *
-                </label>
-                <input
-                  type="text"
-                  value={formData.nombre}
-                  onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem'
-                  }}
-                />
-              </div>
+      {/* MODALES DE INVENTARIO */}
+      <ModalProducto
+        showForm={showForm}
+        setShowForm={setShowForm}
+        productoEdit={productoEdit}
+        setProductoEdit={setProductoEdit}
+        formData={formData}
+        setFormData={setFormData}
+        categorias={categorias}
+        handleCrearProducto={handleCrearProducto}
+        handleActualizarProducto={handleActualizarProducto}
+      />
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                  Descripción
-                </label>
-                <textarea
-                  value={formData.descripcion}
-                  onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
-                  rows="2"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    resize: 'vertical',
-                    fontFamily: 'inherit'
-                  }}
-                />
-              </div>
+      <ModalAjusteStock
+        showAjuste={showAjuste}
+        setShowAjuste={setShowAjuste}
+        ajusteData={ajusteData}
+        setAjusteData={setAjusteData}
+        productos={productos}
+        handleAjusteStock={handleAjusteStock}
+      />
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                    Precio *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.precio}
-                    onChange={(e) => setFormData(prev => ({ ...prev, precio: e.target.value }))}
-                    required
-                    min="0"
-                    step="1"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid var(--border)',
-                      borderRadius: '8px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
+      <ModalDetalles
+        showDetalles={showDetalles}
+        setShowDetalles={setShowDetalles}
+        handleEditarProducto={handleEditarProducto}
+      />
 
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                    {productoEdit ? 'Stock *' : 'Stock inicial *'}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.cantidad}
-                    onChange={(e) => setFormData(prev => ({ ...prev, cantidad: e.target.value }))}
-                    required
-                    min="0"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '2px solid var(--border)',
-                      borderRadius: '8px',
-                      fontSize: '1rem'
-                    }}
-                  />
-                </div>
-              </div>
+      <ModalConfirmacion
+        showConfirmDelete={showConfirmDelete}
+        setShowConfirmDelete={setShowConfirmDelete}
+        handleEliminarProducto={handleEliminarProducto}
+      />
 
-              <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.9rem' }}>
-                  Categoría *
-                </label>
-                <select
-                  value={formData.idCategoria}
-                  onChange={(e) => setFormData(prev => ({ ...prev, idCategoria: e.target.value }))}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem'
-                  }}
-                >
-                  <option value="">Seleccione categoría</option>
-                  {categorias.map(cat => (
-                    <option key={cat.idCategoria} value={cat.idCategoria}>
-                      {cat.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
+      {/* MODALES DE RECETAS */}
+      <ModalVerReceta
+        showRecetaModal={showRecetaModal}
+        setShowRecetaModal={setShowRecetaModal}
+        recetaActual={recetaActual}
+        setShowAgregarMaterialModal={setShowAgregarMaterialModal}
+      />
 
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  onClick={() => {
-                    setShowForm(false)
-                    setProductoEdit(null)
-                    setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit">
-                  {productoEdit ? 'Actualizar' : 'Crear'}
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ModalAgregarMaterial
+        showAgregarMaterialModal={showAgregarMaterialModal}
+        setShowAgregarMaterialModal={setShowAgregarMaterialModal}
+        recetaActual={recetaActual}
+        materiales={materiales}
+        formMaterial={formMaterial}
+        setFormMaterial={setFormMaterial}
+        handleAgregarMaterial={handleAgregarMaterial}
+        setDeleteConfirmReceta={setDeleteConfirmReceta}
+      />
 
-      {/* MODAL DETALLES */}
-      {showDetalles && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'var(--panel)',
-            padding: '2rem',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '500px',
-            border: '2px solid var(--border)'
-          }}>
-            <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.3rem' }}>
-              {showDetalles.producto.nombre}
-            </h3>
+      <ModalCalcularCosto
+        showCostoModal={showCostoModal}
+        setShowCostoModal={setShowCostoModal}
+        recetaActual={recetaActual}
+        costoCalculado={costoCalculado}
+      />
 
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Descripción:</strong> {showDetalles.producto.descripcion || '-'}
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Categoría:</strong> {showDetalles.producto.categoria?.nombre || '-'}
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Precio:</strong> $ {(showDetalles.producto.precio || 0).toLocaleString('es-CL')}
-            </div>
-            <div style={{ marginBottom: '1rem' }}>
-              <strong>Stock:</strong> {showDetalles.inventario?.cantidadProducto || 0} unidades
-            </div>
+      <ModalConfirmarEliminacion
+        deleteConfirmReceta={deleteConfirmReceta}
+        setDeleteConfirmReceta={setDeleteConfirmReceta}
+        handleEliminarMaterial={handleEliminarMaterial}
+      />
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
-              <Button variant="ghost" onClick={() => setShowDetalles(null)}>
-                Cerrar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODALES DE MATERIALES */}
+      <ModalMovimiento
+        showMovimientoModal={showMovimientoModal}
+        setShowMovimientoModal={setShowMovimientoModal}
+        tipoMovimiento={tipoMovimiento}
+        setTipoMovimiento={setTipoMovimiento}
+        formMovimiento={formMovimiento}
+        setFormMovimiento={setFormMovimiento}
+        handleRegistrarMovimiento={handleRegistrarMovimiento}
+      />
 
-      {/* MODAL CONFIRMAR ELIMINACIÓN */}
-      {showConfirmDelete && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          zIndex: 1001
-        }}>
-          <div style={{
-            background: 'var(--panel)',
-            padding: '2rem',
-            borderRadius: '12px',
-            width: '90%',
-            maxWidth: '400px',
-            textAlign: 'center',
-            border: '2px solid var(--border)'
-          }}>
-            <Delete sx={{ fontSize: 48, color: '#F44336', marginBottom: '1rem' }} />
-            
-            <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.3rem' }}>
-              ¿Eliminar "{showConfirmDelete.nombre}"?
-            </h3>
+      <ModalHistorialMovimientos
+        showMovimientosModal={showMovimientosModal}
+        setShowMovimientosModal={setShowMovimientosModal}
+        movimientos={movimientos}
+      />
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginTop: '1.5rem' }}>
-              <Button variant="ghost" onClick={() => setShowConfirmDelete(null)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleEliminarProducto} style={{ background: 'var(--error)' }}>
-                Eliminar
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalDetallesMaterial
+        showDetallesMaterial={showDetallesMaterial}
+        setShowDetallesMaterial={setShowDetallesMaterial}
+      />
     </div>
   )
 }

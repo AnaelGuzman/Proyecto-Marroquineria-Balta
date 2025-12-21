@@ -19,6 +19,8 @@ import { Logout, Person } from '@mui/icons-material'
 import AgendamientosModal from './components/AgendamientosModal.jsx'
 import GestionUsuarios from './pages/GestionUsuarios.jsx'
 import GastosRecurrentes from './pages/Compra/GastosRecurrentes.jsx'
+import { Science } from '@mui/icons-material';
+
 
 const theme = createTheme({
   palette: {
@@ -104,7 +106,7 @@ const allRoutes = [
     permiso: 'INVENTARIO',
     submenu: [
       { path: '#/inventario', label: 'Gestión de Inventario' },
-      { path: '#/inventarioMat', label: 'Inventario Materiales', element: InventarioMateriales },
+     
     ]
   },
   { 
