@@ -5,10 +5,7 @@ import {
   CardContent,
   Typography,
   TextField,
-  MenuItem,
   Button,
-  Stack,
-  Chip,
   Tooltip
 } from '@mui/material';
 import {
@@ -39,20 +36,6 @@ const CARD_BASE_SX = {
   backgroundColor: '#FAF9F7'
 };
 
-const FILTRO_TIPO_OPTIONS = [
-  { value: 'all', label: 'Todos' },
-  { value: 'ing', label: 'Ingresos' },
-  { value: 'egr', label: 'Egresos' }
-];
-
-const FILTRO_CATEGORIA_OPTIONS = [
-  { value: 'all', label: 'Todas' },
-  { value: 'ins', label: 'Insumos' },
-  { value: 'mkt', label: 'Publicidad / Marketing' },
-  { value: 'prod', label: 'Producción' },
-  { value: 'adm', label: 'Administración' }
-];
-
 const FIXED_ROW_COUNT = 6;
 const FIXED_TABLE_HEIGHT = 150;
 const TABLE_ROW_TEMPLATE = 'minmax(0, 1.4fr) minmax(0, 0.8fr) minmax(0, 0.5fr)';
@@ -70,7 +53,6 @@ const numberFormatter = new Intl.NumberFormat('es-CL', { minimumFractionDigits: 
 export default function Reportes() {
   const [periodo, setPeriodo] = useState(() => crearPeriodoInicial());
   const [periodoActivo, setPeriodoActivo] = useState(() => crearPeriodoInicial());
-  const [filtros, setFiltros] = useState({ tipo: 'all', categoria: 'all' });
   const [loading, setLoading] = useState(false);
   const [resumen, setResumen] = useState({
     ingresos: 0,
@@ -83,6 +65,25 @@ export default function Reportes() {
   const [serieMensual, setSerieMensual] = useState([]);
   const [categoriaDistribucion, setCategoriaDistribucion] = useState([]);
   const [showFiltros, setShowFiltros] = useState(false);
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+
+  const dateToInputValue = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  };
+
+  const parseInputDateToLocalDate = (value) => {
+    // value is yyyy-mm-dd; build Date in local time to avoid UTC offset shifting a day.
+    const [y, m, d] = String(value).split('-').map(Number);
+    if (!y || !m || !d) return new Date(value);
+    return new Date(y, m - 1, d);
+  };
+
+  const dateToYearMonth = (date) => {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) return '';
+    return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}`;
+  };
 
   useEffect(() => {
     let cancelado = false;
@@ -215,6 +216,17 @@ export default function Reportes() {
     });
   };
 
+  const formatearRangoMeses = (inicio, fin) => {
+    const inicioKey = `${inicio.getFullYear()}-${inicio.getMonth()}`;
+    const finKey = `${fin.getFullYear()}-${fin.getMonth()}`;
+
+    if (inicioKey === finKey) {
+      return formatearMes(inicio);
+    }
+
+    return `${formatearMes(inicio)} a ${formatearMes(fin)}`;
+  };
+
   const restablecerPeriodoActual = () => {
     const base = crearPeriodoInicial();
     setPeriodo(base);
@@ -230,13 +242,14 @@ export default function Reportes() {
     const base = crearPeriodoInicial();
     setPeriodo(base);
     setPeriodoActivo(base);
-    setFiltros({ tipo: 'all', categoria: 'all' });
+    setShowFiltros(false);
   };
 
   const descargarReporteExcel = async () => {
     try {
-      const desde = periodoActivo.inicio.toISOString().slice(0, 7);
-      const hasta = periodoActivo.fin.toISOString().slice(0, 7);
+      // Use local year-month to avoid shifting to previous month due to timezone offsets.
+      const desde = dateToYearMonth(periodoActivo.inicio);
+      const hasta = dateToYearMonth(periodoActivo.fin);
       const url = `${API_BASE_URL}/estadisticas/reporte-mensual/detallado?desde=${encodeURIComponent(desde)}&hasta=${encodeURIComponent(hasta)}`;
 
       const res = await fetch(url, {
@@ -484,14 +497,14 @@ export default function Reportes() {
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
                 <Typography variant="caption" color="text.secondary">Total ventas</Typography>
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
-                  ${(comparativaSerie.totalVentas/1000).toFixed(0)}k
+                  ${(comparativaSerie.totalVentas / 1000).toFixed(0)}k
                 </Typography>
               </Box>
 
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
                 <Typography variant="caption" color="text.secondary">Total compras</Typography>
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
-                  ${(comparativaSerie.totalCompras/1000).toFixed(0)}k
+                  ${(comparativaSerie.totalCompras / 1000).toFixed(0)}k
                 </Typography>
               </Box>
 
@@ -512,106 +525,102 @@ export default function Reportes() {
     <Box sx={{ p: { xs: 2, sm: 2.25, md: 2.5, lg: 3 }, maxWidth: 1600, margin: '0 auto' }} className="estadisticas-page">
       <PeriodoToolbar
         icon={Analytics}
-        titulo={formatearMes(periodoActivo.inicio)}
+        titulo={formatearRangoMeses(periodoActivo.inicio, periodoActivo.fin)}
         periodoLabel={rangoLabel}
         onPrev={() => cambiarMes(-1)}
         onReset={restablecerPeriodoActual}
         onNext={() => cambiarMes(1)}
+        actions={(
+          <>
+            <Tooltip title={showFiltros ? 'Ocultar filtros avanzados' : 'Mostrar filtros avanzados'} arrow>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList fontSize="inherit" />}
+                onClick={() => setShowFiltros(!showFiltros)}
+              >
+                Filtros
+              </Button>
+            </Tooltip>
+            <Tooltip title="Descargar reporte en Excel" arrow>
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<Download fontSize="inherit" />}
+                onClick={descargarReporteExcel}
+              >
+                Excel
+              </Button>
+            </Tooltip>
+          </>
+        )}
+        footerOpen={showFiltros}
+        footer={(
+          <Box className="periodo-toolbar-footer-panel">
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+                flexWrap: { xs: 'wrap', md: 'nowrap' },
+                justifyContent: 'space-between'
+              }}
+            >
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  flexWrap: 'wrap',
+                  flex: 1,
+                  minWidth: 0
+                }}
+              >
+                <TextField
+                  label="Desde"
+                  type="date"
+                  size="small"
+                  value={dateToInputValue(periodo.inicio)}
+                  onChange={(e) => setPeriodo({ ...periodo, inicio: parseInputDateToLocalDate(e.target.value) })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: { xs: '100%', sm: 170 } }}
+                />
+                <TextField
+                  label="Hasta"
+                  type="date"
+                  size="small"
+                  value={dateToInputValue(periodo.fin)}
+                  onChange={(e) => setPeriodo({ ...periodo, fin: parseInputDateToLocalDate(e.target.value) })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: { xs: '100%', sm: 170 } }}
+                />
+              </Box>
+
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 0.75 }}>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleLimpiarFiltros}
+                  sx={{ borderColor: 'rgba(255,255,255,0.6)', color: '#fff' }}
+                >
+                  Limpiar
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleAplicarFiltros}
+                  sx={{ borderColor: 'rgba(255,255,255,0.9)', color: '#fff' }}
+                >
+                  Aplicar
+                </Button>
+              </Box>
+            </Box>
+          </Box>
+        )}
       />
 
-      {/* Botones de acción */}
-      <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <Button
-          variant="outlined"
-          startIcon={<FilterList />}
-          onClick={() => setShowFiltros(!showFiltros)}
-          sx={{ borderColor: '#5D4037', color: '#5D4037' }}
-        >
-          {showFiltros ? 'Ocultar filtros' : 'Mostrar filtros'}
-        </Button>
-        <Button
-          variant="contained"
-          startIcon={<Download />}
-          onClick={descargarReporteExcel}
-          sx={{ backgroundColor: '#5D4037', '&:hover': { backgroundColor: '#3E2723' } }}
-        >
-          Descargar Excel
-        </Button>
-      </Stack>
-
-      {/* Panel de filtros expandible */}
-      {showFiltros && (
-        <Card sx={{ ...CARD_BASE_SX, mb: 2, p: 2 }}>
-          <Typography variant="h6" sx={{ color: '#5D4037', mb: 2 }}>
-            Filtros avanzados
-          </Typography>
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 2,
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }
-            }}
-          >
-            <TextField
-              label="Desde"
-              type="date"
-              fullWidth
-              value={periodo.inicio.toISOString().slice(0, 10)}
-              onChange={(e) => setPeriodo({ ...periodo, inicio: new Date(e.target.value) })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Hasta"
-              type="date"
-              fullWidth
-              value={periodo.fin.toISOString().slice(0, 10)}
-              onChange={(e) => setPeriodo({ ...periodo, fin: new Date(e.target.value) })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Tipo"
-              select
-              fullWidth
-              value={filtros.tipo}
-              onChange={(e) => setFiltros({ ...filtros, tipo: e.target.value })}
-            >
-              {FILTRO_TIPO_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Categoría"
-              select
-              fullWidth
-              value={filtros.categoria}
-              onChange={(e) => setFiltros({ ...filtros, categoria: e.target.value })}
-            >
-              {FILTRO_CATEGORIA_OPTIONS.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-          <Stack direction="row" spacing={2} justifyContent="flex-end" sx={{ mt: 2 }}>
-            <Button variant="outlined" onClick={handleLimpiarFiltros}>
-              Limpiar
-            </Button>
-            <Button
-              variant="contained"
-              onClick={handleAplicarFiltros}
-              sx={{ backgroundColor: '#5D4037', '&:hover': { backgroundColor: '#3E2723' } }}
-            >
-              Aplicar
-            </Button>
-          </Stack>
-        </Card>
-      )}
-
       {/* KPIs */}
-      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 2.25, md: 2.5 } }}>
+      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 1.25, md: 0.5 } }}>
         <Box
           sx={{
             display: 'grid',
@@ -726,13 +735,14 @@ function MetricaCompacta({ titulo, valor, subtitulo, icono, color }) {
 }
 
 function GraficoBalance({ ingresos, egresos, saldo }) {
-  const total = Math.max(ingresos, 1);
-  const pIngresos = (ingresos / total) * 100;
-  const pEgresos = (egresos / total) * 100;
+  const ingresosSeguro = Math.max(Number(ingresos) || 0, 0);
+  const egresosSeguro = Math.max(Number(egresos) || 0, 0);
+  const total = Math.max(ingresosSeguro + egresosSeguro, 1);
+  const pIngresos = (ingresosSeguro / total) * 100;
 
   const datosTorta = [
-    { nombre: 'Ingresos', valor: ingresos, color: '#4CAF50' },
-    { nombre: 'Egresos', valor: egresos, color: '#FF6B6B' }
+    { nombre: 'Ingresos', valor: ingresosSeguro, color: '#4CAF50' },
+    { nombre: 'Egresos', valor: egresosSeguro, color: '#FF6B6B' }
   ];
 
   return (

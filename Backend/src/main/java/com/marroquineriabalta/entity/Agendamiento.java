@@ -20,10 +20,13 @@ public class Agendamiento {
     @Column(name = "id_agendamiento")
     private Long idAgendamiento;
 
-    @ManyToOne(optional = false, fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_producto", nullable = false)
+    @ManyToOne(optional = true, fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_producto", nullable = true)
     @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Producto producto;
+
+    @Column(name = "producto_nombre", length = 160)
+    private String productoNombre;
 
     @Column(nullable = false, length = 120)
     private String titulo;

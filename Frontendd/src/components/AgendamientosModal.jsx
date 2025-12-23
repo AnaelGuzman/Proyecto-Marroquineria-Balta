@@ -12,6 +12,8 @@ const normalizeDate = (date) => new Date(date.getFullYear(), date.getMonth(), da
 
 const initialFormState = () => ({
   productoId: '',
+  productoTexto: '',
+  horaProgramada: '09:00',
   titulo: '',
   descripcion: ''
 });
@@ -77,6 +79,7 @@ export default function AgendamientosModal({ open, onClose }) {
   const [selectedDate, setSelectedDate] = useState(() => normalizeDate(new Date()));
   const [agendamientos, setAgendamientos] = useState([]);
   const [productos, setProductos] = useState([]);
+  const [productoMenuOpen, setProductoMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -167,27 +170,76 @@ export default function AgendamientosModal({ open, onClose }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const productosFiltrados = useMemo(() => {
+    const query = (form.productoTexto || '').trim().toLowerCase();
+    const list = Array.isArray(productos) ? productos : [];
+    if (!query) return list.slice(0, 8);
+
+    return list
+      .filter((producto) => (producto?.nombre || '').toLowerCase().includes(query))
+      .slice(0, 8);
+  }, [form.productoTexto, productos]);
+
+  const handleProductoTextoChange = (event) => {
+    const value = event.target.value;
+    setForm((prev) => ({
+      ...prev,
+      productoTexto: value,
+      productoId: ''
+    }));
+    setProductoMenuOpen(true);
+  };
+
+  const handleProductoSelect = (producto) => {
+    setForm((prev) => ({
+      ...prev,
+      productoId: String(producto.idProducto),
+      productoTexto: producto.nombre
+    }));
+    setProductoMenuOpen(false);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!form.productoId) {
-      alert('Seleccione un producto antes de agendar.');
+    const productoTextoIngresado = (form.productoTexto || '').trim();
+    const productoTextoLower = productoTextoIngresado.toLowerCase();
+    const productoCoincidente = !form.productoId && productoTextoLower
+      ? productos.find((producto) => (producto?.nombre || '').trim().toLowerCase() === productoTextoLower)
+      : null;
+
+    const productoIdFinal = form.productoId || (productoCoincidente ? String(productoCoincidente.idProducto) : '');
+    const productoNombreFinal = productoIdFinal ? '' : productoTextoIngresado;
+
+    const hasProductoId = Boolean(productoIdFinal);
+    const hasProductoNombre = Boolean(productoNombreFinal);
+    if (!hasProductoId && !hasProductoNombre) {
+      setSuccess(null);
+      setError('Seleccione un producto o ingrese un nombre de producto.');
       return;
     }
     if (!form.titulo.trim()) {
-      alert('Ingrese un título para el agendamiento.');
+      setSuccess(null);
+      setError('Ingrese un título para el agendamiento.');
       return;
     }
 
     setFormLoading(true);
     setError(null);
     try {
+      const [horaStr = '09', minutoStr = '00'] = String(form.horaProgramada || '09:00').split(':');
+      const hora = Number.parseInt(horaStr, 10);
+      const minuto = Number.parseInt(minutoStr, 10);
+      const horaSegura = Number.isFinite(hora) ? hora : 9;
+      const minutoSeguro = Number.isFinite(minuto) ? minuto : 0;
+
       const fechaProgramada = new Date(selectedDate);
-      fechaProgramada.setHours(9, 0, 0, 0);
+      fechaProgramada.setHours(horaSegura, minutoSeguro, 0, 0);
       const fechaEntrega = new Date(selectedDate);
       fechaEntrega.setHours(18, 0, 0, 0);
 
       const payload = {
-        producto: { idProducto: parseInt(form.productoId, 10) },
+        producto: hasProductoId ? { idProducto: parseInt(productoIdFinal, 10) } : null,
+        productoNombre: !hasProductoId && hasProductoNombre ? productoNombreFinal : null,
         titulo: form.titulo.trim(),
         descripcion: form.descripcion.trim(),
         fechaProgramada: fechaProgramada.toISOString(),
@@ -198,6 +250,7 @@ export default function AgendamientosModal({ open, onClose }) {
       setAgendamientos((prev) => [...prev, creado]);
       setForm(initialFormState());
       setSuccess('Agendamiento creado correctamente.');
+      setError(null);
     } catch (err) {
       console.error('Error creando agendamiento', err);
       setError(err.message || 'No fue posible crear el agendamiento');
@@ -222,14 +275,8 @@ export default function AgendamientosModal({ open, onClose }) {
           <Button variant="ghost" small onClick={onClose}>Cerrar</Button>
         </header>
 
-        {(error || success) && (
-          <div className={`agendamientos-alert ${success ? 'success' : ''}`}>
-            {error || success}
-          </div>
-        )}
-
         <div className="agendamientos-body">
-          <section className="agendamientos-calendar">
+          <section className="agendamientos-card agendamientos-calendar">
             <div className="calendar-nav">
               <Button variant="ghost" small onClick={() => handleMonthChange(-1)}>
                 ←
@@ -268,95 +315,128 @@ export default function AgendamientosModal({ open, onClose }) {
             {loading && <p className="agendamientos-loading">Actualizando calendario...</p>}
           </section>
 
-          <section className="agendamientos-details">
+          <section className="agendamientos-card agendamientos-events">
             <div className="details-header">
               <h4>{selectedDate.toLocaleDateString('es-CL', { weekday: 'long', month: 'short', day: 'numeric' })}</h4>
               <span>{eventosDelDia.length} agendamiento(s)</span>
             </div>
 
-            <div className="agendamientos-card agendamientos-events">
-              <div className="event-list">
-                {eventosDelDia.length === 0 && (
-                  <p className="agendamientos-empty">No hay agendamientos para este día.</p>
-                )}
-                {eventosDelDia.map((evento) => {
-                  const entrega = parseDateValue(evento.fechaEntrega);
-                  const entregaLabel = entrega
-                    ? entrega.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
-                    : 'Hora sin definir';
-                  return (
-                    <article
-                      key={evento.idAgendamiento || `${evento.titulo}-${evento.fechaProgramada}`}
-                      className="event-card"
-                    >
-                      <div>
-                        <strong>{evento.titulo}</strong>
-                        <p>{evento.descripcion || 'Sin descripción'}</p>
-                        {evento.producto?.nombre && (
-                          <small>Producto: {evento.producto.nombre}</small>
-                        )}
-                      </div>
-                      <small>Entrega: {entregaLabel}</small>
-                    </article>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="agendamientos-card agendamientos-form-card">
-              <form className="agendamientos-form" onSubmit={handleSubmit}>
-                <h4>Nuevo Agendamiento</h4>
-                <label>
-                  Producto
-                  <select name="productoId" value={form.productoId} onChange={handleInputChange}>
-                    <option value="">Seleccione un producto</option>
-                    {productos.map((producto) => (
-                      <option key={producto.idProducto} value={producto.idProducto}>
-                        {producto.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label>
-                  Título
-                  <input
-                    type="text"
-                    name="titulo"
-                    value={form.titulo}
-                    onChange={handleInputChange}
-                    placeholder="Ej: Carteras personalizadas"
-                  />
-                </label>
-
-                <label>
-                  Descripción
-                  <textarea
-                    name="descripcion"
-                    value={form.descripcion}
-                    onChange={handleInputChange}
-                    rows={2}
-                    placeholder="Notas adicionales"
-                  />
-                </label>
-
-                <label>
-                  Fecha seleccionada
-                  <div className="agendamientos-date-preview">
-                    {selectedDate.toLocaleDateString('es-CL', {
-                      weekday: 'long',
-                      day: '2-digit',
-                      month: 'long'
-                    })}
-                  </div>
-                </label>
-
-                <Button type="submit" disabled={formLoading} small>
-                  {formLoading ? 'Guardando...' : 'Guardar agendamiento'}
-                </Button>
-              </form>
+            <div className="event-list">
+              {eventosDelDia.length === 0 && (
+                <p className="agendamientos-empty">No hay agendamientos para este día.</p>
+              )}
+              {eventosDelDia.map((evento) => {
+                const entrega = parseDateValue(evento.fechaEntrega);
+                const entregaLabel = entrega
+                  ? entrega.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
+                  : 'Hora sin definir';
+                const productoLabel = evento.producto?.nombre || evento.productoNombre;
+                return (
+                  <article
+                    key={evento.idAgendamiento || `${evento.titulo}-${evento.fechaProgramada}`}
+                    className="event-card"
+                  >
+                    <div>
+                      <strong>{evento.titulo}</strong>
+                      <p>{evento.descripcion || 'Sin descripción'}</p>
+                      {productoLabel && (
+                        <small>Producto: {productoLabel}</small>
+                      )}
+                    </div>
+                    <small>Entrega: {entregaLabel}</small>
+                  </article>
+                );
+              })}
             </div>
           </section>
+
+          <section className="agendamientos-card agendamientos-form-card">
+            <form className="agendamientos-form" onSubmit={handleSubmit}>
+              <h4>Nuevo Agendamiento</h4>
+              <div className="agendamientos-form-subtitle">
+                {selectedDate.toLocaleDateString('es-CL', {
+                  weekday: 'long',
+                  day: '2-digit',
+                  month: 'long'
+                })}
+              </div>
+              <label>
+                Producto
+                <div className="agendamientos-producto-combo">
+                  <input
+                    type="text"
+                    name="productoTexto"
+                    value={form.productoTexto}
+                    onChange={handleProductoTextoChange}
+                    onFocus={() => setProductoMenuOpen(true)}
+                    onBlur={() => setTimeout(() => setProductoMenuOpen(false), 120)}
+                    placeholder="Escribe para buscar o crear"
+                    autoComplete="off"
+                  />
+
+                  {productoMenuOpen && productosFiltrados.length > 0 && (
+                    <div className="agendamientos-producto-options" role="listbox">
+                      {productosFiltrados.map((producto) => (
+                        <button
+                          key={producto.idProducto}
+                          type="button"
+                          className="agendamientos-producto-option"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleProductoSelect(producto)}
+                        >
+                          {producto.nombre}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </label>
+
+              <label>
+                Hora
+                <input
+                  type="time"
+                  name="horaProgramada"
+                  value={form.horaProgramada}
+                  onChange={handleInputChange}
+                />
+              </label>
+
+              <label>
+                Título
+                <input
+                  type="text"
+                  name="titulo"
+                  value={form.titulo}
+                  onChange={handleInputChange}
+                  placeholder="Ej: Carteras personalizadas"
+                />
+              </label>
+
+              <label>
+                Descripción
+                <textarea
+                  name="descripcion"
+                  value={form.descripcion}
+                  onChange={handleInputChange}
+                  rows={2}
+                  placeholder="Notas adicionales"
+                />
+              </label>
+
+              <Button type="submit" disabled={formLoading} small>
+                {formLoading ? 'Guardando...' : 'Guardar agendamiento'}
+              </Button>
+            </form>
+          </section>
+        </div>
+
+        <div className="agendamientos-message-slot" aria-live="polite">
+          {(error || success) && (
+            <div className={`agendamientos-message ${success ? 'success' : 'error'}`}>
+              {error || success}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -1,20 +1,20 @@
 .estadisticas-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
 }
 
 .estadisticas-page .periodo-toolbar-wrapper {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 @media (max-width: 1280px) {
   .estadisticas-page {
-    gap: 12px;
+    gap: 8px;
   }
 
   .estadisticas-page .periodo-toolbar-wrapper {
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
 }
 

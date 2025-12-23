@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Card, CardContent, Box, Typography, Button, Chip } from '@mui/material';
+import { Card, CardContent, Box, Typography, Button, Chip, Collapse } from '@mui/material';
 import { ArrowBackIosNew, ArrowForwardIos, Today } from '@mui/icons-material';
 import './PeriodoToolbar.css';
 
@@ -12,6 +12,9 @@ export default function PeriodoToolbar({
   onPrev,
   onNext,
   onReset,
+  actions,
+  footer,
+  footerOpen,
   className
 }) {
   return (
@@ -39,6 +42,11 @@ export default function PeriodoToolbar({
                 size="small"
                 className="periodo-toolbar-chip"
               />
+            )}
+            {actions && (
+              <div className="periodo-toolbar-actions">
+                {actions}
+              </div>
             )}
             <div className="periodo-toolbar-buttons">
               {onPrev && (
@@ -74,6 +82,14 @@ export default function PeriodoToolbar({
             </div>
           </Box>
         </CardContent>
+
+        {footer && (
+          <Collapse in={Boolean(footerOpen)} timeout={180} unmountOnExit>
+            <div className="periodo-toolbar-footer">
+              {footer}
+            </div>
+          </Collapse>
+        )}
       </Card>
     </Box>
   );
@@ -87,5 +103,12 @@ PeriodoToolbar.propTypes = {
   onPrev: PropTypes.func,
   onNext: PropTypes.func,
   onReset: PropTypes.func,
+  actions: PropTypes.node,
+  footer: PropTypes.node,
+  footerOpen: PropTypes.bool,
   className: PropTypes.string
+};
+
+PeriodoToolbar.defaultProps = {
+  footerOpen: false
 };

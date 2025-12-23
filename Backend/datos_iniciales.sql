@@ -135,6 +135,22 @@ WHERE (monto_bruto IS NULL OR monto_bruto = 0)
 -- PARTE 5: VERIFICACIÓN
 -- =====================================================
 
+-- =====================================================
+-- PARTE X: MIGRACIÓN - AGENDAMIENTOS (producto opcional)
+-- =====================================================
+
+-- Permite agendar con nombre de producto libre (sin id_producto)
+DO $$
+    BEGIN
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'agendamiento' AND column_name = 'id_producto' AND is_nullable = 'NO'
+        ) THEN
+            ALTER TABLE agendamiento ALTER COLUMN id_producto DROP NOT NULL;
+            RAISE NOTICE 'Agendamiento.id_producto ahora permite NULL';
+        END IF;
+    END $$;
+
 -- Resumen de datos insertados
 SELECT '════════════════════════════════════════' as separador;
 SELECT '✅ MIGRACIÓN COMPLETADA' as mensaje;

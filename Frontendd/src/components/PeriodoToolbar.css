@@ -61,6 +61,38 @@
   justify-content: flex-end;
 }
 
+.periodo-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Botones extra (filtros / excel) lo más compactos posible */
+.periodo-toolbar-actions .MuiButton-root {
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  color: #fff !important;
+  padding: 0.18rem 0.55rem !important;
+  font-size: 0.78rem !important;
+  min-width: 0 !important;
+  line-height: 1.05 !important;
+}
+
+.periodo-toolbar-actions .MuiButton-root:hover {
+  border-color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.periodo-toolbar-actions .MuiSvgIcon-root {
+  font-size: 0.95rem !important;
+}
+
+.periodo-toolbar-actions .MuiButton-startIcon,
+.periodo-toolbar-actions .MuiButton-endIcon {
+  margin-left: 0 !important;
+  margin-right: 0.2rem !important;
+}
+
 .periodo-toolbar-chip {
   background: rgba(255, 255, 255, 0.18) !important;
   color: #fff !important;
@@ -92,6 +124,41 @@
   font-size: 1rem !important;
 }
 
+.periodo-toolbar-footer {
+  padding: 0 1.05rem 0.85rem;
+}
+
+.periodo-toolbar-footer-panel {
+  border-radius: 12px;
+  padding: 0.55rem;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* Controles dentro del footer (compactos y legibles en fondo oscuro) */
+.periodo-toolbar-footer-panel .MuiInputLabel-root {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.72rem !important;
+}
+
+.periodo-toolbar-footer-panel .MuiInputBase-root {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.periodo-toolbar-footer-panel .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(255, 255, 255, 0.35) !important;
+}
+
+.periodo-toolbar-footer-panel .MuiSvgIcon-root {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.periodo-toolbar-footer-panel .MuiInputBase-input {
+  padding: 0.38rem 0.55rem !important;
+  font-size: 0.82rem !important;
+}
+
 @media (max-width: 899px) {
   .periodo-toolbar-content {
     flex-direction: column;
@@ -106,6 +173,10 @@
   .periodo-toolbar-buttons {
     flex: 1;
     justify-content: flex-end;
+  }
+
+  .periodo-toolbar-footer {
+    padding: 0 0.9rem 0.85rem;
   }
 }
 
@@ -135,5 +206,14 @@
   .periodo-toolbar-buttons .MuiButton-root {
     padding: 0.25rem 0.65rem !important;
     font-size: 0.8rem !important;
+  }
+
+  .periodo-toolbar-actions .MuiButton-root {
+    padding: 0.16rem 0.5rem !important;
+    font-size: 0.76rem !important;
+  }
+
+  .periodo-toolbar-footer {
+    padding: 0 0.9rem 0.8rem;
   }
 }

@@ -400,7 +400,7 @@ export default function EstadisticasVentas() {
         onNext={() => cambiarMes(1)}
       />
 
-      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 2.25, md: 2.5 } }}>
+      <Card sx={{ ...CARD_BASE_SX, p: { xs: 1.25, sm: 1.5 }, mb: { xs: 1.25, md: 0.5 } }}>
         <Box
           sx={{
             display: 'grid',

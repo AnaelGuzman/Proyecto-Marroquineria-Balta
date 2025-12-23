@@ -24,6 +24,9 @@ public class AgendamientoService {
         validarFechas(agendamiento);
 
         agendamiento.setProducto(producto);
+        if (producto != null) {
+            agendamiento.setProductoNombre(null);
+        }
         agendamiento.setFechaSolicitud(agendamiento.getFechaSolicitud() != null
                 ? agendamiento.getFechaSolicitud()
                 : LocalDateTime.now());
@@ -44,6 +47,10 @@ public class AgendamientoService {
             Producto producto = productoRepository.findById(datos.getProducto().getIdProducto())
                     .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
             existente.setProducto(producto);
+            existente.setProductoNombre(null);
+        } else if (datos.getProductoNombre() != null && !datos.getProductoNombre().trim().isEmpty()) {
+            existente.setProducto(null);
+            existente.setProductoNombre(datos.getProductoNombre().trim());
         }
 
         if (datos.getTitulo() != null) {
@@ -87,12 +94,16 @@ public class AgendamientoService {
     }
 
     private Producto obtenerProducto(Agendamiento agendamiento) {
-        if (agendamiento.getProducto() == null || agendamiento.getProducto().getIdProducto() == null) {
-            throw new RuntimeException("Debe seleccionar un producto para el agendamiento");
+        if (agendamiento.getProducto() != null && agendamiento.getProducto().getIdProducto() != null) {
+            return productoRepository.findById(agendamiento.getProducto().getIdProducto())
+                    .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
         }
 
-        return productoRepository.findById(agendamiento.getProducto().getIdProducto())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+        if (agendamiento.getProductoNombre() != null && !agendamiento.getProductoNombre().trim().isEmpty()) {
+            return null;
+        }
+
+        throw new RuntimeException("Debe seleccionar un producto o ingresar un nombre de producto");
     }
 
     private void validarFechas(Agendamiento agendamiento) {
