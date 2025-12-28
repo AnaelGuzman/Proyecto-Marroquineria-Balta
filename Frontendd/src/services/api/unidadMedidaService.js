@@ -1,56 +1,13 @@
-import { API_BASE_URL } from './config';
+import { apiFetch } from './api';
 
-const handleResponse = async (response) => {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Error ${response.status}: ${response.statusText}`);
-  }
-  if (response.status === 204) { 
-    return { success: true };
-  }
-  
-  const text = await response.text();
-  return text ? JSON.parse(text) : null;
-};
 export const unidadMedidaService = {
-  getAll: () => 
-    fetch(`${API_BASE_URL}/unidades-medida`)
-      .then(handleResponse)
-      .catch(err => {
-        console.error('Error en getAll unidades medida:', err);
-        return [];
-      }),
-  
-  getById: (id) => 
-    fetch(`${API_BASE_URL}/unidades-medida/${id}`).then(handleResponse),
-  
-  create: (data) => 
-    fetch(`${API_BASE_URL}/unidades-medida`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).then(handleResponse),
-  
-  update: (id, data) => 
-    fetch(`${API_BASE_URL}/unidades-medida/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).then(handleResponse),
-  
-  delete: async (id) => {
-    const response = await fetch(`${API_BASE_URL}/unidades-medida/${id}`, { 
-      method: 'DELETE' 
-    });
-    
-    if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || `Error ${response.status}: ${response.statusText}`);
-    }
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      return response.json();
-    }
-    return { success: true };
-  }
+  getAll: () => apiFetch('/unidades-medida').catch(err => { console.error('Error en getAll unidades medida:', err); return []; }),
+
+  getById: (id) => apiFetch(`/unidades-medida/${id}`),
+
+  create: (data) => apiFetch('/unidades-medida', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id, data) => apiFetch(`/unidades-medida/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: async (id) => apiFetch(`/unidades-medida/${id}`, { method: 'DELETE' })
 };
