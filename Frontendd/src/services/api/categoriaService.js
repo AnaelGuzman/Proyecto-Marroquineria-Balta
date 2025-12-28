@@ -1,26 +1,26 @@
-import { API_BASE_URL } from './config';
+import { apiFetch } from './api';
 
 export const categoriaService = {
-  getAll: () => 
-    fetch(`${API_BASE_URL}/categorias`).then(r => r.json()),
-  
-  getById: (id) => 
-    fetch(`${API_BASE_URL}/categorias/${id}`).then(r => r.json()),
-  
-  create: (data) => 
-    fetch(`${API_BASE_URL}/categorias`, {
+  getAll: () =>
+    apiFetch('/categorias'),
+
+  getById: (id) =>
+    apiFetch(`/categorias/${id}`),
+
+  create: (data) =>
+    apiFetch('/categorias', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
-    }).then(r => r.json()),
-  
-  update: (id, data) => 
-    fetch(`${API_BASE_URL}/categorias/${id}`, {
+    }),
+
+  update: (id, data) =>
+    apiFetch(`/categorias/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
-    }).then(r => r.json()),
-  
-  delete: (id) => 
-    fetch(`${API_BASE_URL}/categorias/${id}`, { method: 'DELETE' })
+    }),
+
+  delete: (id) =>
+    apiFetch(`/categorias/${id}`, {
+      method: 'DELETE'
+    })
 };

@@ -1,31 +1,18 @@
-import { API_BASE_URL } from './config';
+import { apiFetch } from './api';
 
 export const gastoService = {
-  getAll: () => 
-    fetch(`${API_BASE_URL}/gastos`).then(r => r.json()),
-  
-  getById: (id) => 
-    fetch(`${API_BASE_URL}/gastos/${id}`).then(r => r.json()),
-  
-  registrar: (data) => 
-    fetch(`${API_BASE_URL}/gastos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).then(r => r.json()),
-  
-  update: (id, data) => 
-    fetch(`${API_BASE_URL}/gastos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    }).then(r => r.json()),
-  
+  getAll: () => apiFetch('/gastos'),
+
+  getById: (id) => apiFetch(`/gastos/${id}`),
+
+  registrar: (data) => apiFetch('/gastos', { method: 'POST', body: JSON.stringify(data) }),
+
+  update: (id, data) => apiFetch(`/gastos/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
   getTotalPorPeriodo: (inicio, fin) => {
     const params = new URLSearchParams({ inicio, fin });
-    return fetch(`${API_BASE_URL}/gastos/total-periodo?${params}`).then(r => r.json());
+    return apiFetch(`/gastos/total-periodo?${params}`);
   },
-  
-  delete: (id) => 
-    fetch(`${API_BASE_URL}/gastos/${id}`, { method: 'DELETE' })
+
+  delete: (id) => apiFetch(`/gastos/${id}`, { method: 'DELETE' })
 };

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Table } from '../components/UI.jsx';
 import { api } from '../services/api/index.js';
 import { PersonAdd, Delete, Edit, Security, Check, Key } from '@mui/icons-material';
+import {apiFetch} from '../services/api/api.js';
 
 // Permisos disponibles
 const PERMISOS_DISPONIBLES = [
@@ -45,14 +46,10 @@ export default function GestionUsuarios() {
 
   const cargarUsuarios = async () => {
     try {
-      setLoading(true);
-      const response = await fetch('http://localhost:8080/api/usuarios');
-      const data = await response.json();
+      const data = await apiFetch('/usuarios');
       setUsuarios(data);
     } catch (error) {
-      console.error('Error al cargar usuarios:', error);
-    } finally {
-      setLoading(false);
+      console.error('Error al cargar usuarios:', error.message);
     }
   };
 

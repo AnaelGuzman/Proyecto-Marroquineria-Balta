@@ -1,114 +1,28 @@
-import { API_BASE_URL } from './config';
+import { apiFetch } from './api';
 
 export const ventaService = {
-  getAll: () => 
-    fetch(`${API_BASE_URL}/ventas`)
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          throw new Error(`Error ${r.status}: ${text}`);
-        }
-        return r.json();
-      })
-      .catch(() => []),
-  
-  getById: (id) => 
-    fetch(`${API_BASE_URL}/ventas/${id}`)
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          throw new Error(`Error ${r.status}: ${text}`);
-        }
-        return r.json();
-      }),
-  
-  registrar: (data) => 
-    fetch(`${API_BASE_URL}/ventas`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(data)
-    }).then(async r => {
-      const text = await r.text();
-      if (!r.ok) {
-        throw new Error(`Error ${r.status}: ${text}`);
-      }
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        throw new Error('Respuesta inválida del servidor: ' + text);
-      }
-    }),
-  
+  getAll: () => apiFetch('/ventas').catch(() => []),
+
+  getById: (id) => apiFetch(`/ventas/${id}`),
+
+  registrar: (data) => apiFetch('/ventas', { method: 'POST', body: JSON.stringify(data) }),
+
   getPorPeriodo: (inicio, fin) => {
     const params = new URLSearchParams({ inicio, fin });
-    return fetch(`${API_BASE_URL}/ventas/periodo?${params}`)
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          throw new Error(`Error ${r.status}: ${text}`);
-        }
-        return r.json();
-      });
-  },
-  
-  getTotalPorPeriodo: (inicio, fin) => {
-    const params = new URLSearchParams({ inicio, fin });
-    return fetch(`${API_BASE_URL}/ventas/total-periodo?${params}`)
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          throw new Error(`Error ${r.status}: ${text}`);
-        }
-        return r.json();
-      });
+    return apiFetch(`/ventas/periodo?${params}`);
   },
 
-  actualizar: (id, data) =>
-    fetch(`${API_BASE_URL}/ventas/${id}`, {
-      method: 'PUT',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify(data)
-    }).then(async r => {
-      const text = await r.text();
-      if (!r.ok) {
-        throw new Error(`Error ${r.status}: ${text}`);
-      }
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        throw new Error('Respuesta inválida del servidor: ' + text);
-      }
-    }),
-  
-  delete: (id) => 
-    fetch(`${API_BASE_URL}/ventas/${id}`, { method: 'DELETE' })
-      .then(async r => {
-        if (!r.ok) {
-          const text = await r.text();
-          throw new Error(`Error ${r.status}: ${text}`);
-        }
-        return true;
-      }),
+  getTotalPorPeriodo: (inicio, fin) => {
+    const params = new URLSearchParams({ inicio, fin });
+    return apiFetch(`/ventas/total-periodo?${params}`);
+  },
+
+  actualizar: (id, data) => apiFetch(`/ventas/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+
+  delete: (id) => apiFetch(`/ventas/${id}`, { method: 'DELETE' }).then(() => true),
       
   getTotalPorMetodoPago: (idMetodoPago, inicio, fin) => {
-  const params = new URLSearchParams({ 
-    idMetodoPago, 
-    inicio: inicio.toISOString(), 
-    fin: fin.toISOString() 
-  });
-  return fetch(`${API_BASE_URL}/ventas/total-metodo-pago?${params}`)
-    .then(async r => {
-      if (!r.ok) {
-        const text = await r.text();
-        throw new Error(`Error ${r.status}: ${text}`);
-      }
-      return r.json();
-    });
-}
+    const params = new URLSearchParams({ idMetodoPago, inicio: inicio.toISOString(), fin: fin.toISOString() });
+    return apiFetch(`/ventas/total-metodo-pago?${params}`);
+  }
 };
