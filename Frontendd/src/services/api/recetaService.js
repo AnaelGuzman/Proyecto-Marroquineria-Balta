@@ -1,13 +1,35 @@
-// recetaService.js - VERSIÓN SIMPLIFICADA
+// recetaService.js - VERSIÓN CORREGIDA
 import { API_BASE_URL } from './config';
 
 const handleResponse = async (response) => {
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(text || `Error ${response.status}: ${response.statusText}`);
-  }
   const text = await response.text();
-  return text ? JSON.parse(text) : null;
+  
+  // Si la respuesta no es exitosa, lanzar error
+  if (!response.ok) {
+    // Intentar parsear el error como JSON
+    try {
+      const errorData = JSON.parse(text);
+      throw new Error(errorData.message || text || `Error ${response.status}`);
+    } catch {
+      // Si no es JSON, usar el texto plano
+      throw new Error(text || `Error ${response.status}: ${response.statusText}`);
+    }
+  }
+  
+  // Si no hay contenido, retornar null
+  if (!text || text.trim() === '') {
+    return null;
+  }
+  
+  // Intentar parsear como JSON
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    console.error('Error parsing JSON:', text);
+    console.error('Parse error:', err);
+    // Si no se puede parsear, retornar el texto
+    return text;
+  }
 };
 
 export const recetaService = {
@@ -41,18 +63,33 @@ export const recetaService = {
       body: JSON.stringify(materiales)
     });
     
-    // Solo verificar si hay error, si no, asumir éxito
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(errorText || `Error ${response.status}: ${response.statusText}`);
     }
     
-    // Para actualizarReceta, solo nos importa que no haya error
-    // No necesitamos leer la respuesta si es exitosa
     return { success: true, message: 'Receta actualizada exitosamente' };
   },
   
-  eliminarMaterial: (id) => 
-    fetch(`${API_BASE_URL}/recetas/${id}`, { method: 'DELETE' })
-      .then(handleResponse)
+  eliminarMaterial: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/recetas/${id}`, { 
+      method: 'DELETE' 
+    });
+    
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Error ${response.status}: ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return { success: true };
+    }
+    
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { success: true, message: text };
+    }
+  }
 };

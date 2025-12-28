@@ -1,13 +1,13 @@
-// src/pages/Inventario/components/TablaMateriales.jsx
+// TablaMateriales.jsx - SIN BOTÓN DE AJUSTAR STOCK EN ACCIONES
 import React from 'react'
 import { Table, Button } from '../../../components/UI.jsx'
-import { SwapVert, History, Visibility } from '@mui/icons-material'
+import { Visibility, Edit, Delete } from '@mui/icons-material'
 
 export default function TablaMateriales({ 
   materialesFiltrados,
-  setShowMovimientoModal,
-  handleVerMovimientos,
-  setShowDetallesMaterial
+  setShowDetallesMaterial,
+  handleEditarMaterial,
+  setShowConfirmDeleteMaterial
 }) {
   const getStockStatus = (material) => {
     const stock = material.stockActual || 0
@@ -41,26 +41,27 @@ export default function TablaMateriales({
         <Button 
           small 
           variant="ghost" 
-          onClick={() => setShowMovimientoModal(material)}
-          style={{ background: '#2196F3', color: 'white' }}
-          title="Registrar movimiento"
-        >
-          <SwapVert sx={{ fontSize: 18 }} />
-        </Button>
-        <Button 
-          small 
-          variant="ghost" 
-          onClick={() => handleVerMovimientos(material)}
-          title="Ver historial"
-        >
-          <History sx={{ fontSize: 18 }} />
-        </Button>
-        <Button 
-          small 
-          variant="ghost" 
           onClick={() => setShowDetallesMaterial(material)}
+          title="Ver detalles"
         >
           <Visibility sx={{ fontSize: 18 }} />
+        </Button>
+        <Button 
+          small 
+          variant="ghost" 
+          onClick={() => handleEditarMaterial(material)}
+          title="Editar material"
+        >
+          <Edit sx={{ fontSize: 18 }} />
+        </Button>
+        <Button 
+          small 
+          variant="ghost" 
+          onClick={() => setShowConfirmDeleteMaterial(material)}
+          style={{ color: '#f97066' }}
+          title="Eliminar material"
+        >
+          <Delete sx={{ fontSize: 18 }} />
         </Button>
       </div>
     ]

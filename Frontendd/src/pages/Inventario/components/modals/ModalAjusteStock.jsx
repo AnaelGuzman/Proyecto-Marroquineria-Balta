@@ -1,6 +1,7 @@
-// components/modals/ModalAjusteStock.jsx
+// components/modals/ModalAjusteStock.jsx - SIN MOTIVO
 import React from 'react'
 import { Button } from '../../../../components/UI'
+import { TrendingDown } from '@mui/icons-material'
 
 export default function ModalAjusteStock({
   showAjuste,
@@ -31,26 +32,45 @@ export default function ModalAjusteStock({
         background: 'var(--panel)',
         padding: '2rem',
         borderRadius: '16px',
-        minWidth: '400px',
-        maxWidth: '90vw',
+        width: '90%',
+        maxWidth: '500px',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
         border: '2px solid var(--border)'
       }}>
-        <h3 style={{ marginTop: 0, marginBottom: '1.5rem' }}>Ajuste de Stock</h3>
-        
-        <form onSubmit={handleAjusteStock} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          <label>
-            <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)' }}>
-              Producto *
-            </span>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '1rem', 
+          marginBottom: '1.5rem',
+          paddingBottom: '1rem',
+          borderBottom: '2px solid var(--border)'
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, var(--brand), var(--brand-2))',
+            padding: '0.75rem',
+            borderRadius: '12px',
+            color: 'white'
+          }}>
+            <TrendingDown />
+          </div>
+          <h3 style={{ margin: 0, color: 'var(--text)', fontSize: '1.5rem' }}>
+            Ajustar Stock
+          </h3>
+        </div>
+
+        <form onSubmit={handleAjusteStock} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Producto <span style={{ color: '#f97066' }}>*</span>
+            </label>
             <select
               value={ajusteData.idProducto}
-              onChange={(e) => setAjusteData({ ...ajusteData, idProducto: e.target.value })}
+              onChange={(e) => setAjusteData(prev => ({ ...prev, idProducto: e.target.value }))}
               required
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--border)',
+                border: '2px solid var(--border)',
                 borderRadius: '8px',
                 fontSize: '1rem'
               }}
@@ -62,55 +82,51 @@ export default function ModalAjusteStock({
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label>
-            <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)' }}>
-              Cantidad a ajustar *
-            </span>
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Cantidad <span style={{ color: '#f97066' }}>*</span>
+            </label>
             <input
               type="number"
               value={ajusteData.cantidad}
-              onChange={(e) => setAjusteData({ ...ajusteData, cantidad: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setAjusteData(prev => ({ ...prev, cantidad: e.target.value }))}
               required
+              placeholder="Usar + para aumentar, - para disminuir"
               style={{
                 width: '100%',
                 padding: '0.75rem',
-                border: '1px solid var(--border)',
+                border: '2px solid var(--border)',
                 borderRadius: '8px',
                 fontSize: '1rem'
               }}
             />
-            <small style={{ color: 'var(--muted)', fontSize: '0.85rem' }}>
-              Use números negativos para disminuir el stock
-            </small>
-          </label>
+            <div style={{ fontSize: '0.85rem', color: 'var(--muted)', marginTop: '0.5rem' }}>
+              Ejemplo: +10 (agregar), -5 (quitar)
+            </div>
+          </div>
 
-          <label>
-            <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)' }}>
-              Motivo del ajuste
-            </span>
-            <input
-              type="text"
-              value={ajusteData.motivo}
-              onChange={(e) => setAjusteData({ ...ajusteData, motivo: e.target.value })}
-              placeholder="Ej: Ajuste físico, Daño, etc."
-              style={{
-                width: '100%',
-                padding: '0.75rem',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                fontSize: '1rem'
+          <div style={{ 
+            display: 'flex', 
+            gap: '0.75rem', 
+            justifyContent: 'flex-end',
+            marginTop: '1rem',
+            paddingTop: '1rem',
+            borderTop: '1px solid var(--border)'
+          }}>
+            <Button 
+              type="button"
+              variant="ghost" 
+              onClick={() => {
+                setShowAjuste(false)
+                setAjusteData({ idProducto: '', cantidad: 0 })
               }}
-            />
-          </label>
-
-          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <Button type="button" variant="ghost" onClick={() => setShowAjuste(false)}>
+            >
               Cancelar
             </Button>
             <Button type="submit">
-              Aplicar Ajuste
+              Ajustar Stock
             </Button>
           </div>
         </form>

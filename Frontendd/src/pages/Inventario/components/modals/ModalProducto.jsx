@@ -1,8 +1,8 @@
-// components/modals/ModalProducto.jsx
+// components/modals/ModalProducto.jsx - VERSIÓN SIMPLIFICADA SIN BOTÓN EDITAR
 import React, { useState, useEffect } from 'react'
 import { Button } from '../../../../components/UI'
-import { Inventory, Add, Delete, Calculate } from '@mui/icons-material'
-import { api } from '../../../../services/api/index.js'
+import { Add, Delete, ShoppingCart } from '@mui/icons-material'
+import { api } from '../../../../services/api'
 
 export default function ModalProducto({
   showForm,
@@ -15,151 +15,103 @@ export default function ModalProducto({
   handleCrearProducto,
   handleActualizarProducto
 }) {
-  const categoryOptions = categorias.map(c => ({ 
-    value: c.idCategoria, 
-    label: c.nombre 
-  }))
-
-  const [materiales, setMateriales] = useState([])
   const [receta, setReceta] = useState([])
-  const [costoCalculado, setCostoCalculado] = useState(0)
-  const [loadingMateriales, setLoadingMateriales] = useState(false)
+  const [materiales, setMateriales] = useState([])
 
-  // Cargar materiales disponibles
+  // Cargar materiales y receta cuando se abre el modal
   useEffect(() => {
-    const cargarMateriales = async () => {
-      if (!showForm) return
-      
-      setLoadingMateriales(true)
-      try {
-        const materialesData = await api.materiales.getAll()
-        setMateriales(materialesData || [])
-      } catch (error) {
-        console.error('Error al cargar materiales:', error)
-        setMateriales([])
-      } finally {
-        setLoadingMateriales(false)
+    if (showForm) {
+      cargarMateriales()
+      if (productoEdit) {
+        cargarReceta()
       }
     }
+  }, [showForm, productoEdit])
 
-    cargarMateriales()
-  }, [showForm])
-
-  // Cargar receta existente si estamos editando
-  useEffect(() => {
-    const cargarRecetaExistente = async () => {
-      if (productoEdit && productoEdit.idProducto) {
-        try {
-          const recetaData = await api.recetas.getMaterialesPorProducto(productoEdit.idProducto)
-          setReceta(recetaData || [])
-        } catch (error) {
-          console.error('Error al cargar receta:', error)
-          setReceta([])
-        }
-      } else {
-        setReceta([])
-      }
+  const cargarMateriales = async () => {
+    try {
+      const materialesData = await api.materiales.getAll()
+      setMateriales(materialesData)
+    } catch (err) {
+      console.error('Error cargando materiales:', err)
     }
-
-    cargarRecetaExistente()
-  }, [productoEdit])
-
-  // Calcular costo total cuando cambia la receta
-  useEffect(() => {
-    const calcularCosto = () => {
-      const total = receta.reduce((sum, item) => {
-        return sum + (item.costoCalculado || 0)
-      }, 0)
-      setCostoCalculado(total)
-    }
-
-    calcularCosto()
-  }, [receta])
-
-  const agregarMaterial = () => {
-    setReceta([...receta, {
-      idMaterial: '',
-      cantidad: 1,
-      material: null,
-      costoCalculado: 0
-    }])
   }
 
-  const eliminarMaterial = (index) => {
-    const nuevaReceta = receta.filter((_, i) => i !== index)
-    setReceta(nuevaReceta)
+  const cargarReceta = async () => {
+    if (!productoEdit?.idProducto) return
+    
+    try {
+      const recetaData = await api.recetas.getMaterialesPorProducto(productoEdit.idProducto)
+      setReceta(recetaData || [])
+    } catch (err) {
+      console.error('Error cargando receta:', err)
+      setReceta([])
+    }
+  }
+
+  const agregarMaterial = () => {
+    setReceta([...receta, { idMaterial: '', cantidad: 1 }])
   }
 
   const actualizarMaterial = (index, campo, valor) => {
     const nuevaReceta = [...receta]
-    nuevaReceta[index] = { ...nuevaReceta[index], [campo]: valor }
-    
-    // Si cambió el material, buscar información del material
-    if (campo === 'idMaterial' && valor) {
-      const materialSeleccionado = materiales.find(m => m.idMaterial === parseInt(valor))
-      if (materialSeleccionado) {
-        nuevaReceta[index].material = materialSeleccionado
-        // Calcular costo inicial
-        const cantidad = nuevaReceta[index].cantidad || 1
-        const costoUnitario = materialSeleccionado.costoPromedio || 0
-        nuevaReceta[index].costoCalculado = cantidad * costoUnitario
-      }
-    }
-    
-    // Si cambió la cantidad, recalcular costo
-    if (campo === 'cantidad' && nuevaReceta[index].material) {
-      const cantidad = parseFloat(valor) || 0
-      const costoUnitario = nuevaReceta[index].material.costoPromedio || 0
-      nuevaReceta[index].costoCalculado = cantidad * costoUnitario
-    }
-    
+    nuevaReceta[index][campo] = valor
     setReceta(nuevaReceta)
   }
 
-  const getStockDisponible = (idMaterial) => {
-    const material = materiales.find(m => m.idMaterial === parseInt(idMaterial))
-    return material?.stockActual || 0
+  const eliminarMaterial = async (index) => {
+    const item = receta[index]
+    
+    // Si es un material existente (tiene idMaterialProducto), eliminarlo de la BD
+    if (item.idMaterialProducto) {
+      try {
+        await api.recetas.eliminarMaterial(item.idMaterialProducto)
+        alert('✅ Material eliminado de la receta')
+      } catch (err) {
+        console.error('Error al eliminar material:', err)
+        alert('❌ Error al eliminar material')
+        return
+      }
+    }
+    
+    // Eliminar del estado local
+    const nuevaReceta = receta.filter((_, i) => i !== index)
+    setReceta(nuevaReceta)
   }
 
   const validarStock = () => {
-    // Si estamos editando, no validamos stock porque no vamos a consumir
-    if (productoEdit) {
-      return { valido: true }
-    }
-    
-    // Solo validamos stock al crear nuevo producto
     for (const item of receta) {
-      if (item.idMaterial && item.cantidad) {
-        const stockDisponible = getStockDisponible(item.idMaterial)
-        const cantidadNecesaria = item.cantidad * (formData.cantidad || 1)
-        
-        if (cantidadNecesaria > stockDisponible) {
-          const material = materiales.find(m => m.idMaterial === parseInt(item.idMaterial))
-          return {
-            valido: false,
-            mensaje: `Stock insuficiente para ${material?.nombre}. 
-                    Disponible: ${stockDisponible}, 
-                    Requerido: ${cantidadNecesaria}`
-          }
+      if (!item.idMaterial && !item.material?.idMaterial) continue
+      
+      const idMaterial = item.material?.idMaterial || item.idMaterial
+      const material = materiales.find(m => m.idMaterial === parseInt(idMaterial))
+      
+      if (!material) continue
+      
+      const cantidadNecesaria = item.cantidad * (formData.cantidad || 1)
+      const stockActual = material.stockActual || 0
+      
+      if (cantidadNecesaria > stockActual) {
+        return {
+          valido: false,
+          mensaje: `❌ Stock insuficiente de ${material.nombre}. Necesitas ${cantidadNecesaria} ${material.unidadMedida?.abreviatura}, disponible: ${stockActual}`
         }
       }
     }
+    
     return { valido: true }
   }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Validar que haya al menos un material en la receta
-    if (receta.length === 0) {
-      alert('Debe agregar al menos un material a la receta')
-      return
-    }
-
-    // Validar stock disponible
-    const validacionStock = validarStock()
-    if (!validacionStock.valido) {
-      alert(validacionStock.mensaje)
-      return
+    // Validar stock solo si hay receta y es creación de producto
+    if (receta.length > 0 && !productoEdit) {
+      const validacionStock = validarStock()
+      if (!validacionStock.valido) {
+        alert(validacionStock.mensaje)
+        return
+      }
     }
 
     // Preparar datos del producto
@@ -176,21 +128,39 @@ export default function ModalProducto({
         // Editar producto existente
         productoGuardado = await api.productos.update(productoEdit.idProducto, productoData)
         
-        // Actualizar receta - SOLO actualiza los parámetros, NO consume materiales
-        const recetaData = receta.map(item => ({
-          producto: { idProducto: productoEdit.idProducto },
-          material: { idMaterial: parseInt(item.idMaterial) },
-          cantidad: parseFloat(item.cantidad)
-          // El costoCalculado lo calcula automáticamente el backend
-        }))
-        
-        await api.recetas.actualizarReceta(productoEdit.idProducto, recetaData)
-        
-        //  REMOVER completamente el consumo de materiales en edición
-        // NO consumir materiales al editar, solo se actualiza la receta
+        // Actualizar cantidades de materiales existentes
+        for (const item of receta) {
+          if (item.idMaterialProducto) {
+            // Es un material existente - eliminar y volver a agregar con nueva cantidad
+            const idMaterial = item.material?.idMaterial || item.idMaterial
+            
+            if (idMaterial) {
+              try {
+                // Eliminar el material viejo
+                await api.recetas.eliminarMaterial(item.idMaterialProducto)
+                
+                // Agregar con la nueva cantidad
+                await api.recetas.agregarMaterial({
+                  producto: { idProducto: parseInt(productoEdit.idProducto) },
+                  material: { idMaterial: parseInt(idMaterial) },
+                  cantidad: parseInt(item.cantidad)
+                })
+              } catch (error) {
+                console.error('Error actualizando material:', error)
+              }
+            }
+          } else if (item.idMaterial) {
+            // Es un material nuevo - agregarlo
+            await api.recetas.agregarMaterial({
+              producto: { idProducto: productoEdit.idProducto },
+              material: { idMaterial: parseInt(item.idMaterial) },
+              cantidad: parseInt(item.cantidad)
+            })
+          }
+        }
         
       } else {
-        // Crear nuevo producto - SÍ consume materiales
+        // Crear nuevo producto
         productoGuardado = await api.productos.create(productoData)
         
         // Crear inventario inicial
@@ -202,29 +172,32 @@ export default function ModalProducto({
           await api.inventario.registrar(inventarioData)
         }
 
-        // Crear receta
-        for (const item of receta) {
-          await api.recetas.agregarMaterial({
-            producto: { idProducto: productoGuardado.idProducto },
-            material: { idMaterial: parseInt(item.idMaterial) },
-            cantidad: parseFloat(item.cantidad),
-            costoCalculado: item.costoCalculado
-          })
-        }
+        // Crear receta si hay materiales
+        if (receta.length > 0) {
+          for (const item of receta) {
+            if (item.idMaterial) {
+              await api.recetas.agregarMaterial({
+                producto: { idProducto: productoGuardado.idProducto },
+                material: { idMaterial: parseInt(item.idMaterial) },
+                cantidad: parseInt(item.cantidad)
+              })
+            }
+          }
 
-        // ✅ Consumir materiales del inventario SOLO para nuevos productos
-        for (const item of receta) {
-          if (item.idMaterial && item.cantidad) {
-            const cantidadTotal = item.cantidad * (formData.cantidad || 1)
-            try {
-              await api.inventarioMateriales.registrarSalida(
-                parseInt(item.idMaterial),
-                cantidadTotal,
-                `Producción de producto: ${formData.nombre}`
-              )
-            } catch (consumoError) {
-              console.warn(`Error al consumir material ${item.idMaterial}:`, consumoError)
-              alert(`Advertencia: No se pudo consumir el material ${item.material?.nombre}. Verifique el stock disponible.`)
+          // Consumir materiales del inventario
+          for (const item of receta) {
+            if (item.idMaterial && item.cantidad) {
+              const cantidadTotal = item.cantidad * (formData.cantidad || 1)
+              try {
+                await api.inventarioMateriales.registrarSalida(
+                  parseInt(item.idMaterial),
+                  cantidadTotal,
+                  `Producción de producto: ${formData.nombre}`
+                )
+              } catch (consumoError) {
+                console.warn(`Error al consumir material ${item.idMaterial}:`, consumoError)
+                alert(`Advertencia: No se pudo consumir el material. Verifique el stock disponible.`)
+              }
             }
           }
         }
@@ -236,20 +209,17 @@ export default function ModalProducto({
       setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
       setReceta([])
       
-      alert('Producto guardado exitosamente')
-      
-      // Recargar datos
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
+      alert('✅ Producto guardado exitosamente')
       
     } catch (error) {
       console.error('Error al guardar producto:', error)
-      alert('Error al guardar el producto: ' + (error.message || 'Error desconocido'))
+      alert('❌ Error al guardar el producto: ' + (error.message || 'Error desconocido'))
     }
   }
 
   if (!showForm) return null
+
+  const esEdicion = !!productoEdit
 
   return (
     <div style={{
@@ -270,8 +240,8 @@ export default function ModalProducto({
         background: 'var(--panel)',
         padding: '2rem',
         borderRadius: '16px',
-        minWidth: '600px',
-        maxWidth: '90vw',
+        width: '90%',
+        maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -291,176 +261,190 @@ export default function ModalProducto({
             borderRadius: '12px',
             color: 'white'
           }}>
-            <Inventory />
+            <ShoppingCart />
           </div>
           <h3 style={{ margin: 0, color: 'var(--text)', fontSize: '1.5rem' }}>
-            {productoEdit ? 'Editar Producto' : 'Nuevo Producto'}
+            {esEdicion ? 'Editar Producto' : 'Nuevo Producto'}
           </h3>
         </div>
-        
+
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Información básica del producto */}
-          <div style={{ borderBottom: '2px solid var(--border)', paddingBottom: '1.5rem' }}>
-            <h4 style={{ margin: '0 0 1rem 0', color: 'var(--text)' }}>Información del Producto</h4>
-            
-            <label>
-              <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '500' }}>
-                Nombre *
-              </span>
+          {/* Información del Producto */}
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Nombre <span style={{ color: '#f97066' }}>*</span>
+            </label>
+            <input
+              type="text"
+              value={formData.nombre}
+              onChange={(e) => setFormData(prev => ({ ...prev, nombre: e.target.value }))}
+              required
+              placeholder="Nombre del producto"
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--border)',
+                borderRadius: '8px',
+                fontSize: '1rem'
+              }}
+            />
+          </div>
+
+          <div>
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+              Descripción
+            </label>
+            <textarea
+              value={formData.descripcion}
+              onChange={(e) => setFormData(prev => ({ ...prev, descripcion: e.target.value }))}
+              rows={3}
+              placeholder="Descripción del producto..."
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '2px solid var(--border)',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                resize: 'vertical',
+                fontFamily: 'inherit'
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Precio <span style={{ color: '#f97066' }}>*</span>
+              </label>
               <input
-                type="text"
-                value={formData.nombre}
-                onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
+                type="number"
+                value={formData.precio}
+                onChange={(e) => setFormData(prev => ({ ...prev, precio: e.target.value }))}
+                required
+                min="0"
+                step="1"
+                placeholder="0"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Categoría <span style={{ color: '#f97066' }}>*</span>
+              </label>
+              <select
+                value={formData.idCategoria}
+                onChange={(e) => setFormData(prev => ({ ...prev, idCategoria: e.target.value }))}
                 required
                 style={{
                   width: '100%',
                   padding: '0.75rem',
                   border: '2px solid var(--border)',
                   borderRadius: '8px',
-                  fontSize: '1rem',
-                  background: 'var(--panel)'
-                }}
-              />
-            </label>
-
-            <label>
-              <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '500' }}>
-                Descripción
-              </span>
-              <textarea
-                value={formData.descripcion}
-                onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
-                rows="3"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '2px solid var(--border)',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  background: 'var(--panel)',
-                  resize: 'vertical',
-                  fontFamily: 'inherit'
-                }}
-              />
-            </label>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <label>
-                <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '500' }}>
-                  Precio de Venta *
-                </span>
-                <input
-                  type="number"
-                  value={formData.precio}
-                  onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
-                  min="0"
-                  step="100"
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    background: 'var(--panel)'
-                  }}
-                />
-              </label>
-
-              <label>
-                <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '500' }}>
-                  Stock Inicial
-                </span>
-                <input
-                  type="number"
-                  value={formData.cantidad}
-                  onChange={(e) => setFormData({ ...formData, cantidad: e.target.value })}
-                  min="0"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '2px solid var(--border)',
-                    borderRadius: '8px',
-                    fontSize: '1rem',
-                    background: 'var(--panel)'
-                  }}
-                />
-              </label>
-            </div>
-
-            <label>
-              <span style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '500' }}>
-                Categoría
-              </span>
-              <select
-                value={formData.idCategoria}
-                onChange={(e) => setFormData({ ...formData, idCategoria: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '2px solid var(--border)',
-                  borderRadius: '8px',
-                  fontSize: '1rem',
-                  background: 'var(--panel)'
+                  fontSize: '1rem'
                 }}
               >
                 <option value="">Seleccionar categoría</option>
-                {categoryOptions.map(opt => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                {categorias.map(cat => (
+                  <option key={cat.idCategoria} value={cat.idCategoria}>
+                    {cat.nombre}
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
           </div>
 
-          {/* Sección de Receta/Materiales */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h4 style={{ margin: 0, color: 'var(--text)' }}>Receta del Producto</h4>
-              <Button type="button" variant="ghost" small onClick={agregarMaterial}>
+          {!esEdicion && (
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                Cantidad Inicial
+              </label>
+              <input
+                type="number"
+                value={formData.cantidad}
+                onChange={(e) => setFormData(prev => ({ ...prev, cantidad: e.target.value }))}
+                min="0"
+                step="1"
+                placeholder="0"
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Receta del Producto */}
+          <div style={{
+            padding: '1.5rem',
+            background: 'var(--bg)',
+            borderRadius: '12px',
+            border: '2px solid var(--border)'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '1rem'
+            }}>
+              <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>
+                Receta del Producto
+              </h4>
+              <Button
+                type="button"
+                variant="ghost"
+                small
+                onClick={agregarMaterial}
+              >
                 <Add sx={{ fontSize: 16 }} />
                 Agregar Material
               </Button>
             </div>
 
-            {receta.length === 0 ? (
-              <div style={{
-                background: 'var(--accent)',
-                padding: '1.5rem',
-                borderRadius: '8px',
-                textAlign: 'center',
-                color: 'var(--muted)'
-              }}>
-                No hay materiales agregados a la receta
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {/* Lista de materiales en la receta */}
+            {receta.length > 0 && (
+              <div style={{ marginTop: '1rem' }}>
                 {receta.map((item, index) => (
-                  <div key={index} style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr auto',
-                    gap: '0.5rem',
-                    alignItems: 'end',
-                    padding: '1rem',
-                    background: 'var(--panel-2)',
-                    borderRadius: '8px',
-                    border: '1px solid var(--border)'
-                  }}>
+                  <div
+                    key={index}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '2fr 1fr auto',
+                      gap: '0.75rem',
+                      padding: '0.75rem',
+                      background: 'var(--panel)',
+                      borderRadius: '8px',
+                      marginBottom: '0.5rem',
+                      alignItems: 'center'
+                    }}
+                  >
+                    {/* Material */}
                     <div>
                       <span style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text)' }}>
                         Material
                       </span>
                       <select
-                        value={item.idMaterial}
+                        value={item.material?.idMaterial || item.idMaterial || ''}
                         onChange={(e) => actualizarMaterial(index, 'idMaterial', e.target.value)}
+                        disabled={!!item.idMaterialProducto}
                         required
                         style={{
                           width: '100%',
                           padding: '0.5rem',
                           border: '1px solid var(--border)',
                           borderRadius: '4px',
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          background: item.idMaterialProducto ? '#f5f5f5' : 'white',
+                          cursor: item.idMaterialProducto ? 'not-allowed' : 'pointer'
                         }}
                       >
                         <option value="">Seleccionar material</option>
@@ -472,6 +456,7 @@ export default function ModalProducto({
                       </select>
                     </div>
 
+                    {/* Cantidad (siempre editable) */}
                     <div>
                       <span style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: 'var(--text)' }}>
                         Cantidad
@@ -479,81 +464,74 @@ export default function ModalProducto({
                       <input
                         type="number"
                         value={item.cantidad}
-                        onChange={(e) => actualizarMaterial(index, 'cantidad', e.target.value)}
-                        min="0.1"
-                        step="0.1"
+                        onChange={(e) => {
+                          const valor = e.target.value
+                          actualizarMaterial(index, 'cantidad', valor === '' ? 0 : parseInt(valor))
+                        }}
+                        min="1"
+                        step="1"
                         required
                         style={{
                           width: '100%',
                           padding: '0.5rem',
                           border: '1px solid var(--border)',
                           borderRadius: '4px',
-                          fontSize: '0.9rem'
+                          fontSize: '0.9rem',
+                          background: 'white',
+                          cursor: 'text'
                         }}
                       />
                     </div>
 
+                    {/* Botón eliminar */}
                     <Button
                       type="button"
                       variant="ghost"
                       small
                       onClick={() => eliminarMaterial(index)}
-                      style={{ background: 'var(--error)', color: 'white' }}
+                      style={{ background: 'var(--error)', color: 'white', marginTop: '1.5rem' }}
                     >
                       <Delete sx={{ fontSize: 16 }} />
                     </Button>
-
-                    {item.costoCalculado > 0 && (
-                      <div style={{
-                        gridColumn: '1 / -1',
-                        padding: '0.5rem',
-                        background: 'var(--accent)',
-                        borderRadius: '4px',
-                        fontSize: '0.9rem',
-                        textAlign: 'center'
-                      }}>
-                        Costo: ${item.costoCalculado.toFixed(2)}
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Resumen de costos */}
-            {costoCalculado > 0 && (
+            {receta.length === 0 && (
               <div style={{
-                marginTop: '1rem',
-                padding: '1rem',
-                background: 'linear-gradient(135deg, var(--success), #4CAF50)',
-                borderRadius: '8px',
-                color: 'white',
-                textAlign: 'center'
+                textAlign: 'center',
+                padding: '2rem',
+                color: 'var(--muted)',
+                fontSize: '0.9rem'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                  <Calculate sx={{ fontSize: 20 }} />
-                  <strong>Costo Total de Materiales: ${costoCalculado.toFixed(2)}</strong>
-                </div>
-                {formData.precio > 0 && (
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.9rem' }}>
-                    Margen: ${(formData.precio - costoCalculado).toFixed(2)} 
-                    ({(formData.precio > 0 ? ((formData.precio - costoCalculado) / formData.precio * 100).toFixed(1) : '0')}%)
-                  </div>
-                )}
+                No hay materiales en la receta. Haz click en "Agregar Material" para comenzar.
               </div>
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <Button type="button" variant="ghost" onClick={() => { 
-              setShowForm(false); 
-              setProductoEdit(null); 
-              setReceta([]);
-            }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: '0.75rem', 
+            justifyContent: 'flex-end',
+            marginTop: '1rem',
+            paddingTop: '1rem',
+            borderTop: '1px solid var(--border)'
+          }}>
+            <Button 
+              type="button"
+              variant="ghost" 
+              onClick={() => {
+                setShowForm(false)
+                setProductoEdit(null)
+                setFormData({ nombre: '', descripcion: '', precio: 0, idCategoria: '', cantidad: 0 })
+                setReceta([])
+              }}
+            >
               Cancelar
             </Button>
             <Button type="submit">
-              {productoEdit ? 'Actualizar' : 'Crear'} Producto
+              {esEdicion ? 'Actualizar' : 'Crear'} Producto
             </Button>
           </div>
         </form>

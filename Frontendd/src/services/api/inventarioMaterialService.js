@@ -18,10 +18,13 @@ export const inventarioMaterialService = {
     }).then(handleResponse),
   
   registrarEntrada: (idMaterial, cantidad, costoUnitario, observaciones = '') => {
+    // ✅ Convertir a números apropiados
+    const cantidadEntera = Math.ceil(parseFloat(cantidad));
+    
     const params = new URLSearchParams({
-      idMaterial,
-      cantidad,
-      costoUnitario,
+      idMaterial: parseInt(idMaterial),
+      cantidad: cantidadEntera,  // ✅ Entero
+      costoUnitario: parseFloat(costoUnitario),  // ✅ Decimal está bien aquí
       ...(observaciones && { observaciones })
     });
     
@@ -31,9 +34,12 @@ export const inventarioMaterialService = {
   },
   
   registrarSalida: (idMaterial, cantidad, observaciones = '') => {
+    // ✅ Convertir a entero ANTES de crear los parámetros
+    const cantidadEntera = Math.ceil(parseFloat(cantidad));
+    
     const params = new URLSearchParams({
-      idMaterial,
-      cantidad,
+      idMaterial: parseInt(idMaterial),
+      cantidad: cantidadEntera,  // ✅ Ya es entero
       ...(observaciones && { observaciones })
     });
     

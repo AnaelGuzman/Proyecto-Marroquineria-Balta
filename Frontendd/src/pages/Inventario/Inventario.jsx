@@ -1,29 +1,22 @@
-// Inventario.jsx - COMPLETO CON MATERIALES
+// Inventario.jsx - VERSIÓN FINAL CON TOOLBARS IGUALES
 import React, { useState, useMemo } from 'react'
 import { Card, Toolbar, Button } from '../../components/UI.jsx'
-import { Add, Science, Inventory } from '@mui/icons-material'
+import { Add, TrendingDown } from '@mui/icons-material'
 import { api } from '../../services/api/index.js'
  
 // Importar componentes modulares
 import { useInventario } from './hooks/useInventario'
-import FiltrosInventario from './components/FiltrosInventario'
 import TablaInventario from './components/TablaInventario'
-import TablaRecetas from './components/TablaRecetas'
 import TablaMateriales from './components/TablaMateriales'
 import ModalProducto from './components/modals/ModalProducto'
 import ModalAjusteStock from './components/modals/ModalAjusteStock'
 import ModalDetalles from './components/modals/ModalDetalles'
 import ModalConfirmacion from './components/modals/ModalConfirmacion'
 import { 
-  ModalVerReceta, 
-  ModalAgregarMaterial, 
-  ModalCalcularCosto, 
-  ModalConfirmarEliminacion 
-} from './components/modals/ModalesRecetas'
-import { 
   ModalMovimiento,
-  ModalHistorialMovimientos,
-  ModalDetallesMaterial
+  ModalDetallesMaterial,
+  ModalMaterial,
+  ModalConfirmarEliminarMaterial
 } from './components/modals/ModalesMateriales'
 import { useInventarioMateriales } from './hooks/useInventarioMateriales'
 
@@ -49,10 +42,7 @@ export default function Inventario() {
   const {
     materiales: materialesInventario,
     loading: loadingMateriales,
-    cargarDatos: cargarDatosMateriales,
-    cargarMovimientosPorMaterial,
-    registrarEntrada,
-    registrarSalida
+    cargarDatos: cargarDatosMateriales
   } = useInventarioMateriales()
 
   // Estados de inventario
@@ -70,56 +60,62 @@ export default function Inventario() {
   })
   const [ajusteData, setAjusteData] = useState({
     idProducto: '',
-    cantidad: 0,
-    motivo: ''
+    cantidad: 0
   })
 
-  // Estados de recetas
+  // Estados
   const [vistaActual, setVistaActual] = useState('inventario')
-  const [showRecetaModal, setShowRecetaModal] = useState(null)
-  const [showAgregarMaterialModal, setShowAgregarMaterialModal] = useState(null)
-  const [showCostoModal, setShowCostoModal] = useState(null)
-  const [deleteConfirmReceta, setDeleteConfirmReceta] = useState(null)
-  const [recetaActual, setRecetaActual] = useState([])
-  const [costoCalculado, setCostoCalculado] = useState(null)
-  const [materiales, setMateriales] = useState([])
-  const [filtroRecetas, setFiltroRecetas] = useState({ buscar: '' })
   const [filtroMateriales, setFiltroMateriales] = useState({ buscar: '', stockBajo: false })
-  const [formMaterial, setFormMaterial] = useState({
-    idMaterial: '',
-    cantidad: ''
-  })
 
   // Estados para modales de materiales
-  const [showMovimientosModal, setShowMovimientosModal] = useState(null)
   const [showMovimientoModal, setShowMovimientoModal] = useState(null)
+  const [showAjusteMaterial, setShowAjusteMaterial] = useState(false)
   const [showDetallesMaterial, setShowDetallesMaterial] = useState(null)
-  const [movimientos, setMovimientos] = useState([])
-  const [tipoMovimiento, setTipoMovimiento] = useState('entrada')
-  const [formMovimiento, setFormMovimiento] = useState({
-    cantidad: '',
-    costoUnitario: '',
-    observaciones: ''
+  const [formMovimiento, setFormMovimiento] = useState({ cantidad: '' })
+  const [ajusteMaterialData, setAjusteMaterialData] = useState({
+    idProducto: '',
+    cantidad: 0
   })
 
-  // Cargar materiales al cambiar a vista de recetas o materiales
+  // Estados para crear/editar materiales
+  const [showFormMaterial, setShowFormMaterial] = useState(false)
+  const [materialEdit, setMaterialEdit] = useState(null)
+  const [formDataMaterial, setFormDataMaterial] = useState({
+    nombre: '',
+    descripcion: '',
+    idUnidadMedida: '',
+    stockMinimo: 10
+  })
+  const [unidadesMedida, setUnidadesMedida] = useState([])
+  const [showConfirmDeleteMaterial, setShowConfirmDeleteMaterial] = useState(null)
+
+  // Recargar datos cuando se cierre el modal de producto
   React.useEffect(() => {
-    if ((vistaActual === 'recetas' || vistaActual === 'materiales') && materiales.length === 0) {
-      cargarMateriales()
+    if (!showForm) {
+      cargarDatos()
+    }
+  }, [showForm])
+
+  // Cargar materiales al iniciar
+  React.useEffect(() => {
+    if (vistaActual === 'materiales' && materialesInventario.length === 0) {
+      cargarDatosMateriales()
     }
   }, [vistaActual])
 
-  const cargarMateriales = async () => {
-    try {
-      const materialesData = await api.materiales.getAll()
-      setMateriales(materialesData)
-      
-      // ✅ IMPORTANTE: También recargar los datos del hook
-      await cargarDatosMateriales()
-    } catch (err) {
-      console.error('Error cargando materiales:', err)
+  // Cargar unidades de medida al iniciar
+  React.useEffect(() => {
+    const cargarUnidades = async () => {
+      try {
+        const unidades = await api.unidadesMedida.getAll()
+        setUnidadesMedida(unidades)
+      } catch (err) {
+        console.error('Error cargando unidades:', err)
+        setUnidadesMedida([])
+      }
     }
-  }
+    cargarUnidades()
+  }, [])
 
   const inventarioFiltrado = useMemo(() => 
     inventario.filter(item => {
@@ -132,13 +128,6 @@ export default function Inventario() {
       
       return nombreMatch && categoriaMatch && stockBajoMatch
     }), [inventario, filtro]
-  )
-
-  const productosFiltrados = useMemo(() =>
-    productos.filter(producto =>
-      filtroRecetas.buscar === '' ||
-      producto.nombre?.toLowerCase().includes(filtroRecetas.buscar.toLowerCase())
-    ), [productos, filtroRecetas]
   )
 
   const materialesFiltrados = useMemo(() =>
@@ -190,16 +179,13 @@ export default function Inventario() {
     const idProducto = parseInt(ajusteData.idProducto)
     
     try {
-      // Usar ajustarStock del hook (consume materiales)
       await ajustarStock(idProducto, delta)
       
-      // ✅ Si fue producción, recargar materiales
-      if (delta > 0) {
-        await cargarDatosMateriales()
-      }
+      // ✅ RECARGAR MATERIALES TAMBIÉN
+      await cargarDatosMateriales()
       
       setShowAjuste(false)
-      setAjusteData({ idProducto: '', cantidad: 0, motivo: '' })
+      setAjusteData({ idProducto: '', cantidad: 0 })
     } catch (error) {
       console.error('Error al ajustar stock:', error)
     }
@@ -254,134 +240,162 @@ export default function Inventario() {
     }
   }
 
-  // ========== FUNCIONES DE RECETAS ==========
-
-  const obtenerRecetaProducto = async (idProducto) => {
-    try {
-      const receta = await api.recetas.getMaterialesPorProducto(idProducto)
-      return receta || []
-    } catch (err) {
-      console.error('Error obteniendo receta:', err)
-      return []
-    }
-  }
-
-  const handleVerReceta = async (producto) => {
-    try {
-      const receta = await obtenerRecetaProducto(producto.idProducto)
-      setRecetaActual(receta)
-      setShowRecetaModal(producto)
-    } catch (err) {
-      alert('❌ Error al cargar receta')
-    }
-  }
-
-  const handleEditarReceta = async (producto) => {
-    const receta = await obtenerRecetaProducto(producto.idProducto)
-    setRecetaActual(receta)
-    setShowAgregarMaterialModal(producto)
-  }
-
-  const handleAgregarMaterial = async (e) => {
-    e.preventDefault()
-
-    if (!formMaterial.idMaterial || !formMaterial.cantidad) {
-      alert('⚠️ Complete todos los campos')
-      return
-    }
-
-    try {
-      await api.recetas.agregarMaterial({
-        producto: { idProducto: showAgregarMaterialModal.idProducto },
-        material: { idMaterial: parseInt(formMaterial.idMaterial) },
-        cantidad: parseFloat(formMaterial.cantidad)
-      })
-
-      const recetaActualizada = await obtenerRecetaProducto(showAgregarMaterialModal.idProducto)
-      setRecetaActual(recetaActualizada)
-      setFormMaterial({ idMaterial: '', cantidad: '' })
-      alert('✅ Material agregado a la receta')
-    } catch (err) {
-      alert('❌ Error al agregar material')
-    }
-  }
-
-  const handleEliminarMaterial = async () => {
-    if (!deleteConfirmReceta) return
-
-    try {
-      await api.recetas.eliminarMaterial(deleteConfirmReceta.idMaterialProducto)
-
-      const recetaActualizada = await obtenerRecetaProducto(showRecetaModal.idProducto)
-      setRecetaActual(recetaActualizada)
-
-      setDeleteConfirmReceta(null)
-      alert('✅ Material eliminado de la receta')
-    } catch (err) {
-      console.error('Error:', err)
-      alert('❌ Error al eliminar material')
-      setDeleteConfirmReceta(null)
-    }
-  }
-
-  const handleCalcularCosto = async (producto) => {
-    try {
-      const costo = await api.recetas.getCostoProducto(producto.idProducto)
-      const receta = await obtenerRecetaProducto(producto.idProducto)
-      
-      setCostoCalculado(costo)
-      setRecetaActual(receta)
-      setShowCostoModal(producto)
-    } catch (err) {
-      alert('❌ Error al calcular costo')
-    }
-  }
-
   // ========== FUNCIONES DE MATERIALES ==========
 
   const handleRegistrarMovimiento = async (e) => {
     e.preventDefault()
     
     try {
-      if (tipoMovimiento === 'entrada') {
-        if (!formMovimiento.costoUnitario) {
-          alert('⚠️ El costo unitario es obligatorio para entradas')
-          return
-        }
-        
-        await registrarEntrada(
+      const cantidad = parseInt(formMovimiento.cantidad)
+      
+      if (cantidad === 0) {
+        alert('⚠️ La cantidad no puede ser 0')
+        return
+      }
+
+      if (cantidad > 0) {
+        await api.inventarioMateriales.registrarEntrada(
           showMovimientoModal.idMaterial,
-          parseFloat(formMovimiento.cantidad),
-          parseFloat(formMovimiento.costoUnitario),
-          formMovimiento.observaciones
+          cantidad,
+          0,
+          ''
         )
-        alert('✅ Entrada registrada')
+        alert('✅ Stock aumentado')
       } else {
         const stockActual = showMovimientoModal.stockActual || 0
-        const cantidadSalida = parseFloat(formMovimiento.cantidad)
+        const cantidadSalida = Math.abs(cantidad)
         
         if (cantidadSalida > stockActual) {
           alert(`❌ Stock insuficiente. Stock actual: ${stockActual}`)
           return
         }
         
-        await registrarSalida(
+        await api.inventarioMateriales.registrarSalida(
           showMovimientoModal.idMaterial,
           cantidadSalida,
-          formMovimiento.observaciones
+          ''
         )
-        alert('✅ Salida registrada')
+        alert('✅ Stock reducido')
       }
       
-      // Ya NO es necesario llamar cargarMateriales aquí
-      // porque registrarEntrada y registrarSalida ya recargan automáticamente
-      
+      // ✅ RECARGAR DATOS EN LUGAR DE RELOAD
+      await cargarDatosMateriales()
       setShowMovimientoModal(null)
-      setFormMovimiento({ cantidad: '', costoUnitario: '', observaciones: '' })
-      setTipoMovimiento('entrada')
+      setFormMovimiento({ cantidad: '' })
+      
     } catch (err) {
       console.error('Error al registrar movimiento:', err)
-      alert('❌ Error al registrar movimiento')
+      alert('❌ Error al ajustar stock')
+    }
+  }
+
+  const handleAjusteStockMaterial = async (e) => {
+    e.preventDefault()
+    
+    try {
+      const cantidad = parseInt(ajusteMaterialData.cantidad)
+      const idMaterial = parseInt(ajusteMaterialData.idProducto)  // ✅ Leer de idProducto
+      
+      if (!idMaterial || isNaN(idMaterial)) {
+        alert('⚠️ Debe seleccionar un material')
+        return
+      }
+      
+      if (cantidad === 0) {
+        alert('⚠️ La cantidad no puede ser 0')
+        return
+      }
+
+      if (cantidad > 0) {
+        await api.inventarioMateriales.registrarEntrada(idMaterial, cantidad, 0, '')
+      } else {
+        const material = materialesInventario.find(m => m.idMaterial === idMaterial)
+        const stockActual = material?.stockActual || 0
+        const cantidadSalida = Math.abs(cantidad)
+        
+        if (cantidadSalida > stockActual) {
+          alert(`❌ Stock insuficiente. Stock actual: ${stockActual}`)
+          return
+        }
+        
+        await api.inventarioMateriales.registrarSalida(idMaterial, cantidadSalida, '')
+      }
+      
+      await cargarDatosMateriales()
+      setShowAjusteMaterial(false)
+      setAjusteMaterialData({ idProducto: '', cantidad: 0 })  // ✅ Reset con idProducto
+      alert('✅ Stock ajustado')
+      
+    } catch (err) {
+      console.error('Error al ajustar stock:', err)
+      alert('❌ Error al ajustar stock')
+    }
+  }
+  // ========== FUNCIONES DE GESTIÓN DE MATERIALES ==========
+
+  const handleCrearMaterial = async (e) => {
+    e.preventDefault()
+    try {
+      await api.materiales.create({
+        nombre: formDataMaterial.nombre,
+        descripcion: formDataMaterial.descripcion,
+        unidadMedida: { idUnidadMedida: parseInt(formDataMaterial.idUnidadMedida) },
+        stockMinimo: parseInt(formDataMaterial.stockMinimo) || 10
+      })
+
+      setShowFormMaterial(false)
+      setFormDataMaterial({ nombre: '', descripcion: '', idUnidadMedida: '', stockMinimo: 10 })
+      await cargarDatosMateriales()
+      alert('✅ Material creado exitosamente')
+    } catch (err) {
+      console.error('Error al crear material:', err)
+      alert('❌ Error al crear material')
+    }
+  }
+
+  const handleEditarMaterial = (material) => {
+    setMaterialEdit(material)
+    setFormDataMaterial({
+      nombre: material.nombre || '',
+      descripcion: material.descripcion || '',
+      idUnidadMedida: material.unidadMedida?.idUnidadMedida || '',
+      stockMinimo: material.stockMinimo || 10
+    })
+    setShowFormMaterial(true)
+  }
+
+  const handleActualizarMaterial = async (e) => {
+    e.preventDefault()
+    try {
+      await api.materiales.update(materialEdit.idMaterial, {
+        nombre: formDataMaterial.nombre,
+        descripcion: formDataMaterial.descripcion,
+        unidadMedida: { idUnidadMedida: parseInt(formDataMaterial.idUnidadMedida) },
+        stockMinimo: parseInt(formDataMaterial.stockMinimo) || 10
+      })
+
+      setShowFormMaterial(false)
+      setMaterialEdit(null)
+      setFormDataMaterial({ nombre: '', descripcion: '', idUnidadMedida: '', stockMinimo: 10 })
+      await cargarDatosMateriales()
+      alert('✅ Material actualizado exitosamente')
+    } catch (err) {
+      console.error('Error al actualizar material:', err)
+      alert('❌ Error al actualizar material')
+    }
+  }
+
+  const handleEliminarMaterial = async () => {
+    if (!showConfirmDeleteMaterial) return
+
+    try {
+      await api.materiales.delete(showConfirmDeleteMaterial.idMaterial)
+      await cargarDatosMateriales()
+      setShowConfirmDeleteMaterial(null)
+      alert('✅ Material eliminado')
+    } catch (err) {
+      console.error('Error al eliminar material:', err)
+      alert('❌ Error al eliminar material')
     }
   }
 
@@ -407,18 +421,7 @@ export default function Inventario() {
               borderBottom: vistaActual === 'inventario' ? '3px solid var(--brand)' : 'none'
             }}
           >
-            📦 Inventario
-          </Button>
-          <Button
-            variant={vistaActual === 'recetas' ? 'primary' : 'ghost'}
-            onClick={() => setVistaActual('recetas')}
-            style={{
-              borderRadius: '8px 8px 0 0',
-              borderBottom: vistaActual === 'recetas' ? '3px solid var(--brand)' : 'none'
-            }}
-          >
-            <Science sx={{ fontSize: 18 }} />
-            Recetas
+            📦 Productos
           </Button>
           <Button
             variant={vistaActual === 'materiales' ? 'primary' : 'ghost'}
@@ -428,32 +431,84 @@ export default function Inventario() {
               borderBottom: vistaActual === 'materiales' ? '3px solid var(--brand)' : 'none'
             }}
           >
-            <Inventory sx={{ fontSize: 18 }} />
-            Materiales
+            🧵 Materiales
           </Button>
         </div>
 
         {/* VISTA DE INVENTARIO */}
         {vistaActual === 'inventario' && (
           <>
-            <FiltrosInventario
-              filtro={filtro}
-              setFiltro={setFiltro}
-              categorias={categorias}
-              buscarProductos={buscarProductos}
-              filtrarPorCategoria={filtrarPorCategoria}
-              cargarDatos={cargarDatos}
-              inventario={inventario}
-              inventarioFiltrado={inventarioFiltrado}
-            />
+            {/* Barra de búsqueda y filtros directos */}
+            <div style={{ 
+              display: 'grid',
+              gridTemplateColumns: '2fr 1fr auto',
+              gap: '0.75rem',
+              marginBottom: '1.5rem'
+            }}>
+              <input
+                type="text"
+                placeholder="🔍 Buscar producto por nombre..."
+                value={filtro.buscar}
+                onChange={(e) => {
+                  setFiltro(prev => ({ ...prev, buscar: e.target.value }))
+                  buscarProductos(e.target.value)
+                }}
+                style={{
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              />
 
+              <select
+                value={filtro.categoria}
+                onChange={(e) => {
+                  setFiltro(prev => ({ ...prev, categoria: e.target.value }))
+                  filtrarPorCategoria(e.target.value)
+                }}
+                style={{
+                  padding: '0.75rem',
+                  border: '2px solid var(--border)',
+                  borderRadius: '8px',
+                  fontSize: '1rem'
+                }}
+              >
+                <option value="all">📂 Todas las categorías</option>
+                {categorias.map(cat => (
+                  <option key={cat.idCategoria} value={cat.idCategoria}>
+                    {cat.nombre}
+                  </option>
+                ))}
+              </select>
+
+              <label style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: '0.95rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                padding: '0 0.5rem'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={filtro.stockBajo}
+                  onChange={(e) => setFiltro(prev => ({ ...prev, stockBajo: e.target.checked }))}
+                />
+                ⚠️ Stock bajo
+              </label>
+            </div>
+
+            {/* Toolbar con botones de acción - SIN ACTUALIZAR */}
             <Toolbar style={{ marginBottom: '1.5rem' }}>
               <Button onClick={() => { setProductoEdit(null); setShowForm(true); }}>
                 <Add sx={{ fontSize: 20 }} />
-                Nuevo producto
+                Agregar producto
               </Button>
               <Button variant="ghost" onClick={() => setShowAjuste(true)}>
-                Ajuste de stock
+                <TrendingDown sx={{ fontSize: 20 }} />
+                Ajustar stock
               </Button>
               <div style={{ flex: 1 }} />
               <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
@@ -474,41 +529,6 @@ export default function Inventario() {
           </>
         )}
 
-        {/* VISTA DE RECETAS */}
-        {vistaActual === 'recetas' && (
-          <>
-            <div style={{ marginBottom: '1rem' }}>
-              <input
-                type="text"
-                placeholder="Buscar producto..."
-                value={filtroRecetas.buscar}
-                onChange={(e) => setFiltroRecetas(prev => ({ ...prev, buscar: e.target.value }))}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '2px solid var(--border)',
-                  borderRadius: '8px',
-                  fontSize: '1rem'
-                }}
-              />
-            </div>
-
-            <Toolbar style={{ marginBottom: '1.5rem' }}>
-              <div style={{ flex: 1 }} />
-              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-                Mostrando {productosFiltrados.length} de {productos.length} productos
-              </span>
-            </Toolbar>
-
-            <TablaRecetas
-              productosFiltrados={productosFiltrados}
-              handleVerReceta={handleVerReceta}
-              handleEditarReceta={handleEditarReceta}
-              handleCalcularCosto={handleCalcularCosto}
-            />
-          </>
-        )}
-
         {/* VISTA DE MATERIALES */}
         {vistaActual === 'materiales' && (
           <>
@@ -520,7 +540,7 @@ export default function Inventario() {
             }}>
               <input
                 type="text"
-                placeholder="Buscar material..."
+                placeholder="🔍 Buscar material..."
                 value={filtroMateriales.buscar}
                 onChange={(e) => setFiltroMateriales(prev => ({ ...prev, buscar: e.target.value }))}
                 style={{
@@ -544,30 +564,31 @@ export default function Inventario() {
                   checked={filtroMateriales.stockBajo}
                   onChange={(e) => setFiltroMateriales(prev => ({ ...prev, stockBajo: e.target.checked }))}
                 />
-                Bajo stock
+                ⚠️ Bajo stock
               </label>
             </div>
 
+            {/* Toolbar igual que productos */}
             <Toolbar style={{ marginBottom: '1.5rem' }}>
+              <Button onClick={() => { setMaterialEdit(null); setShowFormMaterial(true); }}>
+                <Add sx={{ fontSize: 20 }} />
+                Agregar material
+              </Button>
+              <Button variant="ghost" onClick={() => setShowAjusteMaterial(true)}>
+                <TrendingDown sx={{ fontSize: 20 }} />
+                Ajustar stock
+              </Button>
               <div style={{ flex: 1 }} />
               <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
-                {materialesFiltrados.length} de {materialesInventario.length} materiales
+                Mostrando {materialesFiltrados.length} de {materialesInventario.length} materiales
               </span>
             </Toolbar>
 
             <TablaMateriales
               materialesFiltrados={materialesFiltrados}
-              setShowMovimientoModal={setShowMovimientoModal}
-              handleVerMovimientos={async (material) => {
-                try {
-                  const movimientosData = await cargarMovimientosPorMaterial(material.idMaterial)
-                  setMovimientos(movimientosData)
-                  setShowMovimientosModal(material)
-                } catch (err) {
-                  alert('❌ Error al cargar movimientos')
-                }
-              }}
               setShowDetallesMaterial={setShowDetallesMaterial}
+              handleEditarMaterial={handleEditarMaterial}
+              setShowConfirmDeleteMaterial={setShowConfirmDeleteMaterial}
             />
           </>
         )}
@@ -607,58 +628,39 @@ export default function Inventario() {
         handleEliminarProducto={handleEliminarProducto}
       />
 
-      {/* MODALES DE RECETAS */}
-      <ModalVerReceta
-        showRecetaModal={showRecetaModal}
-        setShowRecetaModal={setShowRecetaModal}
-        recetaActual={recetaActual}
-        setShowAgregarMaterialModal={setShowAgregarMaterialModal}
-      />
-
-      <ModalAgregarMaterial
-        showAgregarMaterialModal={showAgregarMaterialModal}
-        setShowAgregarMaterialModal={setShowAgregarMaterialModal}
-        recetaActual={recetaActual}
-        materiales={materiales}
-        formMaterial={formMaterial}
-        setFormMaterial={setFormMaterial}
-        handleAgregarMaterial={handleAgregarMaterial}
-        setDeleteConfirmReceta={setDeleteConfirmReceta}
-      />
-
-      <ModalCalcularCosto
-        showCostoModal={showCostoModal}
-        setShowCostoModal={setShowCostoModal}
-        recetaActual={recetaActual}
-        costoCalculado={costoCalculado}
-      />
-
-      <ModalConfirmarEliminacion
-        deleteConfirmReceta={deleteConfirmReceta}
-        setDeleteConfirmReceta={setDeleteConfirmReceta}
-        handleEliminarMaterial={handleEliminarMaterial}
-      />
-
       {/* MODALES DE MATERIALES */}
-      <ModalMovimiento
-        showMovimientoModal={showMovimientoModal}
-        setShowMovimientoModal={setShowMovimientoModal}
-        tipoMovimiento={tipoMovimiento}
-        setTipoMovimiento={setTipoMovimiento}
-        formMovimiento={formMovimiento}
-        setFormMovimiento={setFormMovimiento}
-        handleRegistrarMovimiento={handleRegistrarMovimiento}
-      />
-
-      <ModalHistorialMovimientos
-        showMovimientosModal={showMovimientosModal}
-        setShowMovimientosModal={setShowMovimientosModal}
-        movimientos={movimientos}
+      <ModalAjusteStock
+        showAjuste={showAjusteMaterial}
+        setShowAjuste={setShowAjusteMaterial}
+        ajusteData={ajusteMaterialData}
+        setAjusteData={setAjusteMaterialData}
+        productos={materialesInventario.map(m => ({
+          idProducto: m.idMaterial,  // ✅ Mapear idMaterial a idProducto
+          nombre: m.nombre
+        }))}
+        handleAjusteStock={handleAjusteStockMaterial}
       />
 
       <ModalDetallesMaterial
         showDetallesMaterial={showDetallesMaterial}
         setShowDetallesMaterial={setShowDetallesMaterial}
+      />
+
+      <ModalMaterial
+        showForm={showFormMaterial}
+        setShowForm={setShowFormMaterial}
+        materialEdit={materialEdit}
+        setMaterialEdit={setMaterialEdit}
+        formData={formDataMaterial}
+        setFormData={setFormDataMaterial}
+        unidadesMedida={unidadesMedida}
+        handleSubmit={materialEdit ? handleActualizarMaterial : handleCrearMaterial}
+      />
+
+      <ModalConfirmarEliminarMaterial
+        showConfirmDelete={showConfirmDeleteMaterial}
+        setShowConfirmDelete={setShowConfirmDeleteMaterial}
+        handleEliminarMaterial={handleEliminarMaterial}
       />
     </div>
   )
