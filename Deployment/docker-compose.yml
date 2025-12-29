@@ -1,0 +1,88 @@
+version: "3.8"
+services:
+  # Nginx servers
+  nginx-backend:
+    image: nginx
+    container_name: balta-nginx-backend-container
+    restart: always
+    ports:
+      - 80:80
+    volumes:
+      - ./lb-backend.conf:/etc/nginx/nginx.conf
+    networks:
+      - balta-backend-network
+    depends_on:
+      - spring
+
+  nginx-frontend:
+    image: nginx
+    container_name: balta-nginx-frontend-container
+    restart: always
+    ports:
+      - 8070:8070
+    volumes:
+      - ./lb-frontend.conf:/etc/nginx/nginx.conf
+    networks:
+      - balta-frontend-network
+      - balta-backend-network
+    depends_on:
+      - react
+      - nginx-backend
+
+  postgres:
+    container_name: balta-postgres-container
+    image: postgres:17
+    restart: always
+    volumes:
+      - balta-postgres-volume:/var/lib/postgresql/data
+    networks:
+      - balta-backend-network
+    environment:
+      POSTGRES_PASSWORD: "1234"
+      POSTGRES_DB: "marroquineria_db"
+    ports:
+      - 5432:5432
+
+  spring:
+    container_name: balta-backend-container
+    image: aguzmanusc/balta-backend
+    environment:
+      # Spring Boot recognizes these env vars automatically
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://balta-postgres-container:5432/marroquineria_db"
+      SPRING_DATASOURCE_USERNAME: "postgres"
+      SPRING_DATASOURCE_PASSWORD: "1234"
+      # legacy/env-compatible vars (si tu imagen los usa)
+      DB_HOST: balta-postgres-container
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: 1234
+    networks:
+      - balta-backend-network
+    deploy:
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - postgres
+
+  react:
+    container_name: balta-frontend-container
+    image: aguzmanusc/balta-frontend
+    ports:
+      - 3000:3000
+    networks:
+      - balta-frontend-network
+    environment:
+      # Si reconstruyes la imagen usando VITE_API_BASE_URL, esto ayuda.
+      VITE_API_BASE_URL: "/api"
+    deploy:
+      restart_policy:
+        condition: on-failure
+    depends_on:
+      - nginx-backend
+
+volumes:
+  balta-postgres-volume:
+
+networks:
+  balta-frontend-network:
+  balta-backend-network:
