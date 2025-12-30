@@ -18,7 +18,8 @@ import {
   Insights,
   Analytics,
   ReceiptLong,
-  ShoppingBag
+  ShoppingBag,
+  InfoOutlined
 } from '@mui/icons-material';
 import { api } from '../services/api/index.js';
 import { API_BASE_URL } from '../services/api/config.js';
@@ -436,28 +437,40 @@ export default function Reportes() {
               }}
             >
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
-                <Typography variant="caption" color="text.secondary">Operaciones</Typography>
+                <IndicadorLabel
+                  label="Operaciones"
+                  tooltip="Cantidad de ventas (operaciones) registradas en el período seleccionado."
+                />
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
                   {resumen.operaciones}
                 </Typography>
               </Box>
 
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
-                <Typography variant="caption" color="text.secondary">Margen</Typography>
+                <IndicadorLabel
+                  label="Margen"
+                  tooltip="Porcentaje de saldo sobre ingresos: (saldo / ingresos) × 100."
+                />
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
                   {indicadores.margen.toFixed(1)}%
                 </Typography>
               </Box>
 
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
-                <Typography variant="caption" color="text.secondary">Promedio diario</Typography>
+                <IndicadorLabel
+                  label="Promedio diario"
+                  tooltip="Ingresos promedio por día dentro del período: ingresos / días del período."
+                />
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
                   ${indicadores.promedioDiario.toLocaleString('es-CL', { minimumFractionDigits: 0 })}
                 </Typography>
               </Box>
 
               <Box sx={{ p: 1.25, borderRadius: 2, bgcolor: '#F5F5F5', border: '1px solid #D7CCC8' }}>
-                <Typography variant="caption" color="text.secondary">Reinversión</Typography>
+                <IndicadorLabel
+                  label="Reinversión"
+                  tooltip="Porcentaje de egresos sobre ingresos: (egresos / ingresos) × 100."
+                />
                 <Typography variant="h6" sx={{ color: '#5D4037', fontWeight: 'bold', lineHeight: 1.15 }}>
                   {indicadores.reinversion.toFixed(1)}%
                 </Typography>
@@ -955,6 +968,28 @@ function GraficoBarrasCategorias({ datos }) {
           </Box>
         );
       })}
+    </Box>
+  );
+}
+
+function IndicadorLabel({ label, tooltip }) {
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Typography variant="caption" color="text.secondary">{label}</Typography>
+      <Tooltip title={tooltip} placement="top" arrow>
+        <Box
+          component="span"
+          sx={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            color: '#8D6E63',
+            cursor: 'help',
+            lineHeight: 0
+          }}
+        >
+          <InfoOutlined sx={{ fontSize: 16 }} />
+        </Box>
+      </Tooltip>
     </Box>
   );
 }

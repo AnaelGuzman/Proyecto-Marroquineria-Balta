@@ -30,38 +30,49 @@ export default function TablaMateriales({
         style={{ 
           color: status.color, 
           fontWeight: '600',
-          padding: '0.25rem 0.5rem',
+          padding: '0.2rem 0.45rem',
           borderRadius: '4px',
           background: `${status.color}15`
         }}
       >
         {status.text}
       </span>,
-      <div key={material.idMaterial} style={{ display: 'flex', gap: '0.5rem' }}>
+      <div
+        key={material.idMaterial}
+        style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}
+      >
         <Button 
           small 
           variant="ghost" 
           onClick={() => setShowDetallesMaterial(material)}
           title="Ver detalles"
+          style={{ minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
         >
-          <Visibility sx={{ fontSize: 18 }} />
+          <Visibility sx={{ fontSize: { xs: 15, sm: 18 } }} />
         </Button>
         <Button 
           small 
           variant="ghost" 
           onClick={() => handleEditarMaterial(material)}
           title="Editar material"
+          style={{ minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
         >
-          <Edit sx={{ fontSize: 18 }} />
+          <Edit sx={{ fontSize: { xs: 15, sm: 18 } }} />
         </Button>
         <Button 
           small 
           variant="ghost" 
           onClick={() => setShowConfirmDeleteMaterial(material)}
-          style={{ color: '#f97066' }}
+          style={{
+            color: '#f97066',
+            minWidth: 0,
+            padding: '0 0.4rem',
+            height: 28,
+            minHeight: 28
+          }}
           title="Eliminar material"
         >
-          <Delete sx={{ fontSize: 18 }} />
+          <Delete sx={{ fontSize: { xs: 15, sm: 18 } }} />
         </Button>
       </div>
     ]
@@ -69,6 +80,7 @@ export default function TablaMateriales({
 
   return (
     <Table
+      className="inventario-table"
       columns={['Material', 'Stock', 'Stock Mínimo', 'Estado', 'Acciones']}
       rows={rows}
     />

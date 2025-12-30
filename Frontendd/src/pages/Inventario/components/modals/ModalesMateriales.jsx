@@ -13,7 +13,7 @@ export function ModalMovimiento({
   if (!showMovimientoModal) return null
 
   return (
-    <div style={{
+    <div className="inventario-modal-overlay" style={{
       position: 'fixed',
       top: 0,
       left: 0,
@@ -25,7 +25,7 @@ export function ModalMovimiento({
       alignItems: 'center',
       zIndex: 1000
     }}>
-      <div style={{
+      <div className="inventario-modal" style={{
         background: 'var(--panel)',
         padding: '2rem',
         borderRadius: '12px',

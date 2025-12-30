@@ -3,6 +3,9 @@
   :root {
     --app-topbar-height: 72px;
     --app-topbar-height-mobile: 72px;
+    --topbar-chip-height: 40px;
+    --topbar-chip-pad-y: 0.1rem;
+    --topbar-chip-pad-x: 0.1rem;
   }
 
   /* Ajuste de fuente base para pantallas pequeñas */
@@ -69,8 +72,8 @@
   }
 
   .topbar {
-    padding: 0.75rem 1rem;
-    gap: 0.75rem;
+    padding: 0.6rem 0.75rem;
+    gap: 0.5rem;
     min-height: 72px;
     --app-topbar-height: 72px;
     --app-topbar-height-mobile: 72px;
@@ -78,7 +81,223 @@
 
   .topbar h1 {
     font-size: clamp(1rem, 4vw + 0.4rem, 1.3rem);
-    max-width: 60vw;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  /* Compactar botones del topbar en móvil */
+  .topbar .MuiButton-root {
+    min-height: var(--topbar-chip-height) !important;
+    height: var(--topbar-chip-height) !important;
+    padding: 0 0.6rem !important;
+    font-size: 0.85rem !important;
+  }
+
+  .topbar .MuiButton-startIcon,
+  .topbar .MuiButton-endIcon {
+    margin: 0 !important;
+  }
+
+  /* Ocultamos texto de botones responsive para priorizar el título */
+  .topbar .btn-responsive .text {
+    display: none;
+  }
+
+  /* Chip usuario: ocultar rol (segunda línea) en móvil */
+  .topbar .header-profile-chip span:last-child {
+    display: none;
+  }
+
+  /* ===================== */
+  /* Inventario (móvil)    */
+  /* ===================== */
+
+  .inventario-page {
+    gap: 0.85rem;
+  }
+
+  .inventario-page .MuiCardHeader-title {
+    font-size: 1.1rem !important;
+  }
+
+  .inventario-tabs {
+    margin-bottom: 0.85rem !important;
+    gap: 0.4rem !important;
+    flex-wrap: wrap;
+  }
+
+  .inventario-tabs .MuiButton-root {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 0.75rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .inventario-filtros {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.9rem !important;
+  }
+
+  .inventario-page input,
+  .inventario-page select {
+    height: 42px !important;
+    padding: 0.55rem 0.7rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .inventario-page textarea {
+    padding: 0.55rem 0.7rem !important;
+    font-size: 0.9rem !important;
+  }
+
+  .inventario-toolbar {
+    gap: 0.5rem !important;
+    margin-top: 0.75rem !important;
+  }
+
+  .inventario-toolbar .MuiButton-root {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 0.7rem !important;
+    font-size: 0.88rem !important;
+  }
+
+  .inventario-contador {
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+  }
+
+  /* Tablas Inventario: permitir que el nombre envuelva (evita perder info) */
+  .table-wrap.inventario-table .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:nth-of-type(1) {
+    white-space: normal !important;
+    word-break: break-word;
+    min-width: 180px;
+  }
+
+  /* Inventario: tabla más compacta aún en móvil */
+  .table-wrap.inventario-table .MuiTableHead-root .MuiTableCell-head {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    letter-spacing: 0 !important;
+  }
+  .table-wrap.inventario-table .MuiTableCell-body {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Inventario: acciones en una sola fila, botones más pequeños */
+  .table-wrap.inventario-table .MuiTableCell-root:last-child > div {
+    flex-wrap: nowrap !important;
+    gap: 0.25rem !important;
+  }
+  .table-wrap.inventario-table .MuiTableCell-root:last-child .MuiButton-root {
+    min-width: 0 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 0.4rem !important;
+  }
+
+  .table-wrap.inventario-table .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:last-of-type {
+    min-width: 120px;
+  }
+
+  /* ===================== */
+  /* Configuración (móvil) */
+  /* ===================== */
+
+  .table-wrap.config-table .MuiTableHead-root .MuiTableCell-head {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    letter-spacing: 0 !important;
+  }
+
+  .table-wrap.config-table .MuiTableCell-body {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Permitir wrap en columnas de texto (Nombre / Descripción) */
+  .table-wrap.config-table .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:nth-of-type(1),
+  .table-wrap.config-table .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:nth-of-type(2) {
+    white-space: normal !important;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+
+  /* Acciones: una sola fila horizontal, botones más chicos */
+  .table-wrap.config-table .MuiTableCell-root:last-child > div {
+    flex-wrap: nowrap !important;
+    gap: 0.25rem !important;
+    align-items: center;
+  }
+
+  .table-wrap.config-table .MuiTableCell-root:last-child .MuiButton-root {
+    min-width: 0 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 0.4rem !important;
+  }
+
+  /* ========================= */
+  /* Gestión Usuarios (móvil)  */
+  /* ========================= */
+
+  .gestion-usuarios-page {
+    padding: 0.75rem !important;
+  }
+
+  .gestion-usuarios-title {
+    font-size: 1.1rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .table-wrap.users-table .MuiTableHead-root .MuiTableCell-head {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    letter-spacing: 0 !important;
+  }
+
+  .table-wrap.users-table .MuiTableCell-body {
+    font-size: 0.7rem !important;
+    padding: 0.35rem 0.45rem !important;
+    line-height: 1.15 !important;
+  }
+
+  /* Acciones: mantener en una fila, botones pequeños */
+  .table-wrap.users-table .MuiTableCell-root:last-child > div,
+  .table-wrap.users-table .MuiTableCell-root:last-child .users-actions {
+    flex-wrap: nowrap !important;
+    gap: 0.25rem !important;
+    align-items: center;
+  }
+
+  .table-wrap.users-table .MuiTableCell-root:last-child .MuiButton-root {
+    min-width: 0 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    padding: 0 0.4rem !important;
+  }
+
+  /* Modales de inventario (productos/materiales): más compactos */
+  .inventario-modal-overlay {
+    padding: 0.75rem !important;
+    align-items: flex-start !important;
+  }
+
+  .inventario-modal {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+    max-width: 520px !important;
+    margin-top: 0.75rem;
+  }
+
+  .inventario-modal h3 {
+    font-size: 1.15rem !important;
   }
 
   .stack {
@@ -594,12 +813,6 @@
     line-height: 1.15 !important;
     word-break: break-word !important;
     overflow-wrap: anywhere !important;
-  }
-
-  /* Si antes forzamos elipsis en 2 y 7, lo anulamos aquí */
-  .table-wrap.ventas-recientes .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:nth-of-type(2),
-  .table-wrap.ventas-recientes .MuiTableBody-root .MuiTableRow-root .MuiTableCell-root:nth-of-type(7) {
-    /* override de reglas previas de elipsis */
   }
 
   /* Movimientos Recientes (Dashboard): tabla compacta + wrap en Descripción */

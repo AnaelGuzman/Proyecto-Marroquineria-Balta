@@ -354,8 +354,8 @@ export default function Dashboard() {
 
   if (loading) {
     return (
-      <div className="stack" style={{ padding: '0.75rem' }}>
-        <Card>
+      <div className="stack dashboard-page" style={{ padding: '0.75rem' }}>
+        <Card contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
           <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
             Cargando...
           </div>
@@ -365,35 +365,37 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="stack" style={{ padding: '0.75rem', gap: '0.75rem' }}>
+    <div className="stack dashboard-page" style={{ padding: '0.75rem', gap: '0.75rem' }}>
       {/* RESUMEN */}
-      <Card>
+      <Card contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '1rem',
-          marginBottom: '1rem'
+          gap: 'clamp(0.35rem, 1.8vw, 1rem)',
+          marginBottom: 'clamp(0.35rem, 1.8vw, 1rem)'
         }}>
           {resumen.map((r) => (
             <div key={r.label} style={{
               textAlign: 'center',
-              padding: '1rem',
+              padding: 'clamp(0.55rem, 2.4vw, 1rem)',
               background: 'var(--panel-2)',
               borderRadius: '8px',
-              border: '2px solid var(--border)'
+              border: '2px solid var(--border)',
+              minWidth: 0
             }}>
               <div style={{ 
-                fontSize: '0.85rem', 
+                fontSize: 'clamp(0.68rem, 2.8vw, 0.85rem)', 
                 color: 'var(--muted)', 
-                marginBottom: '0.5rem',
+                marginBottom: 'clamp(0.25rem, 1.5vw, 0.5rem)',
                 fontWeight: '600'
               }}>
                 {r.label}
               </div>
               <div style={{ 
-                fontSize: '1.5rem', 
+                fontSize: 'clamp(0.95rem, 4.6vw, 1.5rem)', 
                 fontWeight: '600',
-                color: r.color
+                color: r.color,
+                whiteSpace: 'nowrap'
               }}>
                 {r.value}
               </div>
@@ -404,25 +406,26 @@ export default function Dashboard() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(3, 1fr)', 
-          gap: '1rem'
+          gap: 'clamp(0.35rem, 1.8vw, 1rem)'
         }}>
           {metricas.map((m) => (
             <div key={m.label} style={{
               textAlign: 'center',
-              padding: '0.75rem',
+              padding: 'clamp(0.5rem, 2.2vw, 0.75rem)',
               background: 'var(--panel)',
               borderRadius: '8px',
-              border: '1px solid var(--border)'
+              border: '1px solid var(--border)',
+              minWidth: 0
             }}>
               <div style={{ 
-                fontSize: '0.8rem', 
+                fontSize: 'clamp(0.66rem, 2.6vw, 0.8rem)', 
                 color: 'var(--muted)', 
-                marginBottom: '0.35rem'
+                marginBottom: 'clamp(0.2rem, 1.2vw, 0.35rem)'
               }}>
                 {m.label}
               </div>
               <div style={{ 
-                fontSize: '1.2rem', 
+                fontSize: 'clamp(0.9rem, 4vw, 1.2rem)', 
                 fontWeight: '600'
               }}>
                 {m.value}
@@ -433,9 +436,9 @@ export default function Dashboard() {
       </Card>
 
       {/* ALERTAS Y MOVIMIENTOS */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
+      <div className="dashboard-alertas-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
         {/* BAJO STOCK */}
-        <Card title="Bajo Stock">
+        <Card title="Bajo Stock" contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
           {bajoStock.length > 0 ? (
             <Table 
               columns={["Producto", "Stock", "Estado"]} 
@@ -453,7 +456,7 @@ export default function Dashboard() {
         </Card>
 
         {/* MOVIMIENTOS */}
-        <Card title="Movimientos Recientes">
+        <Card title="Movimientos Recientes" contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
           {recientes.length > 0 ? (
             <Table 
               columns={[

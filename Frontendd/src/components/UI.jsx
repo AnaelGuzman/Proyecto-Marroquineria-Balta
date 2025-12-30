@@ -13,7 +13,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-export function Card({ title, subtitle, children, footer, accent, className, sx, ...rest }) {
+export function Card({ title, subtitle, children, footer, accent, className, sx, contentSx, ...rest }) {
   const baseSx = {
     background: 'linear-gradient(135deg, var(--panel), var(--panel-2))',
     border: '1px solid var(--border)',
@@ -75,10 +75,11 @@ export function Card({ title, subtitle, children, footer, accent, className, sx,
       )}
       <CardContent 
         sx={{ 
-          padding: 3, 
+          padding: 3,
           flex: '1 1 auto', 
           display: 'block',
           width: '100%',
+          ...(Array.isArray(contentSx) ? Object.assign({}, ...contentSx) : (contentSx ?? {})),
         }}
       >
         {children}
@@ -182,7 +183,7 @@ export function Button({ children, variant = 'primary', small, disabled = false,
 export function Table({ columns = [], rows = [], footer, className }) {
   return (
     <div className={`table-wrap${className ? ` ${className}` : ''}`}>
-      <MuiTable sx={{ 
+      <MuiTable size="small" sx={{ 
         background: 'var(--panel)',
         borderRadius: '12px',
         overflow: 'hidden',
@@ -191,17 +192,24 @@ export function Table({ columns = [], rows = [], footer, className }) {
           '& .MuiTableCell-head': {
             background: 'linear-gradient(120deg, rgba(119, 80, 65, 0.88), rgba(122, 94, 82, 0.88))',
             color: '#FDFBF9',
-            fontSize: '1rem',
+            fontSize: { xs: '0.75rem', sm: '0.9rem', md: '1rem' },
             fontWeight: 600,
             borderBottom: '1px solid rgba(255,255,255,0.18)',
             borderRight: '1px solid rgba(255,255,255,0.12)',
             letterSpacing: '0.02em',
-            
-            padding: '0.9rem 1.2rem',
+
+            padding: { xs: '0.55rem 0.7rem', sm: '0.75rem 1rem', md: '0.9rem 1.2rem' },
             '&:last-of-type': {
               borderRight: 'none'
             }
           }
+        },
+        '& .MuiTableCell-body': {
+          fontSize: { xs: '0.75rem', sm: '0.9rem', md: '0.95rem' },
+          padding: { xs: '0.55rem 0.7rem', sm: '0.75rem 1rem', md: '0.9rem 1.2rem' },
+          color: 'var(--text)',
+          borderBottom: '1px solid var(--border)',
+          whiteSpace: { xs: 'nowrap', sm: 'normal' },
         },
       }}>
         <TableHead>

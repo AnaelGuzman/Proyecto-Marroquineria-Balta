@@ -1362,27 +1362,6 @@ export default function Egresos() {
         }
       `}</style>
 
-      {/* Header compacto */}
-      <div className="egresos-card egresos-header">
-        <div className="card-header">
-          <h1 className="card-title">Compras</h1>
-          <p className="card-subtitle">Control de compras y gastos operativos</p>
-        </div>
-        <div className="card-body">
-          <div className="stats-grid">
-            {resumen.map((r) => (
-              <div key={r.label} className="stat-card">
-                <div className="stat-icon" style={{ backgroundColor: `${r.color}20`, color: r.color }}>
-                  {React.cloneElement(r.icon, { sx: { fontSize: 20 } })}
-                </div>
-                <span className="stat-label">{r.label}</span>
-                <span className="stat-value">{r.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Formulario compacto */}
       <div className="egresos-card">
         <div className="card-header">
@@ -1486,6 +1465,27 @@ export default function Egresos() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header compacto */}
+      <div className="egresos-card egresos-header">
+        <div className="card-header">
+          <h1 className="card-title">Compras</h1>
+          <p className="card-subtitle">Control de compras y gastos operativos</p>
+        </div>
+        <div className="card-body">
+          <div className="stats-grid">
+            {resumen.map((r) => (
+              <div key={r.label} className="stat-card">
+                <div className="stat-icon" style={{ backgroundColor: `${r.color}20`, color: r.color }}>
+                  {React.cloneElement(r.icon, { sx: { fontSize: 20 } })}
+                </div>
+                <span className="stat-label">{r.label}</span>
+                <span className="stat-value">{r.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

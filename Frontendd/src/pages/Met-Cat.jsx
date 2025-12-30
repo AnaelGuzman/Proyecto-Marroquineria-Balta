@@ -211,12 +211,17 @@ export default function Configuracion() {
         return [
           item.nombre,
           item.descripcion || '-',
-          <div key={item.idCategoria} style={{ display: 'flex', gap: '0.5rem' }}>
+          <div key={item.idCategoria} style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}>
             <Button small variant="ghost" onClick={() => handleEdit(item)}>
-              <Edit sx={{ fontSize: 18 }} />
+              <Edit sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
-            <Button small variant="ghost" onClick={() => handleDelete(item)} style={{ background: 'var(--error)', color: 'white' }}>
-              <Delete sx={{ fontSize: 18 }} />
+            <Button
+              small
+              variant="ghost"
+              onClick={() => handleDelete(item)}
+              style={{ background: 'var(--error)', color: 'white', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
+            >
+              <Delete sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
           </div>
         ];
@@ -224,12 +229,17 @@ export default function Configuracion() {
         return [
           item.nombre,
           item.comisionAsociada ? `${parseFloat(item.comisionAsociada).toFixed(2)}%` : '0%',
-          <div key={item.idMetodoPago} style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button small variant="ghost" onClick={() => handleEdit(item)}>
-              <Edit sx={{ fontSize: 18 }} />
+          <div key={item.idMetodoPago} style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}>
+            <Button small variant="ghost" onClick={() => handleEdit(item)} style={{ minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}>
+              <Edit sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
-            <Button small variant="ghost" onClick={() => handleDelete(item)} style={{ background: 'var(--error)', color: 'white' }}>
-              <Delete sx={{ fontSize: 18 }} />
+            <Button
+              small
+              variant="ghost"
+              onClick={() => handleDelete(item)}
+              style={{ background: 'var(--error)', color: 'white', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
+            >
+              <Delete sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
           </div>
         ];
@@ -237,12 +247,17 @@ export default function Configuracion() {
         return [
           item.nombre,
           item.abreviatura,
-          <div key={item.idUnidadMedida} style={{ display: 'flex', gap: '0.5rem' }}>
-            <Button small variant="ghost" onClick={() => handleEdit(item)}>
-              <Edit sx={{ fontSize: 18 }} />
+          <div key={item.idUnidadMedida} style={{ display: 'flex', gap: '0.25rem', flexWrap: 'nowrap', alignItems: 'center' }}>
+            <Button small variant="ghost" onClick={() => handleEdit(item)} style={{ minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}>
+              <Edit sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
-            <Button small variant="ghost" onClick={() => handleDelete(item)} style={{ background: 'var(--error)', color: 'white' }}>
-              <Delete sx={{ fontSize: 18 }} />
+            <Button
+              small
+              variant="ghost"
+              onClick={() => handleDelete(item)}
+              style={{ background: 'var(--error)', color: 'white', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
+            >
+              <Delete sx={{ fontSize: { xs: 15, sm: 18 } }} />
             </Button>
           </div>
         ];
@@ -375,7 +390,7 @@ export default function Configuracion() {
             Cargando...
           </div>
         ) : (
-          <Table columns={columns} rows={rows} />
+          <Table className="config-table" columns={columns} rows={rows} />
         )}
       </Card>
 

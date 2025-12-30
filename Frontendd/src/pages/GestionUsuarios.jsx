@@ -291,7 +291,7 @@ export default function GestionUsuarios() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="gestion-usuarios-page" style={{ padding: '2rem' }}>
       <style>{`
         .tabla-usuarios td {
           font-size: 0.8rem !important;
@@ -317,7 +317,9 @@ export default function GestionUsuarios() {
         marginBottom: '2rem' 
       }}>
         <div>
-          <h2 style={{ margin: 0 }}>Gestión de Usuarios</h2>
+          <h2 className="gestion-usuarios-title" style={{ margin: 0 }}>
+            Gestión de Usuarios
+          </h2>
           <p style={{ color: 'var(--muted)', margin: '0.5rem 0 0 0' }}>
             Administra los usuarios y sus permisos
           </p>
@@ -340,9 +342,10 @@ export default function GestionUsuarios() {
         </div>
       )}
 
-      <Card>
+      <Card className="gestion-usuarios-card" contentSx={{ padding: { xs: 1, sm: 2, md: 3 } }}>
         <div className="tabla-usuarios">
           <Table
+            className="users-table"
             columns={['RUT', 'Nombre', 'Correo', 'Rol', 'Permisos', 'Fecha', 'Acciones']}
             rows={usuarios.map(u => [
               <span className="rut-cell">{u.rut}</span>,
@@ -382,14 +385,15 @@ export default function GestionUsuarios() {
                   return 'Error';
                 }
               })(),
-              <div style={{ display: 'flex', gap: '0.35rem' }}>
+              <div className="users-actions" style={{ display: 'flex', gap: '0.35rem', flexWrap: 'nowrap', alignItems: 'center' }}>
                 <Button 
                   small 
                   variant="ghost"
                   onClick={() => handleEditarRol(u)}
                   title="Editar rol"
+                  style={{ minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
                 >
-                  <Edit sx={{ fontSize: 16 }} />
+                  <Edit sx={{ fontSize: { xs: 15, sm: 16 } }} />
                 </Button>
                 <Button 
                   small 
@@ -401,9 +405,9 @@ export default function GestionUsuarios() {
                     setError('');
                   }}
                   title="Cambiar contraseña"
-                  style={{ color: '#f57c00' }}
+                  style={{ color: '#f57c00', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
                 >
-                  <Key sx={{ fontSize: 16 }} />
+                  <Key sx={{ fontSize: { xs: 15, sm: 16 } }} />
                 </Button>
                 {u.rol === 'USUARIO' && (
                   <Button 
@@ -411,19 +415,19 @@ export default function GestionUsuarios() {
                     variant="ghost"
                     onClick={() => handleEditarPermisos(u)}
                     title="Gestionar permisos"
-                    style={{ color: '#6a1b9a' }}
+                    style={{ color: '#6a1b9a', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
                   >
-                    <Security sx={{ fontSize: 16 }} />
+                    <Security sx={{ fontSize: { xs: 15, sm: 16 } }} />
                   </Button>
                 )}
                 <Button 
                   small 
                   variant="ghost" 
-                  style={{ color: '#d32f2f' }}
+                  style={{ color: '#d32f2f', minWidth: 0, padding: '0 0.4rem', height: 28, minHeight: 28 }}
                   onClick={() => handleEliminar(u.rut)}
                   title="Eliminar usuario"
                 >
-                  <Delete sx={{ fontSize: 16 }} />
+                  <Delete sx={{ fontSize: { xs: 15, sm: 16 } }} />
                 </Button>
               </div>
             ])}

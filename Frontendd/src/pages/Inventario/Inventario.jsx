@@ -400,18 +400,18 @@ export default function Inventario() {
   }
 
   if (loading || loadingMateriales) {
-    return <div className="stack"><Card><p>Cargando...</p></Card></div>
+    return <div className="stack inventario-page"><Card contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}><p>Cargando...</p></Card></div>
   }
 
   return (
-    <div className="stack">
-      <Card>
+    <div className="stack inventario-page">
+      <Card className="inventario-card" contentSx={{ p: { xs: 1.5, sm: 2.5, md: 3 } }}>
         {/* Tabs para cambiar entre vistas */}
-        <div style={{ 
+        <div className="inventario-tabs" style={{ 
           display: 'flex', 
           gap: '0.5rem',
           borderBottom: '2px solid var(--border)',
-          marginBottom: '1.5rem'
+          marginBottom: '1.25rem'
         }}>
           <Button
             variant={vistaActual === 'inventario' ? 'primary' : 'ghost'}
@@ -439,11 +439,11 @@ export default function Inventario() {
         {vistaActual === 'inventario' && (
           <>
             {/* Barra de búsqueda y filtros directos */}
-            <div style={{ 
+            <div className="inventario-filtros" style={{ 
               display: 'grid',
               gridTemplateColumns: '2fr 1fr auto',
               gap: '0.75rem',
-              marginBottom: '1.5rem'
+              marginBottom: '1.25rem'
             }}>
               <input
                 type="text"
@@ -454,10 +454,10 @@ export default function Inventario() {
                   buscarProductos(e.target.value)
                 }}
                 style={{
-                  padding: '0.75rem',
+                  padding: 'clamp(0.55rem, 2vw, 0.75rem)',
                   border: '2px solid var(--border)',
                   borderRadius: '8px',
-                  fontSize: '1rem'
+                  fontSize: 'clamp(0.9rem, 2.6vw, 1rem)'
                 }}
               />
 
@@ -468,10 +468,10 @@ export default function Inventario() {
                   filtrarPorCategoria(e.target.value)
                 }}
                 style={{
-                  padding: '0.75rem',
+                  padding: 'clamp(0.55rem, 2vw, 0.75rem)',
                   border: '2px solid var(--border)',
                   borderRadius: '8px',
-                  fontSize: '1rem'
+                  fontSize: 'clamp(0.9rem, 2.6vw, 1rem)'
                 }}
               >
                 <option value="all">📂 Todas las categorías</option>
@@ -486,7 +486,7 @@ export default function Inventario() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.5rem',
-                fontSize: '0.95rem',
+                fontSize: 'clamp(0.85rem, 2.4vw, 0.95rem)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 padding: '0 0.5rem'
@@ -501,17 +501,17 @@ export default function Inventario() {
             </div>
 
             {/* Toolbar con botones de acción - SIN ACTUALIZAR */}
-            <Toolbar style={{ marginBottom: '1.5rem' }}>
+            <Toolbar className="inventario-toolbar" style={{ marginBottom: '1.25rem' }}>
               <Button onClick={() => { setProductoEdit(null); setShowForm(true); }}>
-                <Add sx={{ fontSize: 20 }} />
+                <Add sx={{ fontSize: { xs: 18, sm: 20 } }} />
                 Agregar producto
               </Button>
               <Button variant="ghost" onClick={() => setShowAjuste(true)}>
-                <TrendingDown sx={{ fontSize: 20 }} />
+                <TrendingDown sx={{ fontSize: { xs: 18, sm: 20 } }} />
                 Ajustar stock
               </Button>
               <div style={{ flex: 1 }} />
-              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+              <span className="inventario-contador" style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                 Mostrando {inventarioFiltrado.length} de {inventario.length} productos
               </span>
             </Toolbar>
@@ -532,7 +532,7 @@ export default function Inventario() {
         {/* VISTA DE MATERIALES */}
         {vistaActual === 'materiales' && (
           <>
-            <div style={{ 
+            <div className="inventario-filtros" style={{ 
               display: 'grid', 
               gridTemplateColumns: '2fr auto', 
               gap: '0.75rem',
@@ -544,10 +544,10 @@ export default function Inventario() {
                 value={filtroMateriales.buscar}
                 onChange={(e) => setFiltroMateriales(prev => ({ ...prev, buscar: e.target.value }))}
                 style={{
-                  padding: '0.75rem',
+                  padding: 'clamp(0.55rem, 2vw, 0.75rem)',
                   border: '2px solid var(--border)',
                   borderRadius: '8px',
-                  fontSize: '1rem'
+                  fontSize: 'clamp(0.9rem, 2.6vw, 1rem)'
                 }}
               />
 
@@ -555,7 +555,7 @@ export default function Inventario() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: '0.5rem',
-                fontSize: '0.9rem',
+                fontSize: 'clamp(0.85rem, 2.4vw, 0.9rem)',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap'
               }}>
@@ -569,17 +569,17 @@ export default function Inventario() {
             </div>
 
             {/* Toolbar igual que productos */}
-            <Toolbar style={{ marginBottom: '1.5rem' }}>
+            <Toolbar className="inventario-toolbar" style={{ marginBottom: '1.25rem' }}>
               <Button onClick={() => { setMaterialEdit(null); setShowFormMaterial(true); }}>
-                <Add sx={{ fontSize: 20 }} />
+                <Add sx={{ fontSize: { xs: 18, sm: 20 } }} />
                 Agregar material
               </Button>
               <Button variant="ghost" onClick={() => setShowAjusteMaterial(true)}>
-                <TrendingDown sx={{ fontSize: 20 }} />
+                <TrendingDown sx={{ fontSize: { xs: 18, sm: 20 } }} />
                 Ajustar stock
               </Button>
               <div style={{ flex: 1 }} />
-              <span style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
+              <span className="inventario-contador" style={{ color: 'var(--muted)', fontSize: '0.9rem' }}>
                 Mostrando {materialesFiltrados.length} de {materialesInventario.length} materiales
               </span>
             </Toolbar>

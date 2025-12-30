@@ -848,24 +848,6 @@ export default function Ingresos() {
         }
       `}</style>
 
-      {/* Header */}
-      <div className="ingresos-card ingresos-header">
-        <div className="card-header">
-          <h1 className="card-title">Ventas</h1>
-          <p className="card-subtitle">Registro y control de ingresos por ventas</p>
-        </div>
-        <div className="card-body">
-          <div className="stats-grid">
-            {resumen.map((r) => (
-              <div key={r.label} className="stat-card">
-                <span className="stat-label">{r.label}</span>
-                <span className="stat-value">{r.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
       {/* Formulario */}
       <div className="ingresos-card">
         <div className="card-header">
@@ -969,6 +951,24 @@ export default function Ingresos() {
                 </button>
               )}
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="ingresos-card ingresos-header">
+        <div className="card-header">
+          <h1 className="card-title">Ventas</h1>
+          <p className="card-subtitle">Registro y control de ingresos por ventas</p>
+        </div>
+        <div className="card-body">
+          <div className="stats-grid">
+            {resumen.map((r) => (
+              <div key={r.label} className="stat-card">
+                <span className="stat-label">{r.label}</span>
+                <span className="stat-value">{r.value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>

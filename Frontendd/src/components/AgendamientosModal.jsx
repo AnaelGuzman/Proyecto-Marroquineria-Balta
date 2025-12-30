@@ -82,6 +82,8 @@ export default function AgendamientosModal({ open, onClose }) {
   const [productoMenuOpen, setProductoMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [form, setForm] = useState(() => initialFormState());
@@ -110,6 +112,8 @@ export default function AgendamientosModal({ open, onClose }) {
       setError(null);
       setSuccess(null);
       setForm(initialFormState());
+      setDeleteCandidate(null);
+      setDeleteLoading(false);
       return;
     }
     setForm(initialFormState());
@@ -260,6 +264,46 @@ export default function AgendamientosModal({ open, onClose }) {
     }
   };
 
+  const handleRequestDelete = (evento) => {
+    const id = evento?.idAgendamiento;
+    if (!id) {
+      setSuccess(null);
+      setError('No se puede eliminar este agendamiento (id no disponible).');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    setDeleteCandidate(evento);
+  };
+
+  const handleCancelDelete = () => {
+    if (deleteLoading) return;
+    setDeleteCandidate(null);
+  };
+
+  const handleConfirmDelete = async () => {
+    const id = deleteCandidate?.idAgendamiento;
+    if (!id) {
+      setDeleteCandidate(null);
+      return;
+    }
+
+    setDeleteLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await api.agendamientos.remove(id);
+      setAgendamientos((prev) => prev.filter((item) => item?.idAgendamiento !== id));
+      setSuccess('Agendamiento eliminado correctamente.');
+      setDeleteCandidate(null);
+    } catch (err) {
+      console.error('Error eliminando agendamiento', err);
+      setError(err.message || 'No fue posible eliminar el agendamiento');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   if (!open) {
     return null;
   }
@@ -331,6 +375,7 @@ export default function AgendamientosModal({ open, onClose }) {
                   ? entrega.toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit' })
                   : 'Hora sin definir';
                 const productoLabel = evento.producto?.nombre || evento.productoNombre;
+                const canDelete = Boolean(evento?.idAgendamiento);
                 return (
                   <article
                     key={evento.idAgendamiento || `${evento.titulo}-${evento.fechaProgramada}`}
@@ -343,7 +388,18 @@ export default function AgendamientosModal({ open, onClose }) {
                         <small>Producto: {productoLabel}</small>
                       )}
                     </div>
-                    <small>Entrega: {entregaLabel}</small>
+                    <small className="event-meta">Entrega: {entregaLabel}</small>
+                    {canDelete && (
+                      <button
+                        type="button"
+                        className="event-delete"
+                        onClick={() => handleRequestDelete(evento)}
+                        aria-label="Eliminar agendamiento"
+                        title="Eliminar"
+                      >
+                        ×
+                      </button>
+                    )}
                   </article>
                 );
               })}
@@ -438,6 +494,25 @@ export default function AgendamientosModal({ open, onClose }) {
             </div>
           )}
         </div>
+
+        {deleteCandidate && (
+          <div className="agendamientos-confirm-overlay" onClick={handleCancelDelete}>
+            <div className="agendamientos-confirm-modal" onClick={(event) => event.stopPropagation()}>
+              <h4>¿Eliminar agendamiento?</h4>
+              <p>
+                Se eliminará <strong>{deleteCandidate.titulo}</strong>. Esta acción no se puede deshacer.
+              </p>
+              <div className="agendamientos-confirm-actions">
+                <Button variant="ghost" small onClick={handleCancelDelete} disabled={deleteLoading}>
+                  Cancelar
+                </Button>
+                <Button small onClick={handleConfirmDelete} disabled={deleteLoading}>
+                  {deleteLoading ? 'Eliminando...' : 'Eliminar'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

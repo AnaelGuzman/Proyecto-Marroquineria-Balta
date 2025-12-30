@@ -417,14 +417,18 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout, routes })
 
   const [showCalendar, setShowCalendar] = useState(false)
 
+  const chipHeight = 'var(--topbar-chip-height, 50px)';
+  const chipPadY = 'var(--topbar-chip-pad-y, 0.45rem)';
+  const chipPadX = 'var(--topbar-chip-pad-x, 0.9rem)';
+
   const chipBaseStyle = {
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
-    padding: '0.45rem 0.9rem',
+    padding: `${chipPadY} ${chipPadX}`,
     borderRadius: '10px',
-    height: '50px',
-    minHeight: '50px'
+    height: chipHeight,
+    minHeight: chipHeight
   };
 
   const profileChipStyle = {
@@ -470,7 +474,7 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout, routes })
         </Button>
 
         {/* Usuario con dropdown de logout */}
-        <div style={profileChipStyle}>
+        <div className="header-profile-chip" style={profileChipStyle}>
           <Person sx={{ fontSize: 20, color: 'var(--brand)' }} />
           <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
             <span style={{ 
@@ -498,12 +502,13 @@ function Header({ hash, onOpenSidebar, sidebarOpen, usuario, onLogout, routes })
           variant="ghost"
           small
           onClick={onLogout}
+          className="btn-responsive"
           style={{
             background: 'transparent',
             color: 'var(--error)',
             border: '2px solid var(--error)',
-            height: '50px',
-            minHeight: '50px'
+            height: chipHeight,
+            minHeight: chipHeight
           }}
         >
           <Logout sx={{ fontSize: 20 }} />

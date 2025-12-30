@@ -222,7 +222,7 @@ export default function ModalProducto({
   const esEdicion = !!productoEdit
 
   return (
-    <div style={{
+    <div className="inventario-modal-overlay" style={{
       position: 'fixed',
       top: 0,
       left: 0,
@@ -236,7 +236,7 @@ export default function ModalProducto({
       padding: '1rem',
       backdropFilter: 'blur(4px)'
     }}>
-      <div style={{
+      <div className="inventario-modal" style={{
         background: 'var(--panel)',
         padding: '2rem',
         borderRadius: '16px',
