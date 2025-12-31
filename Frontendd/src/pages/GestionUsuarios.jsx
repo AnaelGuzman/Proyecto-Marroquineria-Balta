@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Button, Table } from '../components/UI.jsx';
 import { api } from '../services/api/index.js';
 import { PersonAdd, Delete, Edit, Security, Check, Key } from '@mui/icons-material';
-import {apiFetch} from '../services/api/api.js';
+import { apiFetch } from '../services/api/api.js';
 
 // Permisos disponibles
 const PERMISOS_DISPONIBLES = [
@@ -148,13 +148,7 @@ export default function GestionUsuarios() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/usuarios/${rut}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        throw new Error('Error al eliminar usuario');
-      }
+      await apiFetch(`/usuarios/${rut}`, { method: 'DELETE' });
 
       localStorage.removeItem(`permisos_${rut}`);
 
@@ -174,20 +168,13 @@ export default function GestionUsuarios() {
 
   const handleGuardarRol = async () => {
     try {
-      const response = await fetch(`http://localhost:8080/api/usuarios/${editandoUsuario.rut}`, {
+      await apiFetch(`/usuarios/${editandoUsuario.rut}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           ...editandoUsuario,
           rol: nuevoRol
         })
       });
-
-      if (!response.ok) {
-        throw new Error('Error al actualizar rol');
-      }
 
       if (nuevoRol === 'ADMIN') {
         localStorage.removeItem(`permisos_${editandoUsuario.rut}`);
@@ -248,21 +235,10 @@ export default function GestionUsuarios() {
     }
 
     try {
-      const response = await fetch(`http://localhost:8080/api/auth/cambiar-password-admin/${editandoPassword.rut}`, {
+      await apiFetch(`/auth/cambiar-password-admin/${editandoPassword.rut}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          password: nuevaPassword
-        })
+        body: JSON.stringify({ password: nuevaPassword })
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al cambiar contraseña');
-      }
 
       setSuccess('Contraseña actualizada exitosamente');
       setEditandoPassword(null);

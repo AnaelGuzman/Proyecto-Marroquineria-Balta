@@ -35,6 +35,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/", "/api/health").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/usuarios/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -49,17 +50,21 @@ public class SecurityConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(
-                List.of("https://balta-app.netlify.app,*")
+        // Use origin patterns so we can support Azure Static Web Apps preview/production domains.
+        // Keep allowCredentials(false) so wildcard patterns are safe.
+        config.setAllowedOriginPatterns(
+                List.of(
+                        "https://balta-app.netlify.app",
+                        "https://*.azurestaticapps.net",
+                        "http://localhost:5173"
+                )
         );
 
         config.setAllowedMethods(
                 List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")
         );
 
-        config.setAllowedHeaders(
-                List.of("Authorization", "Content-Type")
-        );
+        config.setAllowedHeaders(List.of("*"));
 
         config.setAllowCredentials(false);
 
