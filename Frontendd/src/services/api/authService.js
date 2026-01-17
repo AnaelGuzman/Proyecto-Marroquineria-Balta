@@ -1,5 +1,28 @@
 import { apiFetch } from './api';
 
+const decodeToken = (token) => {
+  if (!token) return null;
+  const parts = token.split('.');
+  if (parts.length !== 3) return null;
+
+  try {
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + (4 - (base64.length % 4)) % 4, '=');
+    const jsonPayload = atob(padded);
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+};
+
+const isTokenExpired = (token, skewSeconds = 30) => {
+  const payload = decodeToken(token);
+  if (!payload || typeof payload.exp !== 'number') return false;
+  const now = Math.floor(Date.now() / 1000);
+  return now >= payload.exp - skewSeconds;
+};
+
 const authService = {
 
   login: async (credentials) => {
@@ -60,8 +83,13 @@ const authService = {
     return usuario ? JSON.parse(usuario) : null;
   },
 
-  estaAutenticado: () =>
-    !!localStorage.getItem('token')
+  estaAutenticado: () => {
+    const token = localStorage.getItem('token');
+    if (!token) return false;
+    return !isTokenExpired(token);
+  },
+
+  isTokenExpired
 };
 
 export default authService;

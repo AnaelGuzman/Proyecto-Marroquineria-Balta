@@ -20,6 +20,7 @@ import AgendamientosModal from './components/AgendamientosModal.jsx'
 import GestionUsuarios from './pages/GestionUsuarios.jsx'
 import GastosRecurrentes from './pages/Compra/GastosRecurrentes.jsx'
 import { Science } from '@mui/icons-material';
+import authService from './services/api/authService';
 
 
 const theme = createTheme({
@@ -148,17 +149,42 @@ export default function App() {
 
   // Verificar autenticación al cargar
   useEffect(() => {
-    const usuarioData = localStorage.getItem('usuario');
-    if (usuarioData) {
-      try {
-        const parsed = JSON.parse(usuarioData);
-        setUsuario(parsed);
-        setIsAuthenticated(true);
-      } catch (e) {
-        localStorage.removeItem('usuario');
-        setIsAuthenticated(false);
+    const token = authService.getToken();
+    const tokenExpirado = token ? authService.isTokenExpired(token) : true;
+
+    if (token && !tokenExpirado) {
+      const usuarioData = localStorage.getItem('usuario');
+      if (usuarioData) {
+        try {
+          const parsed = JSON.parse(usuarioData);
+          setUsuario(parsed);
+          setIsAuthenticated(true);
+          return;
+        } catch (e) {
+          localStorage.removeItem('usuario');
+        }
       }
     }
+
+    authService.logout();
+    setUsuario(null);
+    setIsAuthenticated(false);
+    if (window.location.hash !== '#/login') {
+      window.location.hash = '#/login';
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleLogoutEvent = () => {
+      setUsuario(null);
+      setIsAuthenticated(false);
+      if (window.location.hash !== '#/login') {
+        window.location.hash = '#/login';
+      }
+    };
+
+    window.addEventListener('auth:logout', handleLogoutEvent);
+    return () => window.removeEventListener('auth:logout', handleLogoutEvent);
   }, []);
 
   // Función para obtener permisos del usuario
@@ -291,7 +317,7 @@ export default function App() {
 
   const handleLogout = () => {
     if (window.confirm('¿Estás seguro de que deseas cerrar sesión?')) {
-      localStorage.removeItem('usuario');
+      authService.logout();
       setIsAuthenticated(false);
       setUsuario(null);
       window.location.hash = '#/login';
@@ -299,9 +325,20 @@ export default function App() {
   };
 
   const handleLoginSuccess = (userData) => {
-    setUsuario(userData);
-    setIsAuthenticated(true);
-    window.location.hash = '#/';
+    const token = authService.getToken();
+    const tokenExpirado = token ? authService.isTokenExpired(token) : true;
+
+    if (token && !tokenExpirado) {
+      setUsuario(userData);
+      setIsAuthenticated(true);
+      window.location.hash = '#/';
+      return;
+    }
+
+    authService.logout();
+    setUsuario(null);
+    setIsAuthenticated(false);
+    window.location.hash = '#/login';
   };
 
   const Active = useMemo(() => {

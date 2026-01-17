@@ -19,6 +19,12 @@ export const apiFetch = async (endpoint, options = {}) => {
 
   if (response.status === 401 || response.status === 403) {
     console.warn('No autorizado');
+    localStorage.removeItem('usuario');
+    localStorage.removeItem('token');
+    window.dispatchEvent(new Event('auth:logout'));
+    if (window.location.hash !== '#/login') {
+      window.location.hash = '#/login';
+    }
   }
 
   if (!response.ok) {
